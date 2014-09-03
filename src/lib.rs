@@ -208,8 +208,13 @@ impl<'a> RawIobuf<'a> {
     self.buf.as_mut_slice().mut_slice(self.lo, self.hi)
   }
 
-  // I need [Peek, Poke, Fill, Consume] x ([u8] + [u16, u32, u64] x [le, be]) x [(), unsafe_]
-  // That's 56 functions :(
+  #[inline(always)]
+  fn peek(&self, dst: &mut [u8]) {
+    unsafe {
+      self.check_range(0, dst.len());
+      self.unsafe_peek(dst)
+    }
+  }
 
   #[inline(always)]
   fn peek_be<T: Copy + Zero + Shl<uint, T> + BitOr<T, T> + FromPrimitive>(&self) -> T {
@@ -224,6 +229,14 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       self.check_range(0, mem::size_of::<T>());
       self.unsafe_peek_le::<T>()
+    }
+  }
+
+  #[inline(always)]
+  fn poke(&self, src: &[u8]) {
+    unsafe {
+      self.check_range(0, src.len());
+      self.unsafe_poke(src)
     }
   }
 
@@ -244,6 +257,14 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
+  fn fill(&mut self, src: &[u8]) {
+    unsafe {
+      self.check_range(0, src.len());
+      self.unsafe_fill(src)
+    }
+  }
+
+  #[inline(always)]
   fn fill_be<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&mut self, t: T) {
     unsafe {
       self.check_range(0, mem::size_of::<T>());
@@ -260,6 +281,29 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
+  fn consume(&mut self, dst: &mut [u8]) {
+    unsafe {
+      self.check_range(0, dst.len());
+      self.unsafe_consume(dst)
+    }
+  }
+
+  #[inline(always)]
+  fn consume_le<T: Copy + Zero + Shl<uint, T> + Shr<uint, T> + BitOr<T, T> + FromPrimitive>(&mut self) -> T {
+    unsafe {
+      self.check_range(0, mem::size_of::<T>());
+      self.unsafe_consume_le()
+    }
+  }
+
+  fn consume_be<T: Copy + Zero + Shl<uint, T> + BitOr<T, T> + FromPrimitive>(&mut self) -> T {
+    unsafe {
+      self.check_range(0, mem::size_of::<T>());
+      self.unsafe_consume_be()
+    }
+  }
+
+  #[inline(always)]
   unsafe fn get_at<T: FromPrimitive>(&self, idx: uint) -> T {
     FromPrimitive::from_u8(
       *self.buf.as_slice().unsafe_get(self.lo + idx))
@@ -269,6 +313,12 @@ impl<'a> RawIobuf<'a> {
   #[inline(always)]
   unsafe fn set_at<T: ToPrimitive>(&self, idx: uint, val: T) {
     self.buf.as_mut_slice().unsafe_set(self.lo + idx, val.to_u8().unwrap())
+  }
+
+  unsafe fn unsafe_peek(&self, dst: &mut [u8]) {
+    for (i, tgt) in dst.mut_iter().enumerate() {
+      *tgt = self.get_at(i);
+    }
   }
 
   unsafe fn unsafe_peek_be<T: Copy + Zero + Shl<uint, T> + BitOr<T, T> + FromPrimitive>(&self) -> T {
@@ -293,6 +343,12 @@ impl<'a> RawIobuf<'a> {
     x
   }
 
+  unsafe fn unsafe_poke(&self, src: &[u8]) {
+    for (i, &src) in src.iter().enumerate() {
+      self.set_at(i, src);
+    }
+  }
+
   unsafe fn unsafe_poke_be<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&self, t: T) {
     let bytes = mem::size_of::<T>();
 
@@ -314,6 +370,12 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
+  unsafe fn unsafe_fill(&mut self, src: &[u8]) {
+    self.unsafe_poke(src);
+    self.lo += src.len();
+  }
+
+  #[inline(always)]
   unsafe fn unsafe_fill_be<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&mut self, t: T) {
     self.unsafe_poke_be(t);
     self.lo += mem::size_of::<T>();
@@ -326,15 +388,23 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
+  unsafe fn unsafe_consume(&mut self, dst: &mut [u8]) {
+    self.unsafe_peek(dst);
+    self.lo += dst.len();
+  }
+
+  #[inline(always)]
   unsafe fn unsafe_consume_le<T: Copy + Zero + Shl<uint, T> + Shr<uint, T> + BitOr<T, T> + FromPrimitive>(&mut self) -> T {
+    let ret = self.unsafe_peek_le::<T>();
     self.lo += mem::size_of::<T>();
-    self.unsafe_peek_le::<T>()
+    ret
   }
 
   #[inline(always)]
   unsafe fn unsafe_consume_be<T: Copy + Zero + Shl<uint, T> + BitOr<T, T> + FromPrimitive>(&mut self) -> T {
+    let ret = self.unsafe_peek_be::<T>();
     self.lo += mem::size_of::<T>();
-    self.unsafe_peek_be::<T>()
+    ret
   }
 
   fn show_hex(&self, f: &mut fmt::Formatter, half_line: &[u8])
