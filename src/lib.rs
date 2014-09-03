@@ -37,6 +37,14 @@ impl<'a> MaybeOwnedBuffer<'a> {
       }
     }
   }
+
+  #[inline]
+  fn len(&self) -> uint {
+    match self {
+      &OwnedBuffer(ref v)    => v.len(),
+      &BorrowedBuffer(ref s) => s.len(),
+    }
+  }
 }
 
 #[cold]
@@ -54,51 +62,36 @@ struct RawIobuf<'a> {
 }
 
 impl<'a> RawIobuf<'a> {
-  fn new(len: uint) -> RawIobuf<'static> {
+  fn of_buf<'a>(buf: MaybeOwnedBuffer<'a>) -> RawIobuf<'a> {
+    let len = buf.len();
     RawIobuf {
-      buf: Rc::new(OwnedBuffer(Vec::from_elem(len, 0u8))),
+      buf: Rc::new(buf),
       lo_min: 0,
       lo:     0,
       hi:     len,
       hi_max: len,
     }
+  }
+
+  fn new(len: uint) -> RawIobuf<'static> {
+    RawIobuf::of_buf(OwnedBuffer(Vec::from_elem(len, 0u8)))
   }
 
   fn from_str<'a>(s: &'a str) -> RawIobuf<'a> {
     unsafe {
       let bytes: &mut [u8] = mem::transmute(s.as_bytes());
-      RawIobuf {
-        buf: Rc::new(BorrowedBuffer(bytes)),
-        lo_min: 0,
-        lo:     0,
-        hi:     s.len(),
-        hi_max: s.len(),
-      }
+      RawIobuf::of_buf(BorrowedBuffer(bytes))
     }
   }
 
   fn from_vec(v: Vec<u8>) -> RawIobuf<'static> {
-    let len = v.len();
-    RawIobuf {
-      buf: Rc::new(OwnedBuffer(v)),
-      lo_min: 0,
-      lo:     0,
-      hi:     len,
-      hi_max: len,
-    }
+    RawIobuf::of_buf(OwnedBuffer(v))
   }
 
   fn from_slice<'a>(s: &'a [u8]) -> RawIobuf<'a> {
     unsafe {
-      let len = s.len();
       let mut_buf: &mut [u8] = mem::transmute(s);
-      RawIobuf {
-        buf: Rc::new(BorrowedBuffer(mut_buf)),
-        lo_min: 0,
-        lo:     0,
-        hi:     len,
-        hi_max: len,
-      }
+      RawIobuf::of_buf(BorrowedBuffer(mut_buf))
     }
   }
 
