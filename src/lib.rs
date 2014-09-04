@@ -20,6 +20,7 @@
 
 #![license = "MIT"]
 
+use std::cell::UnsafeCell;
 use std::fmt::{Formatter,FormatError,Show};
 use std::iter;
 use std::mem;
@@ -71,18 +72,10 @@ impl<'a> MaybeOwnedBuffer<'a> {
   }
 
   #[inline]
-  fn as_mut_slice(&self) -> &mut [u8] {
-    unsafe {
-      match self {
-        &OwnedBuffer(ref v) => {
-          let mut_v: &mut Vec<u8> = mem::transmute(v);
-          mut_v.as_mut_slice()
-        },
-        &BorrowedBuffer(ref s) => {
-          let mut_s: &mut &mut [u8] = mem::transmute(s);
-          mut_s.as_mut_slice()
-        },
-      }
+  fn as_mut_slice(&mut self) -> &mut [u8] {
+    match *self {
+      OwnedBuffer(ref mut v)    => v.as_mut_slice(),
+      BorrowedBuffer(ref mut s) => s.as_mut_slice(),
     }
   }
 
@@ -106,7 +99,7 @@ fn bad_range(pos: uint, len: uint) {
 /// It is very cheap to clone, as the backing buffer is shared and refcounted.
 #[deriving(Clone)]
 struct RawIobuf<'a> {
-  buf:    Rc<MaybeOwnedBuffer<'a>>,
+  buf:    Rc<UnsafeCell<MaybeOwnedBuffer<'a>>>,
   lo_min: uint,
   lo:     uint,
   hi:     uint,
@@ -117,7 +110,7 @@ impl<'a> RawIobuf<'a> {
   fn of_buf<'a>(buf: MaybeOwnedBuffer<'a>) -> RawIobuf<'a> {
     let len = buf.len();
     RawIobuf {
-      buf: Rc::new(buf),
+      buf: Rc::new(UnsafeCell::new(buf)),
       lo_min: 0,
       lo:     0,
       hi:     len,
@@ -274,8 +267,8 @@ impl<'a> RawIobuf<'a> {
   #[inline(always)]
   fn compact(&mut self) {
     unsafe {
-      let s: raw::Slice<u8> = mem::transmute(self.buf.as_mut_slice());
       let len = self.len();
+      let s: raw::Slice<u8> = mem::transmute((*self.buf.get()).as_mut_slice());
       ptr::copy_memory(
         s.data as *mut u8,
         s.data.offset(self.lo as int) as *const u8,
@@ -287,12 +280,12 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   unsafe fn as_slice(&self) -> &[u8] {
-    self.buf.as_slice().slice(self.lo, self.hi)
+    (*self.buf.get()).as_slice().slice(self.lo, self.hi)
   }
 
   #[inline]
-  fn as_mut_slice(&mut self) -> &mut [u8] {
-    self.buf.as_mut_slice().mut_slice(self.lo, self.hi)
+  unsafe fn as_mut_slice(&mut self) -> &mut [u8] {
+    (*self.buf.get()).as_mut_slice().mut_slice(self.lo, self.hi)
   }
 
   #[inline(always)]
@@ -394,13 +387,13 @@ impl<'a> RawIobuf<'a> {
   #[inline(always)]
   unsafe fn get_at<T: Prim>(&self, idx: uint) -> T {
     FromPrimitive::from_u8(
-      *self.buf.as_slice().unsafe_get(self.lo + idx))
+      *(*self.buf.get()).as_slice().unsafe_get(self.lo + idx))
     .unwrap()
   }
 
   #[inline(always)]
   unsafe fn set_at<T: Prim>(&self, idx: uint, val: T) {
-    self.buf.as_mut_slice().unsafe_set(self.lo + idx, val.to_u8().unwrap())
+    (*self.buf.get()).as_mut_slice().unsafe_set(self.lo + idx, val.to_u8().unwrap())
   }
 
   unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) {
@@ -553,7 +546,7 @@ impl<'a> RawIobuf<'a> {
 
   fn show(&self, f: &mut Formatter, ty: &str) -> Result<(), FormatError> {
     try!(write!(f, "{} IObuf, raw length={}, limits=[{},{}), bounds=[{},{})\n",
-                ty, unsafe { self.buf.as_slice().len() }, self.lo_min, self.hi_max, self.lo, self.hi));
+                ty, unsafe { (*self.buf.get()).as_slice().len() }, self.lo_min, self.hi_max, self.lo, self.hi));
 
     if self.lo == self.hi { return write!(f, "<empty buffer>"); }
 
@@ -903,17 +896,20 @@ impl<'a> ROIobuf<'a> {
 
   #[inline]
   pub fn deep_clone(&self) -> RWIobuf<'static> {
-    RWIobuf {
-      raw: RawIobuf {
-        buf:
-          Rc::new(OwnedBuffer(match self.raw.buf.deref() {
-            &OwnedBuffer(ref v) => v.clone(),
-            &BorrowedBuffer(ref s) => FromIterator::from_iter(s.iter().map(|&x| x)),
-          })),
-        lo_min: self.raw.lo_min,
-        lo:     self.raw.lo,
-        hi:     self.raw.hi,
-        hi_max: self.raw.hi_max,
+    unsafe {
+      RWIobuf {
+        raw: RawIobuf {
+          buf:
+            Rc::new(UnsafeCell::new(OwnedBuffer(
+              match *self.raw.buf.get() {
+                OwnedBuffer(ref v) => v.clone(),
+                BorrowedBuffer(ref s) => FromIterator::from_iter(s.iter().map(|&x| x)),
+              }))),
+          lo_min: self.raw.lo_min,
+          lo:     self.raw.lo,
+          hi:     self.raw.hi,
+          hi_max: self.raw.hi_max,
+        }
       }
     }
   }
