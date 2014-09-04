@@ -586,6 +586,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let mut b = ROIobuf::from_str("Hello");
   /// assert_eq!(b.advance(2), Ok(()));
   /// assert_eq!(b.len(), 3);
@@ -597,6 +598,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let mut b = ROIobuf::from_str("Hello");
   /// assert_eq!(b.advance(2), Ok(()));
   /// assert_eq!(b.cap(), 5);
@@ -607,6 +609,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// assert!(ROIobuf::from_str("").is_empty());
   /// assert!(!ROIobuf::from_str("a").is_empty());
   /// ```
@@ -619,6 +622,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// unsafe {
   ///   let mut b = ROIobuf::from_str("hello");
   ///   assert_eq!(b.as_slice(), b"hello");
@@ -633,6 +637,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.sub(1, 3), Ok(()));
   /// unsafe { assert_eq!(b.as_slice(), b"ell") };
@@ -643,6 +648,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.advance(2), Ok(()));
   /// assert_eq!(b.sub(0, 5), Err(())); // boom
@@ -652,6 +658,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.sub(0, 3), Ok(()));
   /// unsafe { assert_eq!(b.as_slice(), b"hel") };
@@ -661,6 +668,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let mut b = ROIobuf::from_str("hello");
   /// let len = b.len() - 2; // makes borrowck happy
   /// assert_eq!(b.sub(2, len), Ok(()));
@@ -677,6 +685,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.set_limits_and_window((1, 3), (2, 3)), Ok(()));
   /// assert_eq!(b.cap(), 2);
@@ -692,6 +701,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.advance(2), Ok(()));
   /// b.narrow();
@@ -704,6 +714,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.advance(3), Ok(()));
   /// assert_eq!(b.advance(3), Err(()));
@@ -721,6 +732,7 @@ pub trait Iobuf: Clone + Show {
   /// use std::mem;
   /// use std::result::{Result,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
+  ///
   /// let data = [2, 0x12, 0x34, 0x56, 0x78];
   /// let mut b = ROIobuf::from_slice(&data);
   ///
@@ -816,7 +828,9 @@ pub trait Iobuf: Clone + Show {
   /// `After:  [           xx]`
   fn flip_hi(&mut self);
 
-  /// [TODO]
+  /// Reads the bytes at the beginning of the window into the buffer. It is an
+  /// error to request more bytes (by supplying a bigger buffer) than the size
+  /// of the window.
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
