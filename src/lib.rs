@@ -180,9 +180,12 @@ impl<'a> RawIobuf<'a> {
   }
 
   /// Both the limits and the window are [lo, hi).
+  #[inline]
   fn set_limits_and_window(&mut self, limits: (uint, uint), window: (uint, uint)) -> Result<(), ()> {
     let (new_lo_min, new_hi_max) = limits;
     let (new_lo, new_hi) = window;
+    if new_hi_max < new_lo_min  { return Err(()); }
+    if new_hi     < new_lo      { return Err(()); }
     if new_lo_min < self.lo_min { return Err(()); }
     if new_hi_max > self.hi_max { return Err(()); }
     if new_lo     < self.lo     { return Err(()); }
@@ -629,9 +632,41 @@ pub trait Iobuf: Clone + Show {
   /// Changes the iobuf's limits and bounds to the subrange specified by
   /// `pos` and `len`, which must lie within the current window.
   ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.sub(1, 3), Ok(()));
+  /// unsafe { assert_eq!(b.as_slice(), b"ell") };
+  /// ```
+  ///
+  /// If your position and length do not lie in the current window, you will get
+  /// an error.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.advance(2), Ok(()));
+  /// assert_eq!(b.sub(0, 5), Err(())); // boom
+  /// ```
+  ///
   /// If you want to slice from the start, set `pos` to `0`.
   ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.sub(0, 3), Ok(()));
+  /// unsafe { assert_eq!(b.as_slice(), b"hel") };
+  /// ```
+  ///
   /// If you want to slice to the end, set `len` to `self.len() - pos`.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// let mut b = ROIobuf::from_str("hello");
+  /// let len = b.len() - 2; // makes borrowck happy
+  /// assert_eq!(b.sub(2, len), Ok(()));
+  /// unsafe { assert_eq!(b.as_slice(), b"llo") };
+  /// ```
   fn sub(&mut self, pos: uint, len: uint) -> Result<(), ()>;
 
   /// The same as `sub`, but no bounds checks are performed. You should probably
@@ -640,17 +675,107 @@ pub trait Iobuf: Clone + Show {
 
   /// Overrides the existing limits and window of the Iobuf, returning `Err(())`
   /// if attempting to widen either of them.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.set_limits_and_window((1, 3), (2, 3)), Ok(()));
+  /// assert_eq!(b.cap(), 2);
+  /// assert_eq!(b.len(), 1);
+  /// // trying to shrink the limits...
+  /// assert_eq!(b.set_limits_and_window((1, 4), (2, 2)), Err(()));
+  /// // trying to shrink the window...
+  /// assert_eq!(b.set_limits_and_window((1, 3), (2, 4)), Err(()));
+  /// ```
   fn set_limits_and_window(&mut self, limits: (uint, uint), window: (uint, uint)) -> Result<(), ()>;
 
   /// Sets the limits to the current window.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.advance(2), Ok(()));
+  /// b.narrow();
+  /// assert_eq!(b.cap(), 3);
+  /// ```
   fn narrow(&mut self);
 
   /// Advances the lower bound of the window by `len`. `Err(())` will be
   /// returned if you advance past the upper bound of the window.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.advance(3), Ok(()));
+  /// assert_eq!(b.advance(3), Err(()));
+  /// ```
   fn advance(&mut self, len: uint) -> Result<(), ()>;
 
   /// Advances the lower bound of the window by `len`. No bounds checking will
   /// be performed.
+  ///
+  /// A common pattern with `unsafe_advance` is to consolidate multiple bounds
+  /// checks into one. In this example, O(n) bounds checks are consolidated into
+  /// O(1) bounds checks:
+  ///
+  /// ```
+  /// use std::mem;
+  /// use std::result::{Result,Ok};
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// let data = [2, 0x12, 0x34, 0x56, 0x78];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// fn parse<B: Iobuf>(b: &mut B) -> Result<u16, ()> {
+  ///   let num_shorts: u8 = try!(b.consume_be());
+  ///   let num_bytes: uint = num_shorts as uint * mem::size_of::<u16>();
+  ///   unsafe {
+  ///     try!(b.check_range(0, num_bytes));
+  ///
+  ///     let mut sum = 0u16;
+  ///
+  ///     for i in range(0, num_shorts as uint).map(|x| x * mem::size_of::<u16>()) {
+  ///       sum += b.unsafe_peek_be(i);
+  ///     }
+  ///
+  ///     b.unsafe_advance(num_bytes);
+  ///
+  ///     Ok(sum)
+  ///   }
+  /// }
+  ///
+  /// assert_eq!(parse(&mut b), Ok(0x1234 + 0x5678));
+  /// assert_eq!(b.len(), 0);
+  /// ```
+  ///
+  /// Alternatively, you could use `unsafe_consume` in a similar, arguably
+  /// clearer way:
+  ///
+  /// ```
+  /// use std::mem;
+  /// use std::result::{Result,Ok};
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// let data = [2, 0x12, 0x34, 0x56, 0x78];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// fn parse<B: Iobuf>(b: &mut B) -> Result<u16, ()> {
+  ///   let num_shorts: u8 = try!(b.consume_be());
+  ///   let num_bytes: uint = num_shorts as uint * mem::size_of::<u16>();
+  ///   unsafe {
+  ///     try!(b.check_range(0, num_bytes));
+  ///
+  ///     let mut sum = 0u16;
+  ///
+  ///     for _ in range(0, num_shorts) {
+  ///       sum += b.unsafe_consume_be();
+  ///     }
+  ///
+  ///     Ok(sum)
+  ///   }
+  /// }
+  ///
+  /// assert_eq!(parse(&mut b), Ok(0x1234 + 0x5678));
+  /// assert_eq!(b.len(), 0);
+  /// ```
   unsafe fn unsafe_advance(&mut self, len: uint);
 
   /// Sets the length of the window, provided it does not exceed the limits.
