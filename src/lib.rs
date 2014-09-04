@@ -979,20 +979,23 @@ pub trait Iobuf: Clone + Show {
   /// // Returns the sum of the bytes, omitting as much bounds checking as
   /// // possible while still maintaining safety.
   /// fn parse<B: Iobuf>(b: &mut B) -> Result<uint, ()> {
-  ///   unsafe {
-  ///     let mut sum = 0u;
+  ///   let mut sum = 0u;
   ///
-  ///     let num_buffers: u8 = try!(b.consume_be());
-  ///     for _ in range(0, num_buffers) {
-  ///       let len: u8 = try!(b.consume_be());
+  ///   let num_buffers: u8 = try!(b.consume_be());
+  ///
+  ///   for _ in range(0, num_buffers) {
+  ///     let len: u8 = try!(b.consume_be());
+  ///
+  ///     unsafe {
   ///       try!(b.check_range(0, len as uint));
+  ///
   ///       for _ in range(0, len) {
   ///         sum += b.unsafe_consume_be::<u8>() as uint;
   ///       }
   ///     }
-  ///
-  ///     Ok(sum)
   ///   }
+  ///
+  ///   Ok(sum)
   /// }
   ///
   /// assert_eq!(parse(&mut b), Ok(0x55 + 0x66 + 0x11 + 0x22 + 0x33));
