@@ -849,7 +849,43 @@ pub trait Iobuf: Clone + Show {
   /// assert_eq!(b.peek(1, &mut tgt4), Err(()));
   /// ```
   fn peek(&self, pos: uint, dst: &mut [u8]) -> Result<(), ()>;
+
+  /// Reads a big-endian primitive at a given offset from the beginning of the
+  /// window.
+  ///
+  /// An error is returned if bytes outside of the window were requested.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// assert_eq!(b.advance(1), Ok(()));
+  ///
+  /// assert_eq!(b.peek_be(0), Ok(0x0203u16));
+  /// assert_eq!(b.peek_be(1), Ok(0x0304u16));
+  /// assert_eq!(b.peek_be::<u16>(2), Err(()));
+  /// ```
   fn peek_be<T: Prim>(&self, pos: uint) -> Result<T, ()>;
+
+  /// Reads a little-endian primitive at a given offset from the beginning of
+  /// the window.
+  ///
+  /// An error is returned if bytes outside of the window were requested.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// assert_eq!(b.advance(1), Ok(()));
+  ///
+  /// assert_eq!(b.peek_le(0), Ok(0x0302u16));
+  /// assert_eq!(b.peek_le(1), Ok(0x0403u16));
+  /// assert_eq!(b.peek_le::<u16>(2), Err(()));
+  /// ```
   fn peek_le<T: Prim>(&self, pos: uint) -> Result<T, ()>;
 
   fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()>;
