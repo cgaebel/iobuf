@@ -399,7 +399,7 @@ impl<'a> RawIobuf<'a> {
   unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) {
     let dst: raw::Slice<u8> = mem::transmute(dst);
     let (dst, len) = (dst.data as *mut u8, dst.len);
-    let src: &[u8] = (*self.buf.get()).as_slice().slice_from(pos);
+    let src: &[u8] = (*self.buf.get()).as_slice().slice_from(self.lo+pos);
     let src: raw::Slice<u8> = mem::transmute(src);
     let src = src.data;
     ptr::copy_memory(dst, src, len);
@@ -888,6 +888,29 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn peek_le<T: Prim>(&self, pos: uint) -> Result<T, ()>;
 
+  /// Reads bytes, starting from the front of the window, into the supplied
+  /// buffer. Either the entire buffer is filled, or an error is returned
+  /// because bytes outside the window were requested.
+  ///
+  /// After the bytes have been read, the window will be moved to no longer
+  /// include then.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// use std::iter::AdditiveIterator;
+  ///
+  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  ///
+  /// let mut b = ROIobuf::from_slice(&data);
+  /// let mut tgt3 = [ 0x00, 0x00, 0x00 ];
+  /// let mut tgt1 = [ 0x00 ];
+  ///
+  /// assert_eq!(b.consume(&mut tgt3), Ok(()));
+  /// assert_eq!(tgt3.iter().map(|&x| x).sum(), 6);
+  /// assert_eq!(b.consume(&mut tgt3), Err(()));
+  /// assert_eq!(b.consume(&mut tgt1), Ok(()));
+  /// assert_eq!(tgt1[0], 4);
+  /// ```
   fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()>;
   fn consume_be<T: Prim>(&mut self) -> Result<T, ()>;
   fn consume_le<T: Prim>(&mut self) -> Result<T, ()>;
