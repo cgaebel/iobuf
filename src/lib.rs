@@ -837,9 +837,11 @@ pub trait Iobuf: Clone + Show {
   /// use std::iter::AdditiveIterator;
   ///
   /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  ///
   /// let mut b = ROIobuf::from_slice(&data);
   /// let mut tgt4 = [ 0x00, 0x00, 0x00, 0x00 ];
   /// let mut tgt3 = [ 0x00, 0x00, 0x00 ];
+  ///
   /// assert_eq!(b.peek(0, &mut tgt4), Ok(()));
   /// assert_eq!(tgt4.iter().map(|&x| x).sum(), 10);
   /// assert_eq!(b.peek(1, &mut tgt3), Ok(()));
