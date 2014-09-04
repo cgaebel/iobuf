@@ -397,9 +397,12 @@ impl<'a> RawIobuf<'a> {
   }
 
   unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) {
-    for (i, tgt) in dst.mut_iter().enumerate() {
-      *tgt = self.get_at(pos+i);
-    }
+    let dst: raw::Slice<u8> = mem::transmute(dst);
+    let (dst, len) = (dst.data as *mut u8, dst.len);
+    let src: &[u8] = (*self.buf.get()).as_slice().slice_from(pos);
+    let src: raw::Slice<u8> = mem::transmute(src);
+    let src = src.data;
+    ptr::copy_memory(dst, src, len);
   }
 
   unsafe fn unsafe_peek_be<T: Prim>(&self, pos: uint) -> T {
@@ -813,6 +816,22 @@ pub trait Iobuf: Clone + Show {
   /// `After:  [           xx]`
   fn flip_hi(&mut self);
 
+  /// [TODO]
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  /// use std::iter::AdditiveIterator;
+  ///
+  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  /// let mut b = ROIobuf::from_slice(&data);
+  /// let mut tgt4 = [ 0x00, 0x00, 0x00, 0x00 ];
+  /// let mut tgt3 = [ 0x00, 0x00, 0x00 ];
+  /// assert_eq!(b.peek(0, &mut tgt4), Ok(()));
+  /// assert_eq!(tgt4.iter().map(|&x| x).sum(), 10);
+  /// assert_eq!(b.peek(1, &mut tgt3), Ok(()));
+  /// assert_eq!(tgt3.iter().map(|&x| x).sum(), 9);
+  /// assert_eq!(b.peek(1, &mut tgt4), Err(()));
+  /// ```
   fn peek(&self, pos: uint, dst: &mut [u8]) -> Result<(), ()>;
   fn peek_be<T: Prim>(&self, pos: uint) -> Result<T, ()>;
   fn peek_le<T: Prim>(&self, pos: uint) -> Result<T, ()>;
