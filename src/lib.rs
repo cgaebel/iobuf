@@ -795,8 +795,9 @@ pub trait Iobuf: Clone + Show {
   /// If the area of the limits is denoted with `[]` and the area of the window
   /// is denoted with `x`, then the `flip_lo` looks like:
   ///
-  /// Before: `[       xxxx  ]`
-  /// After:  `[xxxxxxx      ]`
+  /// `Before: [       xxxx  ]`
+  ///
+  /// `After:  [xxxxxxx      ]`
   fn flip_lo(&mut self);
 
   /// Sets the window to range from the upper bound of the old window to the
@@ -807,8 +808,9 @@ pub trait Iobuf: Clone + Show {
   /// If the area of the limits is denoted with `[]` and the area of the window
   /// is denoted with `x`, then the `flip_lo` looks like:
   ///
-  /// Before: `[       xxxx  ]`
-  /// Before: `[           xx]`
+  /// `Before: [       xxxx  ]`
+  ///
+  /// `After:  [           xx]`
   fn flip_hi(&mut self);
 
   fn peek(&self, pos: uint, dst: &mut [u8]) -> Result<(), ()>;
