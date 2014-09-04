@@ -912,7 +912,49 @@ pub trait Iobuf: Clone + Show {
   /// assert_eq!(tgt1[0], 4);
   /// ```
   fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()>;
+
+  /// Reads a big-endian primitive at a given offset from the beginning of the
+  /// window.
+  ///
+  /// After the primitive has been read, the window will be moved such that it
+  /// is no longer included.
+  ///
+  /// An error is returned if bytes outside of the window were requested.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// assert_eq!(b.advance(1), Ok(()));
+  ///
+  /// assert_eq!(b.consume_be(), Ok(0x0203u16));
+  /// assert_eq!(b.consume_be::<u16>(), Err(()));
+  /// assert_eq!(b.consume_be(), Ok(0x04u8));
+  /// ```
   fn consume_be<T: Prim>(&mut self) -> Result<T, ()>;
+
+  /// Reads a little-endian primitive at a given offset from the beginning of
+  /// the window.
+  ///
+  /// After the primitive has been read, the window will be moved such that it
+  /// is no longer included.
+  ///
+  /// An error is returned if bytes outside of the window were requested.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// assert_eq!(b.advance(1), Ok(()));
+  ///
+  /// assert_eq!(b.consume_le(), Ok(0x0302u16));
+  /// assert_eq!(b.consume_le::<u16>(), Err(()));
+  /// assert_eq!(b.consume_le(), Ok(0x04u8));
+  /// ```
   fn consume_le<T: Prim>(&mut self) -> Result<T, ()>;
 
   /// Returns an `Err(())` if the `len` bytes, starting at `pos`, are not all
