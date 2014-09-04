@@ -22,4 +22,4 @@ Iobufs are cheap to `clone`, since the buffers are refcounted. Use this to
 construct multiple views into the same data.
 
 This a pretty much a direct port of Jane Street Core's
-(Iobufs)(https://github.com/janestreet/core/blob/master/lib/iobuf.mli).
+[Iobuf](https://github.com/janestreet/core/blob/master/lib/iobuf.mli) module.
