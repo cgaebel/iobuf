@@ -965,6 +965,38 @@ pub trait Iobuf: Clone + Show {
   /// `check_range`, followed by unsafe accesses. If you do unsafe accesses
   /// without a `check_range`, there will likely be reliability and security
   /// issues with your application.
+  ///
+  /// Below is a correct usage of `check_range` to minimize bounds checks:
+  ///
+  /// ```
+  /// use std::result::{Result,Ok};
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// // [ number of byte buffers, size of first byte buffer, ...bytes, etc. ]
+  /// let data = [ 0x02, 0x02, 0x55, 0x66, 0x03, 0x11, 0x22, 0x33 ];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// // Returns the sum of the bytes, omitting as much bounds checking as
+  /// // possible while still maintaining safety.
+  /// fn parse<B: Iobuf>(b: &mut B) -> Result<uint, ()> {
+  ///   unsafe {
+  ///     let mut sum = 0u;
+  ///
+  ///     let num_buffers: u8 = try!(b.consume_be());
+  ///     for _ in range(0, num_buffers) {
+  ///       let len: u8 = try!(b.consume_be());
+  ///       try!(b.check_range(0, len as uint));
+  ///       for _ in range(0, len) {
+  ///         sum += b.unsafe_consume_be::<u8>() as uint;
+  ///       }
+  ///     }
+  ///
+  ///     Ok(sum)
+  ///   }
+  /// }
+  ///
+  /// assert_eq!(parse(&mut b), Ok(0x55 + 0x66 + 0x11 + 0x22 + 0x33));
+  /// ```
   fn check_range(&self, pos: uint, len: uint) -> Result<(), ()>;
 
   /// The same as `check_range`, but fails if the bounds check returns `Err(())`.
