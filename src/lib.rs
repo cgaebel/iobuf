@@ -1,13 +1,55 @@
+//! A contiguous region of bytes, useful for I/O operations.
+//!
+//! An Iobuf consists of:
+//!
+//!   - buffer
+//!   - limits (a subrange of the buffer)
+//!   - window (a subrange of the limits)
+//!
+//! All iobuf operations are restricted to operate within the limits. Initially,
+//! the window of an Iobuf is identical to the limits. If you have an `&mut` to
+//! an Iobuf, you may change the window and limits. If you only have a `&`, you
+//! may not. Similarly, if you have a `RWIobuf`, you may modify the data in the
+//! buffer. If you have a `ROIobuf`, you may not.
+//!
+//! The limits can be `narrow`ed, but never widened. The window may be set to
+//! any arbitrary subrange of the limits.
+//!
+//! Iobufs are cheap to `clone`, since the buffers are refcounted. Use this to
+//! construct multiple views into the same data.
 use std::fmt;
 use std::iter;
 use std::mem;
-use std::num;
 use std::num::Zero;
 use std::ptr;
 use std::raw;
 use std::rc::Rc;
-use std::result;
+use std::result::{Result,Ok,Err};
 
+/// A generic, over all built-in number types. Think of it as [u,i][8,16,32,64].
+pub trait Prim
+  : Copy
+  + Zero
+  + Shl<uint, Self>
+  + Shr<uint, Self>
+  + BitOr<Self, Self>
+  + BitAnd<Self, Self>
+  + FromPrimitive
+  + ToPrimitive
+{}
+
+impl Prim for i8  {}
+impl Prim for u8  {}
+impl Prim for i16 {}
+impl Prim for u16 {}
+impl Prim for i32 {}
+impl Prim for u32 {}
+impl Prim for i64 {}
+impl Prim for u64 {}
+
+/// Both owned vectors of memory and slices of memory are supported.
+/// In the case of a `ROIobuf`, although there is mutable slice access, it is
+/// never used.
 enum MaybeOwnedBuffer<'a> {
   OwnedBuffer(Vec<u8>),
   BorrowedBuffer(&'a mut [u8]),
@@ -15,7 +57,7 @@ enum MaybeOwnedBuffer<'a> {
 
 impl<'a> MaybeOwnedBuffer<'a> {
   #[inline]
-  fn as_slice(&self) -> &[u8] {
+  unsafe fn as_slice(&self) -> &[u8] {
     match self {
       &OwnedBuffer(ref v)    => v.as_slice(),
       &BorrowedBuffer(ref s) => s.as_slice(),
@@ -47,11 +89,15 @@ impl<'a> MaybeOwnedBuffer<'a> {
   }
 }
 
+/// By factoring out the range check, we prevent rustc from emitting a ton of
+/// formatting code in our tight, little functions.
 #[cold]
 fn bad_range(pos: uint, len: uint) {
   fail!("Iobuf got invalid range: pos={}, len={}", pos, len);
 }
 
+/// A `RawIobuf` is the representation of both a `RWIobuf` and a `ROIobuf`.
+/// It is very cheap to clone, as the backing buffer is shared and refcounted.
 #[deriving(Clone)]
 struct RawIobuf<'a> {
   buf:    Rc<MaybeOwnedBuffer<'a>>,
@@ -96,18 +142,53 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
-  fn check_range(&self, pos: uint, len: uint) {
+  fn check_range(&self, pos: uint, len: uint) -> Result<(), ()> {
     if pos + len <= self.len() {
-      bad_range(pos, len);
+      Ok(())
+    } else {
+      Err(())
+    }
+  }
+
+  #[inline(always)]
+  fn check_range_fail(&self, pos: uint, len: uint) {
+    match self.check_range(pos, len) {
+      Ok(()) => {},
+      Err(()) => bad_range(pos, len),
     }
   }
 
   #[inline]
-  fn sub(&mut self, pos: uint, len: uint) {
-    self.check_range(pos, len);
-    self.hi     = self.lo + len;
-    self.hi_max = self.hi;
-    self.lo     = self.lo + pos;
+  fn sub(&mut self, pos: uint, len: uint) -> Result<(), ()> {
+    unsafe {
+      try!(self.check_range(pos, len));
+      Ok(self.unsafe_sub(pos, len))
+    }
+  }
+
+  #[inline]
+  unsafe fn unsafe_sub(&mut self, pos: uint, len: uint) {
+    let lo      = self.lo + pos;
+    let hi      = lo + len;
+    self.lo_min = lo;
+    self.lo     = lo;
+    self.hi     = hi;
+    self.hi_max = hi;
+  }
+
+  /// Both the limits and the window are [lo, hi).
+  fn set_limits_and_window(&mut self, limits: (uint, uint), window: (uint, uint)) -> Result<(), ()> {
+    let (new_lo_min, new_hi_max) = limits;
+    let (new_lo, new_hi) = window;
+    if new_lo_min < self.lo_min { return Err(()); }
+    if new_hi_max > self.hi_max { return Err(()); }
+    if new_lo     < self.lo     { return Err(()); }
+    if new_hi     > self.hi     { return Err(()); }
+    self.lo_min = new_lo_min;
+    self.lo     = new_lo;
+    self.hi     = new_hi;
+    self.hi_max = new_hi_max;
+    Ok(())
   }
 
   #[inline(always)]
@@ -132,10 +213,11 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
-  fn advance(&mut self, len: uint) {
+  fn advance(&mut self, len: uint) -> Result<(), ()> {
     unsafe {
-      self.check_range(0, len);
+      try!(self.check_range(0, len));
       self.unsafe_advance(len);
+      Ok(())
     }
   }
 
@@ -145,16 +227,16 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
-  fn resize(&mut self, len: uint) {
-    unsafe {
-      self.check_range(0, len);
-      self.unsafe_resize(len);
-    }
+  fn resize(&mut self, len: uint) -> Result<(), ()> {
+    let new_hi = self.lo + len;
+    if new_hi > self.hi_max { return Err(()) }
+    self.hi = new_hi;
+    Ok(())
   }
 
   #[inline(always)]
   unsafe fn unsafe_resize(&mut self, len: uint) {
-    self.hi += len;
+    self.hi = self.lo + len;
   }
 
   #[inline(always)]
@@ -184,15 +266,18 @@ impl<'a> RawIobuf<'a> {
   fn compact(&mut self) {
     unsafe {
       let s: raw::Slice<u8> = mem::transmute(self.buf.as_mut_slice());
+      let len = self.len();
       ptr::copy_memory(
         s.data as *mut u8,
         s.data.offset(self.lo as int) as *const u8,
-        self.len());
+        len);
+      self.lo = self.lo_min + len;
+      self.hi = self.hi_max;
     }
   }
 
   #[inline]
-  fn as_slice(&self) -> &[u8] {
+  unsafe fn as_slice(&self) -> &[u8] {
     self.buf.as_slice().slice(self.lo, self.hi)
   }
 
@@ -202,223 +287,232 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
-  fn peek(&self, dst: &mut [u8]) {
+  fn peek(&self, pos: uint, dst: &mut [u8]) -> Result<(), ()> {
     unsafe {
-      self.check_range(0, dst.len());
-      self.unsafe_peek(dst)
+      try!(self.check_range(pos, dst.len()));
+      self.unsafe_peek(pos, dst);
+      Ok(())
     }
   }
 
   #[inline(always)]
-  fn peek_be<T: Copy + Zero + Shl<uint, T> + BitOr<T, T> + FromPrimitive>(&self) -> T {
+  fn peek_be<T: Prim>(&self, pos: uint) -> Result<T, ()> {
     unsafe {
-      self.check_range(0, mem::size_of::<T>());
-      self.unsafe_peek_be::<T>()
+      try!(self.check_range(pos, mem::size_of::<T>()));
+      Ok(self.unsafe_peek_be::<T>(pos))
     }
   }
 
   #[inline(always)]
-  fn peek_le<T: Copy + Zero + Shl<uint, T> + Shr<uint, T> + BitOr<T, T> + FromPrimitive>(&self) -> T {
+  fn peek_le<T: Prim>(&self, pos: uint) -> Result<T, ()> {
     unsafe {
-      self.check_range(0, mem::size_of::<T>());
-      self.unsafe_peek_le::<T>()
+      try!(self.check_range(pos, mem::size_of::<T>()));
+      Ok(self.unsafe_peek_le::<T>(pos))
     }
   }
 
   #[inline(always)]
-  fn poke(&self, src: &[u8]) {
+  fn poke(&self, pos: uint, src: &[u8]) -> Result<(), ()> {
     unsafe {
-      self.check_range(0, src.len());
-      self.unsafe_poke(src)
+      try!(self.check_range(pos, src.len()));
+      self.unsafe_poke(pos, src);
+      Ok(())
     }
   }
 
   #[inline(always)]
-  fn poke_be<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&self, t: T) {
+  fn poke_be<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> {
     unsafe {
-      self.check_range(0, mem::size_of::<T>());
-      self.unsafe_poke_be(t)
+      try!(self.check_range(pos, mem::size_of::<T>()));
+      self.unsafe_poke_be(pos, t);
+      Ok(())
     }
   }
 
   #[inline(always)]
-  fn poke_le<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&self, t: T) {
+  fn poke_le<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> {
     unsafe {
-      self.check_range(0, mem::size_of::<T>());
-      self.unsafe_poke_le(t)
+      try!(self.check_range(pos, mem::size_of::<T>()));
+      self.unsafe_poke_le(pos, t);
+      Ok(())
     }
   }
 
   #[inline(always)]
-  fn fill(&mut self, src: &[u8]) {
+  fn fill(&mut self, src: &[u8]) -> Result<(), ()> {
     unsafe {
-      self.check_range(0, src.len());
-      self.unsafe_fill(src)
+      try!(self.check_range(0, src.len()));
+      self.unsafe_fill(src);
+      Ok(())
     }
   }
 
   #[inline(always)]
-  fn fill_be<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&mut self, t: T) {
+  fn fill_be<T: Prim>(&mut self, t: T) -> Result<(), ()> {
     unsafe {
-      self.check_range(0, mem::size_of::<T>());
-      self.unsafe_fill_be(t)
+      try!(self.check_range(0, mem::size_of::<T>()));
+      self.unsafe_fill_be(t);
+      Ok(())
     }
   }
 
   #[inline(always)]
-  fn fill_le<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&mut self, t: T) {
+  fn fill_le<T: Prim>(&mut self, t: T) -> Result<(), ()> {
     unsafe {
-      self.check_range(0, mem::size_of::<T>());
-      self.unsafe_fill_le(t) // unsafe fillet? om nom.
+      try!(self.check_range(0, mem::size_of::<T>()));
+      self.unsafe_fill_le(t); // unsafe fillet? om nom.
+      Ok(())
     }
   }
 
   #[inline(always)]
-  fn consume(&mut self, dst: &mut [u8]) {
+  fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()> {
     unsafe {
-      self.check_range(0, dst.len());
-      self.unsafe_consume(dst)
+      try!(self.check_range(0, dst.len()));
+      self.unsafe_consume(dst);
+      Ok(())
     }
   }
 
   #[inline(always)]
-  fn consume_le<T: Copy + Zero + Shl<uint, T> + Shr<uint, T> + BitOr<T, T> + FromPrimitive>(&mut self) -> T {
+  fn consume_le<T: Prim>(&mut self) -> Result<T, ()> {
     unsafe {
-      self.check_range(0, mem::size_of::<T>());
-      self.unsafe_consume_le()
-    }
-  }
-
-  fn consume_be<T: Copy + Zero + Shl<uint, T> + BitOr<T, T> + FromPrimitive>(&mut self) -> T {
-    unsafe {
-      self.check_range(0, mem::size_of::<T>());
-      self.unsafe_consume_be()
+      try!(self.check_range(0, mem::size_of::<T>()));
+      Ok(self.unsafe_consume_le())
     }
   }
 
   #[inline(always)]
-  unsafe fn get_at<T: FromPrimitive>(&self, idx: uint) -> T {
+  fn consume_be<T: Prim>(&mut self) -> Result<T, ()> {
+    unsafe {
+      try!(self.check_range(0, mem::size_of::<T>()));
+      Ok(self.unsafe_consume_be())
+    }
+  }
+
+  #[inline(always)]
+  unsafe fn get_at<T: Prim>(&self, idx: uint) -> T {
     FromPrimitive::from_u8(
       *self.buf.as_slice().unsafe_get(self.lo + idx))
     .unwrap()
   }
 
   #[inline(always)]
-  unsafe fn set_at<T: ToPrimitive>(&self, idx: uint, val: T) {
+  unsafe fn set_at<T: Prim>(&self, idx: uint, val: T) {
     self.buf.as_mut_slice().unsafe_set(self.lo + idx, val.to_u8().unwrap())
   }
 
-  unsafe fn unsafe_peek(&self, dst: &mut [u8]) {
+  unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) {
     for (i, tgt) in dst.mut_iter().enumerate() {
-      *tgt = self.get_at(i);
+      *tgt = self.get_at(pos+i);
     }
   }
 
-  unsafe fn unsafe_peek_be<T: Copy + Zero + Shl<uint, T> + BitOr<T, T> + FromPrimitive>(&self) -> T {
+  unsafe fn unsafe_peek_be<T: Prim>(&self, pos: uint) -> T {
     let bytes = mem::size_of::<T>();
     let mut x: T = Zero::zero();
 
     for i in iter::range(0, bytes) {
-      x = self.get_at::<T>(i) | (x << 8);
+      x = self.get_at::<T>(pos+i) | (x << 8);
     }
 
     x
   }
 
-  unsafe fn unsafe_peek_le<T: Copy + Zero + Shl<uint, T> + Shr<uint, T> + BitOr<T, T> + FromPrimitive>(&self) -> T {
+  unsafe fn unsafe_peek_le<T: Prim>(&self, pos: uint) -> T {
     let bytes = mem::size_of::<T>();
     let mut x: T = Zero::zero();
 
     for i in iter::range(0, bytes) {
-      x = (x >> 8) | (self.get_at::<T>(i) << ((bytes - 1)* 8));
+      x = (x >> 8) | (self.get_at::<T>(pos+i) << ((bytes - 1)* 8));
     }
 
     x
   }
 
-  unsafe fn unsafe_poke(&self, src: &[u8]) {
+  unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) {
     for (i, &src) in src.iter().enumerate() {
-      self.set_at(i, src);
+      self.set_at(pos+i, src);
     }
   }
 
-  unsafe fn unsafe_poke_be<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&self, t: T) {
+  unsafe fn unsafe_poke_be<T: Prim>(&self, pos: uint, t: T) {
     let bytes = mem::size_of::<T>();
 
     let msk: T = FromPrimitive::from_u8(0xFFu8).unwrap();
 
     for i in iter::range(0, bytes) {
-      self.set_at(i, t << ((bytes-i-1)*8) & msk);
+      self.set_at(pos+i, t << ((bytes-i-1)*8) & msk);
     }
   }
 
-  unsafe fn unsafe_poke_le<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&self, t: T) {
+  unsafe fn unsafe_poke_le<T: Prim>(&self, pos: uint, t: T) {
     let bytes = mem::size_of::<T>();
 
     let msk: T = FromPrimitive::from_u8(0xFFu8).unwrap();
 
     for i in iter::range(0, bytes) {
-      self.set_at(i, t << (i*8) & msk);
+      self.set_at(pos+i, t << (i*8) & msk);
     }
   }
 
   #[inline(always)]
   unsafe fn unsafe_fill(&mut self, src: &[u8]) {
-    self.unsafe_poke(src);
+    self.unsafe_poke(0, src);
     self.lo += src.len();
   }
 
   #[inline(always)]
-  unsafe fn unsafe_fill_be<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&mut self, t: T) {
-    self.unsafe_poke_be(t);
+  unsafe fn unsafe_fill_be<T: Prim>(&mut self, t: T) {
+    self.unsafe_poke_be(0, t);
     self.lo += mem::size_of::<T>();
   }
 
   #[inline(always)]
-  unsafe fn unsafe_fill_le<T: Copy + Shl<uint, T> + BitAnd<T, T> + FromPrimitive + ToPrimitive>(&mut self, t: T) {
-    self.unsafe_poke_le(t);
+  unsafe fn unsafe_fill_le<T: Prim>(&mut self, t: T) {
+    self.unsafe_poke_le(0, t);
     self.lo += mem::size_of::<T>();
   }
 
   #[inline(always)]
   unsafe fn unsafe_consume(&mut self, dst: &mut [u8]) {
-    self.unsafe_peek(dst);
+    self.unsafe_peek(0, dst);
     self.lo += dst.len();
   }
 
   #[inline(always)]
-  unsafe fn unsafe_consume_le<T: Copy + Zero + Shl<uint, T> + Shr<uint, T> + BitOr<T, T> + FromPrimitive>(&mut self) -> T {
-    let ret = self.unsafe_peek_le::<T>();
+  unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T {
+    let ret = self.unsafe_peek_le::<T>(0);
     self.lo += mem::size_of::<T>();
     ret
   }
 
   #[inline(always)]
-  unsafe fn unsafe_consume_be<T: Copy + Zero + Shl<uint, T> + BitOr<T, T> + FromPrimitive>(&mut self) -> T {
-    let ret = self.unsafe_peek_be::<T>();
+  unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T {
+    let ret = self.unsafe_peek_be::<T>(0);
     self.lo += mem::size_of::<T>();
     ret
   }
 
   fn show_hex(&self, f: &mut fmt::Formatter, half_line: &[u8])
-      -> result::Result<(), fmt::FormatError> {
+      -> Result<(), fmt::FormatError> {
     for &x in half_line.iter() {
       try!(write!(f, "{:02x} ", x));
     }
-    result::Ok(())
+    Ok(())
   }
 
   fn show_ascii(&self, f: &mut fmt::Formatter, half_line: &[u8])
-      -> result::Result<(), fmt::FormatError> {
+      -> Result<(), fmt::FormatError> {
      for &x in half_line.iter() {
        let c = if x >= 32 && x < 126 { x as char } else { '.' };
        try!(write!(f, "{}", c));
      }
-     result::Ok(())
+     Ok(())
   }
 
   fn show_line(&self, f: &mut fmt::Formatter, line_number: uint, chunk: &[u8])
-      -> result::Result<(), fmt::FormatError> {
+      -> Result<(), fmt::FormatError> {
 
     if      self.len() <= 1u <<  8 { try!(write!(f, "0x{:02x}",  line_number * 8)) }
     else if self.len() <= 1u << 16 { try!(write!(f, "0x{:04x}",  line_number * 8)) }
@@ -456,31 +550,108 @@ impl<'a> RawIobuf<'a> {
     write!(f, "\n")
   }
 
-  fn show(&self, f: &mut fmt::Formatter, ty: &str) -> result::Result<(), fmt::FormatError> {
+  fn show(&self, f: &mut fmt::Formatter, ty: &str) -> Result<(), fmt::FormatError> {
     try!(write!(f, "{} IObuf, raw length={}, limits=[{},{}), bounds=[{},{})\n",
-                ty, self.buf.as_slice().len(), self.lo_min, self.hi_max, self.lo, self.hi));
+                ty, unsafe { self.buf.as_slice().len() }, self.lo_min, self.hi_max, self.lo, self.hi));
 
     if self.lo == self.hi { return write!(f, "<empty buffer>"); }
 
-    let b = self.buf.as_slice().slice(self.lo, self.hi);
+    let b = unsafe { self.as_slice() };
 
     for (i, c) in b.chunks(8).enumerate() {
       try!(self.show_line(f, i, c));
     }
 
-    result::Ok(())
+    Ok(())
   }
 }
 
+/// Have your functions take a generic IObuf whenever they don't modify the
+/// window or bounds. This way, the functions can be used with both `ROIobuf`s
+/// and `RWIobuf`s.
+///
+/// `peek` and `poke` access a value at a position relative to the start of the
+/// window without advancing, and are meant to be used with `try!`.
+///
+/// A suffix `_be` means the data will be read big-endian. A suffix `_le` means
+/// the data will be read little-endian.
+///
+/// The `unsafe_` prefix means the function omits bounds checks. Misuse can
+/// easily cause security issues. Be careful!
 pub trait Iobuf: Clone + fmt::Show {
-  // read-only methods on iobufs go here.
+  /// Returns the size of the window.
+  fn len(&self) -> uint;
+
+  /// Returns the size of the limits subrange. The capacity of an iobuf can be
+  /// reduced via `narrow`.
+  fn cap(&self) -> uint;
+
+  /// `true` if `len() == 0`.
+  fn is_empty(&self) -> bool;
+
+  /// Reads the data in the window as an immutable slice. Note that `Peek`s
+  /// and `Poke`s into the iobuf will change the contents of the slice, even
+  /// though it advertises itself as immutable. Therefore, this function is
+  /// `unsafe`.
+  unsafe fn as_slice(&self) -> &[u8];
+
+  fn peek(&self, pos: uint, dst: &mut [u8]) -> Result<(), ()>;
+  fn peek_be<T: Prim>(&self, pos: uint) -> Result<T, ()>;
+  fn peek_le<T: Prim>(&self, pos: uint) -> Result<T, ()>;
+
+  fn poke(&self, pos: uint, src: &[u8]) -> Result<(), ()>;
+  fn poke_be<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()>;
+  fn poke_le<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()>;
+
+  /// Returns an `Err(())` if the `len` bytes, starting at `pos`, are not all
+  /// in the window. To be used with the `try!` macro.
+  ///
+  /// Make sure you use this in conjunction with the `unsafe` combinators. It
+  /// is recommended you minimize your bounds checks by doing it once with
+  /// `check_range`, followed by unsafe accesses. If you do unsafe accesses
+  /// without a `check_range`, there will likely be reliability and security
+  /// issues with your application.
+  fn check_range(&self, pos: uint, len: uint) -> Result<(), ()>;
+
+  /// The same as `check_range`, but fails if the bounds check returns `Err(())`.
+  fn check_range_fail(&self, pos: uint, len: uint);
+
+  unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]);
+  unsafe fn unsafe_peek_be<T: Prim>(&self, pos: uint) -> T;
+  unsafe fn unsafe_peek_le<T: Prim>(&self, pos: uint) -> T;
+
+  unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]);
+  unsafe fn unsafe_poke_be<T: Prim>(&self, pos: uint, t: T);
+  unsafe fn unsafe_poke_le<T: Prim>(&self, pos: uint, t: T);
 }
 
+/// An `Iobuf` that cannot write into the buffer, but all read-only operations
+/// are supported. It is possible to get a `RWIobuf` by performing a `deep_clone`
+/// of the Iobuf, but this is extremely inefficient.
+///
+/// If your function only needs to do read-only operations on an Iobuf, consider
+/// taking a generic `Iobuf` trait instead. That way, it can be used with either
+/// a ROIobuf or a RWIobuf, generically.
 #[deriving(Clone)]
 pub struct ROIobuf<'a> {
   raw: RawIobuf<'a>,
 }
 
+/// An `Iobuf` which can read and write into a buffer.
+///
+/// Iobufs may be `cloned` cheaply. When cloned, the data itself is shared and
+/// refcounted, and a new copy of the limits and window is made. This can be
+/// used to construct multiple views into the same buffer.
+///
+/// `fill` and `consume` access a value at a position relative to the start of
+/// the window, and advance the window appropriately They are meant to be used
+/// with `try!`.
+///
+/// A suffix `_be` means the data will be read big-endian. A suffix `_le` means
+/// the data will be read little-endian.
+///
+/// The `unsafe_` prefix means the function omits bounds checks. Misuse can
+/// easily cause security issues. Be careful!
 #[deriving(Clone)]
 pub struct RWIobuf<'a> {
   raw: RawIobuf<'a>,
@@ -506,6 +677,23 @@ impl<'a> ROIobuf<'a> {
   pub fn from_slice<'a>(s: &'a [u8]) -> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_slice(s) }
   }
+
+  #[inline]
+  pub fn deep_clone(&self) -> RWIobuf<'static> {
+    RWIobuf {
+      raw: RawIobuf {
+        buf:
+          Rc::new(OwnedBuffer(match self.raw.buf.deref() {
+            &OwnedBuffer(ref v) => v.clone(),
+            &BorrowedBuffer(ref s) => FromIterator::from_iter(s.iter().map(|&x| x)),
+          })),
+        lo_min: self.raw.lo_min,
+        lo:     self.raw.lo,
+        hi:     self.raw.hi,
+        hi_max: self.raw.hi_max,
+      }
+    }
+  }
 }
 
 impl<'a> RWIobuf<'a> {
@@ -528,24 +716,242 @@ impl<'a> RWIobuf<'a> {
   pub fn from_slice<'a>(s: &'a mut [u8]) -> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::from_slice(s) }
   }
+
+  /// Get a read-only copy of this Iobuf. This is a very cheap operation, as the
+  /// backing buffers are shared.
+  #[inline]
+  pub fn read_only(&self) -> ROIobuf<'a> {
+    ROIobuf { raw: self.raw.clone() }
+  }
+
+  /// Changes the iobuf's limits and bounds to the subrange specified by
+  /// `pos` and `len`, which must lie within the current window.
+  ///
+  /// If you want to slice from the start, set `pos` to `0`.
+  ///
+  /// If you want to slice to the end, set `len` to `self.len() - pos`.
+  #[inline(always)]
+  pub fn sub(&mut self, pos: uint, len: uint) -> Result<(), ()> { self.raw.sub(pos, len) }
+
+  /// The same as `sub`, but no bounds checks are performed. You should probably
+  /// just use `sub`.
+  #[inline(always)]
+  pub unsafe fn unsafe_sub(&mut self, pos: uint, len: uint) { self.raw.unsafe_sub(pos, len) }
+
+  /// Overrides the existing limits and window of the Iobuf, returning `Err(())`
+  /// if attempting to widen either of them.
+  #[inline(always)]
+  pub fn set_limits_and_window(&mut self, limits: (uint, uint), window: (uint, uint)) -> Result<(), ()> { self.raw.set_limits_and_window(limits, window) }
+
+  /// Sets the limits to the current window.
+  #[inline(always)]
+  pub fn narrow(&mut self) { self.raw.narrow() }
+
+  /// Advances the lower bound of the window by `len`. `Err(())` will be
+  /// returned if you advance past the upper bound of the window.
+  #[inline(always)]
+  pub fn advance(&mut self, len: uint) -> Result<(), ()> { self.raw.advance(len) }
+
+  /// Advances the lower bound of the window by `len`. No bounds checking will
+  /// be performed.
+  #[inline(always)]
+  pub unsafe fn unsafe_advance(&mut self, len: uint) { self.raw.unsafe_advance(len) }
+
+  /// Sets the length of the window, provided it does not exceed the limits.
+  #[inline(always)]
+  pub fn resize(&mut self, len: uint) -> Result<(), ()> { self.raw.resize(len) }
+
+  /// Sets the length of the window. No bounds checking will be performed.
+  #[inline(always)]
+  pub unsafe fn unsafe_resize(&mut self, len: uint) { self.raw.unsafe_resize(len) }
+
+  /// Sets the lower bound of the window to the lower limit.
+  #[inline(always)]
+  pub fn rewind(&mut self) { self.raw.rewind() }
+
+  /// Sets the window to the limits.
+  ///
+  /// "Take it to the limit..."
+  #[inline(always)]
+  pub fn reset(&mut self) { self.raw.reset() }
+
+  /// Sets the window to range from the lower limit to the lower bound of the
+  /// old window. This is typically called after a series of `Fill`s, to
+  /// reposition the window in preparation to `Consume` the newly written data.
+  ///
+  /// If the area of the limits is denoted with `[]` and the area of the window
+  /// is denoted with `x`, then the `flip_lo` looks like:
+  ///
+  /// Before: `[       xxxx  ]`
+  /// After:  `[xxxxxxx      ]`
+  #[inline(always)]
+  pub fn flip_lo(&mut self) { self.raw.flip_lo() }
+
+  /// Sets the window to range from the upper bound of the old window to the
+  /// upper limit. This is a dual to `flip_lo`, and is typically called when the
+  /// data in the current (narrowed) window has been processed and the window
+  /// needs to be positioned over the remaining data in the buffer.
+  ///
+  /// If the area of the limits is denoted with `[]` and the area of the window
+  /// is denoted with `x`, then the `flip_lo` looks like:
+  ///
+  /// Before: `[       xxxx  ]`
+  /// Before: `[           xx]`
+  #[inline(always)]
+  pub fn flip_hi(&mut self) { self.raw.flip_hi() }
+
+  /// Copies data from the window to the lower limit fo the iobuf and sets the
+  /// window to range from the end of the copied data to the upper limit. This
+  /// is typically called after a series of `Consume`s to save unread data and
+  /// prepare for the next series of `Fill`s and `flip_lo`s.
+  #[inline(always)]
+  pub fn compact(&mut self) { self.raw.compact() }
+
+  /// Reads the data in the window as a mutable slice. Note that since `&mut`
+  /// in rust really means `&unique`, this function lies. There can exist
+  /// multiple slices of the same data. Therefore, this function is unsafe.
+  #[inline(always)]
+  pub unsafe fn as_mut_slice(&mut self) -> &mut [u8] { self.raw.as_mut_slice() }
+
+  #[inline(always)]
+  pub fn fill(&mut self, src: &[u8]) -> Result<(), ()> { self.raw.fill(src) }
+
+  #[inline(always)]
+  pub fn fill_be<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_be(t) }
+
+  #[inline(always)]
+  pub unsafe fn fill_le<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
+
+  #[inline(always)]
+  pub fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()> { self.raw.consume(dst) }
+
+  #[inline(always)]
+  pub fn consume_le<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_le::<T>() }
+
+  #[inline(always)]
+  pub fn consume_be<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_be::<T>() }
+
+  #[inline(always)]
+  pub unsafe fn unsafe_fill(&mut self, src: &[u8]) { self.raw.unsafe_fill(src) }
+
+  #[inline(always)]
+  pub unsafe fn unsafe_fill_be<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_be(t) }
+
+  #[inline(always)]
+  pub unsafe fn unsafe_fill_le<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_le(t) }
+
+  #[inline(always)]
+  pub unsafe fn unsafe_consume(&mut self, dst: &mut [u8]) { self.raw.unsafe_consume(dst) }
+
+  #[inline(always)]
+  pub unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
+
+  #[inline(always)]
+  pub unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_be::<T>() }
 }
 
 impl<'a> Iobuf for ROIobuf<'a> {
-  // ...
+  #[inline(always)]
+  fn len(&self) -> uint { self.raw.len() }
+
+  #[inline(always)]
+  fn cap(&self) -> uint { self.raw.cap() }
+
+  fn is_empty(&self) -> bool { self.raw.is_empty() }
+
+  #[inline(always)]
+  unsafe fn as_slice(&self) -> &[u8] { self.raw.as_slice() }
+
+  #[inline(always)]
+  fn peek(&self, pos: uint, dst: &mut [u8]) -> Result<(), ()> { self.raw.peek(pos, dst) }
+  #[inline(always)]
+  fn peek_be<T: Prim>(&self, pos: uint) -> Result<T, ()> { self.raw.peek_be(pos) }
+  #[inline(always)]
+  fn peek_le<T: Prim>(&self, pos: uint) -> Result<T, ()> { self.raw.peek_le(pos) }
+
+  #[inline(always)]
+  fn poke(&self, pos: uint, src: &[u8]) -> Result<(), ()> { self.raw.poke(pos, src) }
+  #[inline(always)]
+  fn poke_be<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
+  #[inline(always)]
+  fn poke_le<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_le(pos, t) }
+
+  #[inline(always)]
+  fn check_range(&self, pos: uint, len: uint) -> Result<(), ()> { self.raw.check_range(pos, len) }
+
+  #[inline(always)]
+  fn check_range_fail(&self, pos: uint, len: uint) { self.raw.check_range_fail(pos, len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) { self.raw.unsafe_peek(pos, dst) }
+  #[inline(always)]
+  unsafe fn unsafe_peek_be<T: Prim>(&self, pos: uint) -> T { self.raw.unsafe_peek_be(pos) }
+  #[inline(always)]
+  unsafe fn unsafe_peek_le<T: Prim>(&self, pos: uint) -> T { self.raw.unsafe_peek_le(pos) }
+
+  #[inline(always)]
+  unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) { self.raw.unsafe_poke(pos, src) }
+  #[inline(always)]
+  unsafe fn unsafe_poke_be<T: Prim>(&self, pos: uint, t: T) { self.raw.unsafe_poke_be(pos, t) }
+  #[inline(always)]
+  unsafe fn unsafe_poke_le<T: Prim>(&self, pos: uint, t: T) { self.raw.unsafe_poke_le(pos, t) }
 }
 
 impl<'a> Iobuf for RWIobuf<'a> {
-  // ...
+  #[inline(always)]
+  fn len(&self) -> uint { self.raw.len() }
+
+  #[inline(always)]
+  fn cap(&self) -> uint { self.raw.cap() }
+
+  fn is_empty(&self) -> bool { self.raw.is_empty() }
+
+  #[inline(always)]
+  unsafe fn as_slice(&self) -> &[u8] { self.raw.as_slice() }
+
+  #[inline(always)]
+  fn peek(&self, pos: uint, dst: &mut [u8]) -> Result<(), ()> { self.raw.peek(pos, dst) }
+  #[inline(always)]
+  fn peek_be<T: Prim>(&self, pos: uint) -> Result<T, ()> { self.raw.peek_be(pos) }
+  #[inline(always)]
+  fn peek_le<T: Prim>(&self, pos: uint) -> Result<T, ()> { self.raw.peek_le(pos) }
+
+  #[inline(always)]
+  fn poke(&self, pos: uint, src: &[u8]) -> Result<(), ()> { self.raw.poke(pos, src) }
+  #[inline(always)]
+  fn poke_be<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
+  #[inline(always)]
+  fn poke_le<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_le(pos, t) }
+
+  #[inline(always)]
+  fn check_range(&self, pos: uint, len: uint) -> Result<(), ()> { self.raw.check_range(pos, len) }
+
+  #[inline(always)]
+  fn check_range_fail(&self, pos: uint, len: uint) { self.raw.check_range_fail(pos, len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) { self.raw.unsafe_peek(pos, dst) }
+  #[inline(always)]
+  unsafe fn unsafe_peek_be<T: Prim>(&self, pos: uint) -> T { self.raw.unsafe_peek_be(pos) }
+  #[inline(always)]
+  unsafe fn unsafe_peek_le<T: Prim>(&self, pos: uint) -> T { self.raw.unsafe_peek_le(pos) }
+
+  #[inline(always)]
+  unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) { self.raw.unsafe_poke(pos, src) }
+  #[inline(always)]
+  unsafe fn unsafe_poke_be<T: Prim>(&self, pos: uint, t: T) { self.raw.unsafe_poke_be(pos, t) }
+  #[inline(always)]
+  unsafe fn unsafe_poke_le<T: Prim>(&self, pos: uint, t: T) { self.raw.unsafe_poke_le(pos, t) }
 }
 
 impl<'a> fmt::Show for ROIobuf<'a> {
-  fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::FormatError> {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::FormatError> {
     self.raw.show(f, "read-only")
   }
 }
 
 impl<'a> fmt::Show for RWIobuf<'a> {
-  fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::FormatError> {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::FormatError> {
     self.raw.show(f, "read-write")
   }
 }
