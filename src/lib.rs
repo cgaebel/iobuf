@@ -828,9 +828,9 @@ pub trait Iobuf: Clone + Show {
   /// `After:  [           xx]`
   fn flip_hi(&mut self);
 
-  /// Reads the bytes at the beginning of the window into the buffer. It is an
-  /// error to request more bytes (by supplying a bigger buffer) than the size
-  /// of the window.
+  /// Reads the bytes at a given offset from the beginning of the window, into
+  /// the supplied buffer. Either the entire buffer is filled, or an error is
+  /// returned because bytes outside of the window were requested.
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
