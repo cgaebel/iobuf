@@ -17,6 +17,9 @@
 //!
 //! Iobufs are cheap to `clone`, since the buffers are refcounted. Use this to
 //! construct multiple views into the same data.
+
+#![license = "MIT"]
+
 use std::fmt::{Formatter,FormatError,Show};
 use std::iter;
 use std::mem;
