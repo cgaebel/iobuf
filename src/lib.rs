@@ -602,6 +602,8 @@ pub trait Iobuf: Clone + Show {
   /// let mut b = ROIobuf::from_str("Hello");
   /// assert_eq!(b.advance(2), Ok(()));
   /// assert_eq!(b.cap(), 5);
+  /// b.narrow();
+  /// assert_eq!(b.cap(), 3);
   /// ```
   fn cap(&self) -> uint;
 
