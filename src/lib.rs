@@ -65,9 +65,9 @@ enum MaybeOwnedBuffer<'a> {
 impl<'a> MaybeOwnedBuffer<'a> {
   #[inline]
   unsafe fn as_slice(&self) -> &[u8] {
-    match self {
-      &OwnedBuffer(ref v)    => v.as_slice(),
-      &BorrowedBuffer(ref s) => s.as_slice(),
+    match *self {
+      OwnedBuffer(ref v)    => v.as_slice(),
+      BorrowedBuffer(ref s) => s.as_slice(),
     }
   }
 
@@ -81,9 +81,9 @@ impl<'a> MaybeOwnedBuffer<'a> {
 
   #[inline]
   fn len(&self) -> uint {
-    match self {
-      &OwnedBuffer(ref v)    => v.len(),
-      &BorrowedBuffer(ref s) => s.len(),
+    match *self {
+      OwnedBuffer(ref v)    => v.len(),
+      BorrowedBuffer(ref s) => s.len(),
     }
   }
 }
