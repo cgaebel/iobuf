@@ -1150,6 +1150,23 @@ pub trait Iobuf: Clone + Show {
 
   /// Reads a little-endian primitive at a given offset from the beginning of
   /// the window. It is undefined behavior to read outside the iobuf window.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let data = [1,2,3,4,5,6];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// unsafe {
+  ///   assert_eq!(b.check_range(0, 6), Ok(()));
+  ///   let x: u16 = b.unsafe_peek_le(0);
+  ///   let y: u32 = b.unsafe_peek_le(2);
+  ///   b.unsafe_advance(6);
+  ///
+  ///   let z: u32 = x as u32 + y;
+  ///   assert_eq!(z, 0x0102 + 0x0201, 0x06050403);
+  /// }
+  /// ```
   unsafe fn unsafe_peek_le<T: Prim>(&self, pos: uint) -> T;
 
   unsafe fn unsafe_consume(&mut self, dst: &mut [u8]);
