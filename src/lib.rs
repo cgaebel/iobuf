@@ -17,6 +17,15 @@
 //!
 //! Iobufs are cheap to `clone`, since the buffers are refcounted. Use this to
 //! construct multiple views into the same data.
+//!
+//! Although this library is designed for efficiency, and hence gives you lots
+//! of ways to omit bounds checks, that does not mean it's recommended you do.
+//! They merely provide a way for you to manually bounds check a whole bunch
+//! of data at once (with `check_range`), and then `peek` or `poke` out the data
+//! you want. See the documentation for `check_range` for an example.
+//!
+//! To repeat: Do not omit bounds checks unless you've checked _very_ carefully
+//! that they are redundant. This can cause terrifying security issues.
 
 #![license = "MIT"]
 
@@ -1169,8 +1178,59 @@ pub trait Iobuf: Clone + Show {
   /// ```
   unsafe fn unsafe_peek_le<T: Prim>(&self, pos: uint) -> T;
 
+  /// Reads bytes, starting from the front of the window, into the supplied
+  /// buffer. After the bytes have been read, the window will be moved to no
+  /// longer include then.
+  ///
+  /// It is undefined behavior to request bytes outside the iobuf window.
   unsafe fn unsafe_consume(&mut self, dst: &mut [u8]);
+
+  /// Reads a big-endian primitive at a given offset from the beginning of the
+  /// window.
+  ///
+  /// After the primitive has been read, the window will be moved such that it
+  /// is no longer included.
+  ///
+  /// It is undefined behavior if bytes outside the window are requested.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// assert_eq!(b.advance(1), Ok(()));
+  ///
+  /// unsafe {
+  ///   assert_eq!(b.check_range(0, 3), Ok(()));
+  ///   assert_eq!(b.unsafe_consume_be::<u16>(), 0x0203u16);
+  ///   assert_eq!(b.unsafe_consume_be::<u8>(), 0x04u8);
+  /// }
+  /// ```
   unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T;
+
+  /// Reads a little-endian primitive at a given offset from the beginning of
+  /// the window.
+  ///
+  /// After the primitive has been read, the window will be moved such that it
+  /// is no longer included.
+  ///
+  /// It is undefined behavior if bytes outside of the window are requested.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  /// let mut b = ROIobuf::from_slice(&data);
+  ///
+  /// assert_eq!(b.advance(1), Ok(()));
+  ///
+  /// unsafe {
+  ///   assert_eq!(b.check_range(0, 3), Ok(()));
+  ///   assert_eq!(b.unsafe_consume_le::<u16>(), 0x0302u16);
+  ///   assert_eq!(b.unsafe_consume_le::<u8>(), 0x04u8);
+  /// }
+  /// ```
   unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T;
 }
 
