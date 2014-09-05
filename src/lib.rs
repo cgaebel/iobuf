@@ -805,6 +805,17 @@ pub trait Iobuf: Clone + Show {
   unsafe fn unsafe_advance(&mut self, len: uint);
 
   /// Sets the length of the window, provided it does not exceed the limits.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.resize(3), Ok(()));
+  /// assert_eq!(b.peek_be(2), Ok(b'l'));
+  /// assert_eq!(b.peek_be::<u8>(3), Err(()));
+  /// assert_eq!(b.advance(1), Ok(()));
+  /// assert_eq!(b.resize(5), Err(()));
+  /// ```
   fn resize(&mut self, len: uint) -> Result<(), ()>;
 
   /// Sets the length of the window. No bounds checking will be performed.
