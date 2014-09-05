@@ -866,6 +866,23 @@ pub trait Iobuf: Clone + Show {
   /// `Before: [       xxxx  ]`
   ///
   /// `After:  [xxxxxxx      ]`
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(4);
+  ///
+  /// assert_eq!(b.fill_be(1u8), Ok(()));
+  /// assert_eq!(b.fill_be(2u8), Ok(()));
+  /// assert_eq!(b.fill_be(3u8), Ok(()));
+  /// assert_eq!(b.len(), 1);
+  ///
+  /// b.flip_lo();
+  ///
+  /// assert_eq!(b.consume_be(), Ok(0x0102u16));
+  /// assert_eq!(b.consume_be(), Ok(0x03u8));
+  /// assert!(b.is_empty());
+  /// ```
   fn flip_lo(&mut self);
 
   /// Sets the window to range from the upper bound of the old window to the
