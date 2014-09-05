@@ -1284,7 +1284,8 @@ impl<'a> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_str(s) }
   }
 
-  /// Directly converts a byte vector into a read-only Iobuf.
+  /// Directly converts a byte vector into a read-only Iobuf. The Iobuf will
+  /// take ownership of the vector, therefore there will be no copying.
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
@@ -1301,6 +1302,21 @@ impl<'a> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_vec(v) }
   }
 
+  /// Construclts an Iobuf from a slice. The Iobuf will not copy the slice
+  /// contents, and therefore their lifetimes will be linked.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let s = [1,2,3,4];
+  ///
+  /// let mut b = ROIobuf::from_slice(s.as_slice());
+  ///
+  /// assert_eq!(b.advance(1), Ok(()));
+  ///
+  /// assert_eq!(s[1], 2); // we can still use the slice!
+  /// assert_eq!(b.peek_be(1), Ok(0x0304u16)); // ...and the Iobuf!
+  /// ```
   #[inline]
   pub fn from_slice<'a>(s: &'a [u8]) -> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_slice(s) }
