@@ -1164,7 +1164,7 @@ pub trait Iobuf: Clone + Show {
   ///   b.unsafe_advance(6);
   ///
   ///   let z: u32 = x as u32 + y;
-  ///   assert_eq!(z, 0x0102 + 0x0201, 0x06050403);
+  ///   assert_eq!(z, 0x0201 + 0x06050403);
   /// }
   /// ```
   unsafe fn unsafe_peek_le<T: Prim>(&self, pos: uint) -> T;
