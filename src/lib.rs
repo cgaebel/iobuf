@@ -896,6 +896,26 @@ pub trait Iobuf: Clone + Show {
   /// `Before: [       xxxx  ]`
   ///
   /// `After:  [           xx]`
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  ///
+  /// assert_eq!(b.resize(3), Ok(()));
+  ///
+  /// assert_eq!(b.consume_be(), Ok(b'h'));
+  /// assert_eq!(b.consume_be(), Ok(b'e'));
+  /// assert_eq!(b.consume_be(), Ok(b'l'));
+  /// assert!(b.is_empty());
+  ///
+  /// b.flip_hi();
+  ///
+  /// assert!(!b.is_empty());
+  /// assert_eq!(b.consume_be(), Ok(b'l'));
+  /// assert_eq!(b.consume_be(), Ok(b'o'));
+  /// assert!(b.is_empty());
+  /// ```
   fn flip_hi(&mut self);
 
   /// Reads the bytes at a given offset from the beginning of the window, into
