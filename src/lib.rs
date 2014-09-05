@@ -860,7 +860,7 @@ pub trait Iobuf: Clone + Show {
   /// old window. This is typically called after a series of `Fill`s, to
   /// reposition the window in preparation to `Consume` the newly written data.
   ///
-  /// If the area of the limits is denoted with `[]` and the area of the window
+  /// If the area of the limits is denoted with `[ ]` and the area of the window
   /// is denoted with `x`, then the `flip_lo` looks like:
   ///
   /// `Before: [       xxxx  ]`
@@ -873,7 +873,7 @@ pub trait Iobuf: Clone + Show {
   /// data in the current (narrowed) window has been processed and the window
   /// needs to be positioned over the remaining data in the buffer.
   ///
-  /// If the area of the limits is denoted with `[]` and the area of the window
+  /// If the area of the limits is denoted with `[ ]` and the area of the window
   /// is denoted with `x`, then the `flip_lo` looks like:
   ///
   /// `Before: [       xxxx  ]`
