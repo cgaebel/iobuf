@@ -20,7 +20,6 @@
 
 #![license = "MIT"]
 
-use std::cell::UnsafeCell;
 use std::fmt::{Formatter,FormatError,Show};
 use std::iter;
 use std::mem;
@@ -88,7 +87,7 @@ fn bad_range(pos: uint, len: uint) {
 /// It is very cheap to clone, as the backing buffer is shared and refcounted.
 #[deriving(Clone)]
 struct RawIobuf<'a> {
-  buf:    Rc<UnsafeCell<MaybeOwnedBuffer<'a>>>,
+  buf:    Rc<MaybeOwnedBuffer<'a>>,
   lo_min: uint,
   lo:     uint,
   hi:     uint,
@@ -99,7 +98,7 @@ impl<'a> RawIobuf<'a> {
   fn of_buf<'a>(buf: MaybeOwnedBuffer<'a>) -> RawIobuf<'a> {
     let len = buf.len();
     RawIobuf {
-      buf: Rc::new(UnsafeCell::new(buf)),
+      buf: Rc::new(buf),
       lo_min: 0,
       lo:     0,
       hi:     len,
@@ -129,7 +128,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn as_raw_slice(&self) -> raw::Slice<u8> {
-    (*self.buf.get()).as_raw_slice()
+    self.buf.as_raw_slice()
   }
 
   #[inline(always)]
@@ -1089,8 +1088,8 @@ impl<'a> ROIobuf<'a> {
       RWIobuf {
         raw: RawIobuf {
           buf:
-            Rc::new(UnsafeCell::new(OwnedBuffer(
-              Vec::from_slice(mem::transmute(self.raw.as_raw_slice()))))),
+            Rc::new(OwnedBuffer(
+              Vec::from_slice(mem::transmute(self.raw.as_raw_slice())))),
           lo_min: self.raw.lo_min,
           lo:     self.raw.lo,
           hi:     self.raw.hi,
