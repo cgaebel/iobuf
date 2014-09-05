@@ -622,6 +622,11 @@ pub trait Iobuf: Clone + Show {
   /// though it advertises itself as immutable. Therefore, this function is
   /// `unsafe`.
   ///
+  /// To use this function safely, you must manually ensure that the slice never
+  /// interacts with the same Iobuf. If you take a slice of an Iobuf, you can
+  /// immediately poke it into itself. This is unsafe, and undefined. However,
+  /// it can be safely poked into a _different_ iobuf without issue.
+  ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
   ///
