@@ -820,6 +820,20 @@ pub trait Iobuf: Clone + Show {
   fn resize(&mut self, len: uint) -> Result<(), ()>;
 
   /// Sets the length of the window. No bounds checking will be performed.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  ///
+  /// unsafe {
+  ///   assert_eq!(b.check_range(1, 3), Ok(()));
+  ///   assert_eq!(b.peek_be(1), Ok(b'e'));
+  ///   assert_eq!(b.peek_be(2), Ok(b'l'));
+  ///   assert_eq!(b.peek_be(3), Ok(b'l'));
+  ///   b.unsafe_resize(4); // safe, since we already checked it.
+  /// }
+  /// ```
   unsafe fn unsafe_resize(&mut self, len: uint);
 
   /// Sets the lower bound of the window to the lower limit.
