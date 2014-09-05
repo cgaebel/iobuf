@@ -59,32 +59,21 @@ impl Prim for u64 {}
 /// never used.
 enum MaybeOwnedBuffer<'a> {
   OwnedBuffer(Vec<u8>),
-  BorrowedBuffer(&'a mut [u8]),
+  BorrowedBuffer(raw::Slice<u8>),
 }
 
 impl<'a> MaybeOwnedBuffer<'a> {
-  #[inline]
-  unsafe fn as_slice(&self) -> &[u8] {
+  #[inline(always)]
+  unsafe fn as_raw_slice(&self) -> raw::Slice<u8> {
     match *self {
-      OwnedBuffer(ref v)    => v.as_slice(),
-      BorrowedBuffer(ref s) => s.as_slice(),
-    }
-  }
-
-  #[inline]
-  fn as_mut_slice(&mut self) -> &mut [u8] {
-    match *self {
-      OwnedBuffer(ref mut v)    => v.as_mut_slice(),
-      BorrowedBuffer(ref mut s) => s.as_mut_slice(),
+      OwnedBuffer(ref v)    => mem::transmute(v.as_slice()),
+      BorrowedBuffer(ref s) => *s,
     }
   }
 
   #[inline]
   fn len(&self) -> uint {
-    match *self {
-      OwnedBuffer(ref v)    => v.len(),
-      BorrowedBuffer(ref s) => s.len(),
-    }
+    unsafe { self.as_raw_slice().len }
   }
 }
 
@@ -124,8 +113,7 @@ impl<'a> RawIobuf<'a> {
 
   fn from_str<'a>(s: &'a str) -> RawIobuf<'a> {
     unsafe {
-      let bytes: &mut [u8] = mem::transmute(s.as_bytes());
-      RawIobuf::of_buf(BorrowedBuffer(bytes))
+      RawIobuf::of_buf(BorrowedBuffer(mem::transmute(s.as_bytes())))
     }
   }
 
@@ -135,9 +123,13 @@ impl<'a> RawIobuf<'a> {
 
   fn from_slice<'a>(s: &'a [u8]) -> RawIobuf<'a> {
     unsafe {
-      let mut_buf: &mut [u8] = mem::transmute(s);
-      RawIobuf::of_buf(BorrowedBuffer(mut_buf))
+      RawIobuf::of_buf(BorrowedBuffer(mem::transmute(s)))
     }
+  }
+
+  #[inline(always)]
+  unsafe fn as_raw_slice(&self) -> raw::Slice<u8> {
+    (*self.buf.get()).as_raw_slice()
   }
 
   #[inline(always)]
@@ -267,7 +259,7 @@ impl<'a> RawIobuf<'a> {
   fn compact(&mut self) {
     unsafe {
       let len = self.len();
-      let s: raw::Slice<u8> = mem::transmute((*self.buf.get()).as_mut_slice());
+      let s = self.as_raw_slice();
       ptr::copy_memory(
         s.data as *mut u8,
         s.data.offset(self.lo as int) as *const u8,
@@ -279,12 +271,20 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   unsafe fn as_slice(&self) -> &[u8] {
-    (*self.buf.get()).as_slice().slice(self.lo, self.hi)
+    let s = self.as_raw_slice();
+    mem::transmute(raw::Slice {
+      data: s.data.offset(self.lo as int),
+      len:  self.hi - self.lo,
+    })
   }
 
   #[inline]
   unsafe fn as_mut_slice(&mut self) -> &mut [u8] {
-    (*self.buf.get()).as_mut_slice().mut_slice(self.lo, self.hi)
+    let s = self.as_raw_slice();
+    mem::transmute(raw::Slice {
+      data: s.data.offset(self.lo as int),
+      len:  self.hi - self.lo,
+    })
   }
 
   #[inline(always)]
@@ -384,25 +384,28 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
-  unsafe fn get_at<T: Prim>(&self, idx: uint) -> T {
+  unsafe fn get_at<T: Prim>(&self, pos: uint) -> T {
+    let s = self.as_raw_slice();
     FromPrimitive::from_u8(
-      *(*self.buf.get()).as_slice().unsafe_get(self.lo + idx))
+      ptr::read(s.data.offset((self.lo + pos) as int)))
     .unwrap()
   }
 
   #[inline(always)]
-  unsafe fn set_at<T: Prim>(&self, idx: uint, val: T) {
-    (*self.buf.get()).as_mut_slice().unsafe_set(self.lo + idx, val.to_u8().unwrap())
+  unsafe fn set_at<T: Prim>(&self, pos: uint, val: T) {
+    let s = self.as_raw_slice();
+    ptr::write(s.data.offset((self.lo + pos) as int) as *mut u8,
+               val.to_u8().unwrap());
   }
 
   unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) {
     let len = dst.len();
     let dst: raw::Slice<u8> = mem::transmute(dst);
-    let src: raw::Slice<u8> = mem::transmute((*self.buf.get()).as_slice());
+    let src: raw::Slice<u8> = self.as_raw_slice();
 
     ptr::copy_nonoverlapping_memory(
       dst.data as *mut u8,
-      src.data.offset((self.lo+pos) as int) as *const u8,
+      src.data.offset((self.lo + pos) as int) as *const u8,
       len);
   }
 
@@ -430,11 +433,11 @@ impl<'a> RawIobuf<'a> {
 
   unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) {
     let len = src.len();
-    let dst: raw::Slice<u8> = mem::transmute((*self.buf.get()).as_mut_slice());
+    let dst: raw::Slice<u8> = self.as_raw_slice();
     let src: raw::Slice<u8> = mem::transmute(src);
 
     ptr::copy_nonoverlapping_memory(
-      dst.data.offset((self.lo+pos) as int) as *mut u8,
+      dst.data.offset((self.lo + pos) as int) as *mut u8,
       src.data as *const u8,
       len);
   }
@@ -555,7 +558,7 @@ impl<'a> RawIobuf<'a> {
 
   fn show(&self, f: &mut Formatter, ty: &str) -> Result<(), FormatError> {
     try!(write!(f, "{} IObuf, raw length={}, limits=[{},{}), bounds=[{},{})\n",
-                ty, unsafe { (*self.buf.get()).as_slice().len() }, self.lo_min, self.hi_max, self.lo, self.hi));
+                ty, unsafe { self.as_raw_slice().len }, self.lo_min, self.hi_max, self.lo, self.hi));
 
     if self.lo == self.hi { return write!(f, "<empty buffer>"); }
 
@@ -1087,10 +1090,7 @@ impl<'a> ROIobuf<'a> {
         raw: RawIobuf {
           buf:
             Rc::new(UnsafeCell::new(OwnedBuffer(
-              match *self.raw.buf.get() {
-                OwnedBuffer(ref v) => v.clone(),
-                BorrowedBuffer(ref s) => FromIterator::from_iter(s.iter().map(|&x| x)),
-              }))),
+              Vec::from_slice(mem::transmute(self.raw.as_raw_slice()))))),
           lo_min: self.raw.lo_min,
           lo:     self.raw.lo,
           hi:     self.raw.hi,
