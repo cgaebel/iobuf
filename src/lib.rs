@@ -396,12 +396,14 @@ impl<'a> RawIobuf<'a> {
   }
 
   unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) {
+    let len = dst.len();
     let dst: raw::Slice<u8> = mem::transmute(dst);
-    let (dst, len) = (dst.data as *mut u8, dst.len);
-    let src: &[u8] = (*self.buf.get()).as_slice().slice_from(self.lo+pos);
-    let src: raw::Slice<u8> = mem::transmute(src);
-    let src = src.data;
-    ptr::copy_nonoverlapping_memory(dst, src, len);
+    let src: raw::Slice<u8> = mem::transmute((*self.buf.get()).as_slice());
+
+    ptr::copy_nonoverlapping_memory(
+      dst.data as *mut u8,
+      src.data.offset((self.lo+pos) as int) as *const u8,
+      len);
   }
 
   unsafe fn unsafe_peek_be<T: Prim>(&self, pos: uint) -> T {
@@ -427,9 +429,14 @@ impl<'a> RawIobuf<'a> {
   }
 
   unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) {
-    for (i, &src) in src.iter().enumerate() {
-      self.set_at(pos+i, src);
-    }
+    let len = src.len();
+    let dst: raw::Slice<u8> = mem::transmute((*self.buf.get()).as_mut_slice());
+    let src: raw::Slice<u8> = mem::transmute(src);
+
+    ptr::copy_nonoverlapping_memory(
+      dst.data.offset((self.lo+pos) as int) as *mut u8,
+      src.data as *const u8,
+      len);
   }
 
   unsafe fn unsafe_poke_be<T: Prim>(&self, pos: uint, t: T) {
