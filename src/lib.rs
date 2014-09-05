@@ -1267,16 +1267,35 @@ pub struct RWIobuf<'a> {
 }
 
 impl<'a> ROIobuf<'a> {
-  #[inline]
-  pub fn new(len: uint) -> ROIobuf<'static> {
-    ROIobuf { raw: RawIobuf::new(len) }
-  }
-
+  /// Constructs an Iobuf with the same contents as a string. The limits and
+  /// window will be initially set to cover the whole string.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  ///
+  /// assert_eq!(b.cap(), 5);
+  /// assert_eq!(b.len(), 5);
+  /// unsafe { assert_eq!(b.as_slice(), b"hello"); }
+  /// ```
   #[inline]
   pub fn from_str<'a>(s: &'a str) -> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_str(s) }
   }
 
+  /// Directly converts a byte vector into a read-only Iobuf.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut v = vec!(1u8, 2, 3, 4, 5, 6, 10);
+  /// v.as_mut_slice()[1] = 20;
+  ///
+  /// let mut b = ROIobuf::from_vec(v);
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [1, 20, 3, 4, 5, 6, 10].as_slice()); }
+  /// ```
   #[inline]
   pub fn from_vec(v: Vec<u8>) -> ROIobuf<'static> {
     ROIobuf { raw: RawIobuf::from_vec(v) }
