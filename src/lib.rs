@@ -812,6 +812,7 @@ pub trait Iobuf: Clone + Show {
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.resize(3), Ok(()));
   /// assert_eq!(b.peek_be(2), Ok(b'l'));
+  /// assert_eq!(unsafe { b.as_slice() }, b"hel");
   /// assert_eq!(b.peek_be::<u8>(3), Err(()));
   /// assert_eq!(b.advance(1), Ok(()));
   /// assert_eq!(b.resize(5), Err(()));
@@ -827,6 +828,18 @@ pub trait Iobuf: Clone + Show {
   /// Sets the window to the limits.
   ///
   /// "Take it to the limit..."
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.resize(3), Ok(()));
+  /// assert_eq!(unsafe { b.as_slice() }, b"hel");
+  /// assert_eq!(b.advance(2), Ok(()));
+  /// assert_eq!(unsafe { b.as_slice() }, b"l");
+  /// b.reset();
+  /// assert_eq!(unsafe { b.as_slice() }, b"hello");
+  /// ```
   fn reset(&mut self);
 
   /// Sets the window to range from the lower limit to the lower bound of the
