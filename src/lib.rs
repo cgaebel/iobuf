@@ -264,7 +264,6 @@ impl<'a> RawIobuf<'a> {
     self.hi = self.hi_max;
   }
 
-  #[inline(always)]
   fn compact(&mut self) {
     unsafe {
       let len = self.len();
@@ -402,7 +401,7 @@ impl<'a> RawIobuf<'a> {
     let src: &[u8] = (*self.buf.get()).as_slice().slice_from(self.lo+pos);
     let src: raw::Slice<u8> = mem::transmute(src);
     let src = src.data;
-    ptr::copy_memory(dst, src, len);
+    ptr::copy_nonoverlapping_memory(dst, src, len);
   }
 
   unsafe fn unsafe_peek_be<T: Prim>(&self, pos: uint) -> T {
