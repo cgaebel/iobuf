@@ -29,6 +29,8 @@
 
 #![license = "MIT"]
 
+extern crate debug;
+
 use std::fmt::{Formatter,FormatError,Show};
 use std::iter;
 use std::mem;
@@ -468,7 +470,7 @@ impl<'a> RawIobuf<'a> {
     let msk: T = FromPrimitive::from_u8(0xFFu8).unwrap();
 
     for i in iter::range(0, bytes) {
-      self.set_at(pos+i, t << ((bytes-i-1)*8) & msk);
+      self.set_at(pos+i, (t >> ((bytes-i-1)*8)) & msk);
     }
   }
 
@@ -478,7 +480,7 @@ impl<'a> RawIobuf<'a> {
     let msk: T = FromPrimitive::from_u8(0xFFu8).unwrap();
 
     for i in iter::range(0, bytes) {
-      self.set_at(pos+i, t << (i*8) & msk);
+      self.set_at(pos+i, (t >> (i*8)) & msk);
     }
   }
 
@@ -1511,9 +1513,9 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub unsafe fn as_mut_slice(&mut self) -> &mut [u8] { self.raw.as_mut_slice() }
 
-  /// Reads the bytes at a given offset from the beginning of the window, into
-  /// the supplied buffer. Either the entire buffer is filled, or an error is
-  /// returned because bytes outside of the window were requested.
+  /// Writes the bytes at a given offset from the beginning of the window, into
+  /// the supplied buffer. Either the entire buffer is copied, or an error is
+  /// returned because bytes outside of the window would be written.
   ///
   /// ```
   /// use iobuf::{RWIobuf,Iobuf};
@@ -1525,12 +1527,30 @@ impl<'a> RWIobuf<'a> {
   /// assert_eq!(b.poke(0, data.as_slice()), Ok(()));
   /// assert_eq!(b.poke(3, data.as_slice()), Ok(()));
   /// assert_eq!(b.resize(7), Ok(()));
-  /// assert_eq!(b.poke(4, data.as_slice()), Err(()));
+  /// assert_eq!(b.poke(4, data.as_slice()), Err(())); // no partial write, just failure
   /// unsafe { assert_eq!(b.as_slice(), [ 1,2,3,1,2,3,4 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub fn poke(&self, pos: uint, src: &[u8]) -> Result<(), ()> { self.raw.poke(pos, src) }
 
+  /// Writes a big-endian primitive at a given offset from the beginning of the
+  /// window.
+  ///
+  /// An error is returned if bytes outside of the window would be accessed.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// assert_eq!(b.poke_be(0, 0x0304u16), Ok(()));
+  /// assert_eq!(b.poke_be(1, 0x0505u16), Ok(()));
+  /// assert_eq!(b.poke_be(3, 0x06070809u32), Ok(()));
+  ///
+  /// assert_eq!(b.resize(7), Ok(()));
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 3, 5, 5, 6, 7, 8, 9 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub fn poke_be<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
   #[inline(always)]
@@ -1742,4 +1762,32 @@ impl<'a> Show for RWIobuf<'a> {
   fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
     self.raw.show(f, "read-write")
   }
+}
+
+#[test]
+fn peek_some_be() {
+  let s = [1,2,3,4];
+  let b = ROIobuf::from_slice(&s);
+  assert_eq!(b.peek_be(0), Ok(0x01020304u32));
+}
+
+#[test]
+fn peek_some_le() {
+  let s = [1,2,3,4];
+  let b = ROIobuf::from_slice(&s);
+  assert_eq!(b.peek_le(0), Ok(0x04030201u32));
+}
+
+#[test]
+fn poke_some_be() {
+  let b = RWIobuf::new(4);
+  assert_eq!(b.poke_be(0, 0x01020304u32), Ok(()));
+  unsafe { assert_eq!(b.as_slice(), [1,2,3,4].as_slice()); }
+}
+
+#[test]
+fn poke_some_le() {
+  let b = RWIobuf::new(4);
+  assert_eq!(b.poke_le(0, 0x01020304u32), Ok(()));
+  unsafe { assert_eq!(b.as_slice(), [4,3,2,1].as_slice()); }
 }
