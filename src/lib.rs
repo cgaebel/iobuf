@@ -1553,6 +1553,25 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn poke_be<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
+
+  /// Writes a little-endian primitive at a given offset from the beginning of
+  /// the window.
+  ///
+  /// An error is returned if bytes outside of the window would be accessed.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// assert_eq!(b.poke_le(0, 0x0304u16), Ok(()));
+  /// assert_eq!(b.poke_le(1, 0x0505u16), Ok(()));
+  /// assert_eq!(b.poke_le(3, 0x06070809u32), Ok(()));
+  ///
+  /// assert_eq!(b.resize(7), Ok(()));
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub fn poke_le<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_le(pos, t) }
 
