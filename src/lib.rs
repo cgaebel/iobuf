@@ -135,6 +135,18 @@ impl<'a> RawIobuf<'a> {
     }
   }
 
+  fn deep_clone(&self) -> RawIobuf<'static> {
+    RawIobuf {
+      buf:
+        Rc::new(OwnedBuffer(
+          Vec::from_slice(unsafe { mem::transmute(self.as_raw_slice()) }))),
+      lo_min: self.lo_min,
+      lo:     self.lo,
+      hi:     self.hi,
+      hi_max: self.hi_max,
+    }
+  }
+
   #[inline(always)]
   unsafe fn as_raw_slice(&self) -> raw::Slice<u8> {
     self.buf.as_raw_slice()
@@ -599,6 +611,23 @@ impl<'a> RawIobuf<'a> {
 /// The `unsafe_` prefix means the function omits bounds checks. Misuse can
 /// easily cause security issues. Be careful!
 pub trait Iobuf: Clone + Show {
+  /// Copies the data byte-by-byte in the Iobuf into a new, writeable Iobuf.
+  /// The new Iobuf and the old Iobuf will not share storage.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut s = [ 1, 2 ];
+  ///
+  /// let mut b = RWIobuf::from_slice(&mut s);
+  ///
+  /// let mut c = b.deep_clone();
+  ///
+  /// assert_eq!(b.poke_be(0, 0u8), Ok(()));
+  /// assert_eq!(c.peek_be::<u8>(0), Ok(1u8));
+  /// ```
+  fn deep_clone(&self) -> RWIobuf<'static>;
+
   /// Returns the size of the window.
   ///
   /// ```
@@ -1321,49 +1350,89 @@ impl<'a> ROIobuf<'a> {
   pub fn from_slice<'a>(s: &'a [u8]) -> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_slice(s) }
   }
-
-  #[inline]
-  pub fn deep_clone(&self) -> RWIobuf<'static> {
-    unsafe {
-      RWIobuf {
-        raw: RawIobuf {
-          buf:
-            Rc::new(OwnedBuffer(
-              Vec::from_slice(mem::transmute(self.raw.as_raw_slice())))),
-          lo_min: self.raw.lo_min,
-          lo:     self.raw.lo,
-          hi:     self.raw.hi,
-          hi_max: self.raw.hi_max,
-        }
-      }
-    }
-  }
 }
 
 impl<'a> RWIobuf<'a> {
-  #[inline]
+  /// Constructs a new Iobuf with a buffer of size `len`, undefined contents,
+  /// and the limits and window set to the full size of the buffer.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// assert_eq!(b.len(), 10);
+  /// assert_eq!(b.cap(), 10);
+  /// ```
+  #[inline(always)]
   pub fn new(len: uint) -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::new(len) }
   }
 
-  #[inline]
-  pub fn from_str<'a>(s: &'a mut str) -> RWIobuf<'a> {
-    RWIobuf { raw: RawIobuf::from_str(s) }
-  }
-
-  #[inline]
+  /// Directly converts a byte vector into a writeable Iobuf. The Iobuf will
+  /// take ownership of the vector, therefore there will be no copying.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut v = vec!(1u8, 2, 3, 4, 5, 6, 10);
+  /// v.as_mut_slice()[1] = 20;
+  ///
+  /// let mut b = RWIobuf::from_vec(v);
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [1, 20, 3, 4, 5, 6, 10].as_slice()); }
+  /// ```
+  #[inline(always)]
   pub fn from_vec(v: Vec<u8>) -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::from_vec(v) }
   }
 
-  #[inline]
+  /// Construclts an Iobuf from a slice. The Iobuf will not copy the slice
+  /// contents, and therefore their lifetimes will be linked.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut s = [1,2,3,4];
+  ///
+  /// {
+  ///   let mut b = RWIobuf::from_slice(s.as_mut_slice());
+  ///
+  ///   assert_eq!(b.advance(1), Ok(()));
+  ///   assert_eq!(b.peek_be(1), Ok(0x0304u16)); // ...and the Iobuf!
+  ///   assert_eq!(b.poke_be(1, 100u8), Ok(()));
+  /// }
+  ///
+  /// // We can still use the slice, but only because of the braces above.
+  /// assert_eq!(s[2], 100);
+  /// ```
+  #[inline(always)]
   pub fn from_slice<'a>(s: &'a mut [u8]) -> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::from_slice(s) }
   }
 
-  /// Get a read-only copy of this Iobuf. This is a very cheap operation, as the
-  /// backing buffers are shared.
-  #[inline]
+  /// Gets a read-only copy of this Iobuf. This is a very cheap operation, as
+  /// the backing buffers are shared. This can be useful for interfacing with
+  /// code that only accepts read-only Iobufs.
+  ///
+  /// In general, ROIobuf should never be used as a function parameter. If
+  /// read-only acceess is all that is required, take a generic `<T: Iobuf>`.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,RWIobuf,Iobuf};
+  ///
+  /// let mut s = [1,2,3,4];
+  ///
+  /// let rwb: RWIobuf = RWIobuf::from_slice(s.as_mut_slice());
+  ///
+  /// // write some data into rwb.
+  ///
+  /// let rb: ROIobuf = rwb.read_only();
+  ///
+  /// // now do read-only ops.
+  /// assert_eq!(rb.len(), 4);
+  /// ```
+  #[inline(always)]
   pub fn read_only(&self) -> ROIobuf<'a> {
     ROIobuf { raw: self.raw.clone() }
   }
@@ -1372,15 +1441,92 @@ impl<'a> RWIobuf<'a> {
   /// window to range from the end of the copied data to the upper limit. This
   /// is typically called after a series of `Consume`s to save unread data and
   /// prepare for the next series of `Fill`s and `flip_lo`s.
+  ///
+  /// ```
+  /// use std::iter::range;
+  /// use std::result::{Result,Ok};
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// // A header, saying how many shorts will follow. Unfortunately, our buffer
+  /// // isn't big enough for all the shorts! Assume the rest will be sent in a
+  /// // later packet.
+  /// let mut s = [ 0x02, 0x11, 0x22, 0x33 ];
+  /// let mut b = RWIobuf::from_slice(s.as_mut_slice());
+  ///
+  /// #[deriving(Eq, PartialEq, Show)]
+  /// enum ParseState {
+  ///   NeedMore(u16), // sum so far
+  ///   Done(u16),     // final sum
+  /// };
+  ///
+  /// // Returns a pair of the sum of shorts seen so far, and `true` if we're
+  /// // finally done parsing. The sum will be partial if parsing is incomplete.
+  /// fn parse(b: &mut RWIobuf) -> Result<ParseState, ()> {
+  ///   let len: u8 = try!(b.consume_be());
+  ///   let mut sum = 0u16;
+  ///
+  ///   for _ in range(0u8, len) {
+  ///     unsafe {
+  ///       if b.len() < 2 {
+  ///         b.compact();
+  ///         return Ok(NeedMore(sum));
+  ///       }
+  ///       sum += b.unsafe_consume_be();
+  ///     }
+  ///   }
+  ///
+  ///   Ok(Done(sum))
+  /// }
+  ///
+  /// assert_eq!(parse(&mut b), Ok(NeedMore(0x1122)));
+  /// assert_eq!(b.len(), 3);
+  /// assert_eq!(b.cap(), 4);
+  /// assert_eq!(b.peek_be(0), Ok(0x11u8));
+  /// ```
   #[inline(always)]
   pub fn compact(&mut self) { self.raw.compact() }
 
   /// Reads the data in the window as a mutable slice. Note that since `&mut`
   /// in rust really means `&unique`, this function lies. There can exist
   /// multiple slices of the same data. Therefore, this function is unsafe.
+  ///
+  /// It may only be used safely if you ensure that the data in the iobuf never
+  /// interacts with the slice, as they point to the same data. `peek`ing or
+  /// `poke`ing the slice returned from this function is a big no-no.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf, Iobuf};
+  ///
+  /// let mut s = [1,2,3];
+  ///
+  /// {
+  ///   let mut b = RWIobuf::from_slice(&mut s);
+  ///
+  ///   assert_eq!(b.advance(1), Ok(()));
+  ///   unsafe { b.as_mut_slice()[1] = 30; }
+  /// }
+  ///
+  /// assert_eq!(s.as_slice(), [1,2,30].as_slice());
+  /// ```
   #[inline(always)]
   pub unsafe fn as_mut_slice(&mut self) -> &mut [u8] { self.raw.as_mut_slice() }
 
+  /// Reads the bytes at a given offset from the beginning of the window, into
+  /// the supplied buffer. Either the entire buffer is filled, or an error is
+  /// returned because bytes outside of the window were requested.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// assert_eq!(b.poke(0, data.as_slice()), Ok(()));
+  /// assert_eq!(b.poke(3, data.as_slice()), Ok(()));
+  /// assert_eq!(b.resize(7), Ok(()));
+  /// unsafe { assert_eq!(b.as_slice(), [1,2,3,1,2,3,4].as_slice()); }
+  /// ```
   #[inline(always)]
   pub fn poke(&self, pos: uint, src: &[u8]) -> Result<(), ()> { self.raw.poke(pos, src) }
   #[inline(always)]
@@ -1411,6 +1557,9 @@ impl<'a> RWIobuf<'a> {
 }
 
 impl<'a> Iobuf for ROIobuf<'a> {
+  #[inline(always)]
+  fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone() } }
+
   #[inline(always)]
   fn len(&self) -> uint { self.raw.len() }
 
@@ -1495,6 +1644,9 @@ impl<'a> Iobuf for ROIobuf<'a> {
 }
 
 impl<'a> Iobuf for RWIobuf<'a> {
+  #[inline(always)]
+  fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone() } }
+
   #[inline(always)]
   fn len(&self) -> uint { self.raw.len() }
 
