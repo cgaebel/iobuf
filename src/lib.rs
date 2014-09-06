@@ -1043,8 +1043,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()>;
 
-  /// Reads a big-endian primitive at a given offset from the beginning of the
-  /// window.
+  /// Reads a big-endian primitive from the beginning of the window.
   ///
   /// After the primitive has been read, the window will be moved such that it
   /// is no longer included.
@@ -1065,8 +1064,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn consume_be<T: Prim>(&mut self) -> Result<T, ()>;
 
-  /// Reads a little-endian primitive at a given offset from the beginning of
-  /// the window.
+  /// Reads a little-endian primitive from the beginning of the window.
   ///
   /// After the primitive has been read, the window will be moved such that it
   /// is no longer included.
@@ -1216,8 +1214,7 @@ pub trait Iobuf: Clone + Show {
   /// It is undefined behavior to request bytes outside the iobuf window.
   unsafe fn unsafe_consume(&mut self, dst: &mut [u8]);
 
-  /// Reads a big-endian primitive at a given offset from the beginning of the
-  /// window.
+  /// Reads a big-endian primitive at the beginning of the window.
   ///
   /// After the primitive has been read, the window will be moved such that it
   /// is no longer included.
@@ -1240,8 +1237,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T;
 
-  /// Reads a little-endian primitive at a given offset from the beginning of
-  /// the window.
+  /// Reads a little-endian primitive at the beginning of the window.
   ///
   /// After the primitive has been read, the window will be moved such that it
   /// is no longer included.
@@ -1575,12 +1571,82 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn poke_le<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_le(pos, t) }
 
+  /// Writes bytes from the supplied buffer, starting from the front of the
+  /// window. Either the entire buffer is copied, or an error is returned
+  /// because bytes outside the window were requested.
+  ///
+  /// After the bytes have been written, the window will be moved to no longer
+  /// include then.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let data = [ 1, 2, 3, 4 ];
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// assert_eq!(b.fill(data.as_slice()), Ok(()));
+  /// assert_eq!(b.fill(data.as_slice()), Ok(()));
+  /// assert_eq!(b.fill(data.as_slice()), Err(()));
+  ///
+  /// b.flip_lo();
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 1,2,3,4,1,2,3,4 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub fn fill(&mut self, src: &[u8]) -> Result<(), ()> { self.raw.fill(src) }
+
+  /// Writes a big-endian primitive into the beginning of the window.
+  ///
+  /// After the primitive has been written, the window will be moved such that
+  /// it is no longer included.
+  ///
+  /// An error is returned if bytes outside of the window were requested.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// assert_eq!(b.fill_be(0x12345678u32), Ok(()));
+  /// assert_eq!(b.fill_be(0x11223344u32), Ok(()));
+  /// assert_eq!(b.fill_be(0x54321123u32), Err(()));
+  /// assert_eq!(b.fill_be(0x8877u16), Ok(()));
+  ///
+  /// b.flip_lo();
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 0x12, 0x34, 0x56, 0x78
+  ///                                   , 0x11, 0x22, 0x33, 0x44
+  ///                                   , 0x88, 0x77 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub fn fill_be<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_be(t) }
+
+  /// Writes a little-endian primitive into the beginning of the window.
+  ///
+  /// After the primitive has been written, the window will be moved such that
+  /// it is no longer included.
+  ///
+  /// An error is returned if bytes outside of the window were requested.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// assert_eq!(b.fill_le(0x12345678u32), Ok(()));
+  /// assert_eq!(b.fill_le(0x11223344u32), Ok(()));
+  /// assert_eq!(b.fill_le(0x54321123u32), Err(()));
+  /// assert_eq!(b.fill_le(0x8877u16), Ok(()));
+  ///
+  /// b.flip_lo();
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 0x78, 0x56, 0x34, 0x12
+  ///                                   , 0x44, 0x33, 0x22, 0x11
+  ///                                   , 0x77, 0x88 ].as_slice()); }
+  /// ```
   #[inline(always)]
-  pub unsafe fn fill_le<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
+  pub fn fill_le<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
 
   #[inline(always)]
   pub unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) { self.raw.unsafe_poke(pos, src) }
