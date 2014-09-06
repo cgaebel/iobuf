@@ -1518,17 +1518,19 @@ impl<'a> RWIobuf<'a> {
   /// ```
   /// use iobuf::{RWIobuf,Iobuf};
   ///
-  /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
+  /// let data = [ 1,2,3,4 ];
   ///
   /// let mut b = RWIobuf::new(10);
   ///
   /// assert_eq!(b.poke(0, data.as_slice()), Ok(()));
   /// assert_eq!(b.poke(3, data.as_slice()), Ok(()));
   /// assert_eq!(b.resize(7), Ok(()));
-  /// unsafe { assert_eq!(b.as_slice(), [1,2,3,1,2,3,4].as_slice()); }
+  /// assert_eq!(b.poke(4, data.as_slice()), Err(()));
+  /// unsafe { assert_eq!(b.as_slice(), [ 1,2,3,1,2,3,4 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub fn poke(&self, pos: uint, src: &[u8]) -> Result<(), ()> { self.raw.poke(pos, src) }
+
   #[inline(always)]
   pub fn poke_be<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
   #[inline(always)]
