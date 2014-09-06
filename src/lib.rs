@@ -1648,17 +1648,164 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn fill_le<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
 
+  /// Writes the bytes at a given offset from the beginning of the window, into
+  /// the supplied buffer. It is undefined behavior to write outside the iobuf
+  /// window.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let data = [ 1,2,3,4 ];
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// unsafe {
+  ///   b.check_range_fail(1, 7);
+  ///
+  ///   b.unsafe_advance(1);
+  ///   b.narrow();
+  ///
+  ///   b.unsafe_poke(0, data);
+  ///   b.unsafe_poke(3, data);
+  ///   b.unsafe_advance(7);
+  /// }
+  ///
+  /// b.flip_lo();
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 1,2,3,1,2,3,4 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) { self.raw.unsafe_poke(pos, src) }
+
+  /// Writes a big-endian primitive at a given offset from the beginning of the
+  /// window. It is undefined behavior to write outside the iobuf window.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// unsafe {
+  ///   b.check_range_fail(0, 7);
+  ///
+  ///   b.unsafe_poke_be(0, 0x0304u16);
+  ///   b.unsafe_poke_be(1, 0x0505u16);
+  ///   b.unsafe_poke_be(3, 0x06070809u32);
+  /// }
+  ///
+  /// assert_eq!(b.resize(7), Ok(()));
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 3, 5, 5, 6, 7, 8, 9 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub unsafe fn unsafe_poke_be<T: Prim>(&self, pos: uint, t: T) { self.raw.unsafe_poke_be(pos, t) }
+
+  /// Writes a little-endian primitive at a given offset from the beginning of
+  /// the window. It is undefined behavior to write outside the iobuf window.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// unsafe {
+  ///   b.check_range_fail(0, 7);
+  ///
+  ///   b.unsafe_poke_le(0, 0x0304u16);
+  ///   b.unsafe_poke_le(1, 0x0505u16);
+  ///   b.unsafe_poke_le(3, 0x06070809u32);
+  /// }
+  ///
+  /// assert_eq!(b.resize(7), Ok(()));
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub unsafe fn unsafe_poke_le<T: Prim>(&self, pos: uint, t: T) { self.raw.unsafe_poke_le(pos, t) }
 
+
+  /// Writes bytes from the supplied buffer, starting from the front of the
+  /// window. It is undefined behavior to write outside the iobuf window.
+  ///
+  /// After the bytes have been written, the window will be moved to no longer
+  /// include then.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let data = [ 1, 2, 3, 4 ];
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// unsafe {
+  ///   b.check_range_fail(0, 8);
+  ///
+  ///   b.unsafe_fill(data.as_slice());
+  ///   b.unsafe_fill(data.as_slice());
+  /// }
+  ///
+  /// b.flip_lo();
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 1,2,3,4,1,2,3,4 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill(&mut self, src: &[u8]) { self.raw.unsafe_fill(src) }
+
+  /// Writes a big-endian primitive into the beginning of the window. It is
+  /// undefined behavior to write outside the iobuf window.
+  ///
+  /// After the primitive has been written, the window will be moved such that
+  /// it is no longer included.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// unsafe {
+  ///   b.check_range_fail(0, 10);
+  ///
+  ///   b.unsafe_fill_be(0x12345678u32);
+  ///   b.unsafe_fill_be(0x11223344u32);
+  ///   // b.unsafe_fill_be(0x54321123u32); DO NOT DO THIS. Undefined behavior.
+  ///   b.unsafe_fill_be(0x8877u16);
+  /// }
+  ///
+  /// b.flip_lo();
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 0x12, 0x34, 0x56, 0x78
+  ///                                   , 0x11, 0x22, 0x33, 0x44
+  ///                                   , 0x88, 0x77 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill_be<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_be(t) }
+
+  /// Writes a little-endian primitive into the beginning of the window. It is
+  /// undefined behavior to write outside the iobuf window.
+  ///
+  /// After the primitive has been written, the window will be moved such that
+  /// it is no longer included.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(10);
+  ///
+  /// unsafe {
+  ///   b.check_range_fail(0, 10);
+  ///
+  ///   b.unsafe_fill_le(0x12345678u32);
+  ///   b.unsafe_fill_le(0x11223344u32);
+  ///   // b.unsafe_fill_le(0x54321123u32); DO NOT DO THIS. Undefined behavior.
+  ///   b.unsafe_fill_le(0x8877u16);
+  /// }
+  ///
+  /// b.flip_lo();
+  ///
+  /// unsafe { assert_eq!(b.as_slice(), [ 0x78, 0x56, 0x34, 0x12
+  ///                                   , 0x44, 0x33, 0x22, 0x11
+  ///                                   , 0x77, 0x88 ].as_slice()); }
+  /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill_le<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_le(t) }
 }
@@ -1850,28 +1997,28 @@ impl<'a> Show for RWIobuf<'a> {
 }
 
 #[test]
-fn peek_some_be() {
+fn peek_be() {
   let s = [1,2,3,4];
   let b = ROIobuf::from_slice(&s);
   assert_eq!(b.peek_be(0), Ok(0x01020304u32));
 }
 
 #[test]
-fn peek_some_le() {
+fn peek_le() {
   let s = [1,2,3,4];
   let b = ROIobuf::from_slice(&s);
   assert_eq!(b.peek_le(0), Ok(0x04030201u32));
 }
 
 #[test]
-fn poke_some_be() {
+fn poke_be() {
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_be(0, 0x01020304u32), Ok(()));
   unsafe { assert_eq!(b.as_slice(), [1,2,3,4].as_slice()); }
 }
 
 #[test]
-fn poke_some_le() {
+fn poke_le() {
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_le(0, 0x01020304u32), Ok(()));
   unsafe { assert_eq!(b.as_slice(), [4,3,2,1].as_slice()); }
