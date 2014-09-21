@@ -2021,6 +2021,9 @@ impl IORingbuf {
 
   /// Returns an Iobuf, whose window may be filled with new data. This acts as
   /// the "push" operations for the ringbuf.
+  ///
+  /// It is easy to get garbage data if using a clone of the returned Iobuf.
+  /// This is not memory-unsafe, but should be avoided.
   #[inline(always)]
   pub fn push_buf(&mut self) -> &mut RWIobuf<'static> {
     &mut self.i_buf
@@ -2028,6 +2031,13 @@ impl IORingbuf {
 
   /// Returns an Iobuf, whose window may be have data `consume`d out of it. This
   /// acts as the "pop" operation for the ringbuf.
+  ///
+  /// After emptying out the returned Iobuf, it is not necessarily true that
+  /// the ringbuf is empty. To truly empty out the ringbuf, you must pop
+  /// Iobufs in a loop until `is_empty` returns `true`.
+  ///
+  /// It is easy to get garbage data if using a clone of the returned Iobuf.
+  /// This is not memory-unsafe, but should be avoided.
   #[inline]
   pub fn pop_buf(&mut self) -> &mut ROIobuf<'static> {
     if self.o_buf.is_empty() {
