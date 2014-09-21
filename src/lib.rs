@@ -29,14 +29,13 @@
 
 #![license = "MIT"]
 
-extern crate debug;
-
 use std::fmt::{Formatter,FormatError,Show};
 use std::iter;
 use std::mem;
 use std::num::Zero;
 use std::ptr;
 use std::raw;
+use std::rc;
 use std::rc::Rc;
 use std::result::{Result,Ok,Err};
 
@@ -96,13 +95,24 @@ fn bad_range(pos: uint, len: uint) {
 
 /// A `RawIobuf` is the representation of both a `RWIobuf` and a `ROIobuf`.
 /// It is very cheap to clone, as the backing buffer is shared and refcounted.
-#[deriving(Clone)]
 struct RawIobuf<'a> {
   buf:    Rc<MaybeOwnedBuffer<'a>>,
   lo_min: uint,
   lo:     uint,
   hi:     uint,
   hi_max: uint,
+}
+
+impl<'a> Clone for RawIobuf<'a> {
+    fn clone(&self) -> RawIobuf<'a> {
+        RawIobuf {
+            buf: self.buf.clone(),
+            lo_min: self.lo_min,
+            lo: self.lo,
+            hi: self.hi,
+            hi_max: self.hi_max,
+        }
+    }
 }
 
 impl<'a> RawIobuf<'a> {
@@ -1808,6 +1818,36 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill_le<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_le(t) }
+}
+
+impl RWIobuf<'static> {
+  /// Converts an `RWIobuf` into a vector of bytes, representing the whole
+  /// internal buffer. This will forever lose the limits and window.
+  ///
+  /// This function returns `None` if the backing buffer of this iobuf is shared
+  /// with any other iobufs, or the buffer is borrowed as opposed to owned.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf};
+  ///
+  /// let mut a = RWIobuf::new(1);
+  /// a.fill_be(0xABu8).unwrap();
+  /// assert_eq!(a.into_vec(), Some(vec!(0xAB)));
+  ///
+  /// let b = RWIobuf::new(1);
+  /// let c = b.clone();
+  /// assert_eq!(b.into_vec(), None);
+  /// let d = c.clone();
+  /// assert_eq!(d.into_vec(), None);
+  /// // At this point, `c` is the only one left.
+  /// assert!(c.into_vec().is_some());
+  /// ```
+  pub fn into_vec(self) -> Option<Vec<u8>> {
+    match rc::try_unwrap(self.raw.buf) {
+        Ok(OwnedBuffer(buf)) => Some(buf),
+        _                    => None,
+    }
+  }
 }
 
 impl<'a> Iobuf for ROIobuf<'a> {
