@@ -2021,12 +2021,14 @@ impl IORingbuf {
 
   /// Returns an Iobuf, whose window may be filled with new data. This acts as
   /// the "push" operations for the ringbuf.
+  #[inline(always)]
   pub fn push_buf(&mut self) -> &mut RWIobuf<'static> {
     &mut self.i_buf
   }
 
   /// Returns an Iobuf, whose window may be have data `consume`d out of it. This
   /// acts as the "pop" operation for the ringbuf.
+  #[inline]
   pub fn pop_buf(&mut self) -> &mut ROIobuf<'static> {
     if self.o_buf.is_empty() {
       self.i_buf.flip_lo();
@@ -2039,11 +2041,13 @@ impl IORingbuf {
   }
 
   /// `true` if there is no data to pop in the Iobuf.
+  #[inline]
   pub fn is_empty(&self) -> bool {
     self.i_buf.cap() == self.i_buf.len() && self.o_buf.is_empty()
   }
 
   /// `true` if there is no room for new data in the Iobuf.
+  #[inline(always)]
   pub fn is_full(&self) -> bool {
     self.i_buf.is_empty()
   }
