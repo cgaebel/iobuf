@@ -30,6 +30,7 @@
 #![license = "MIT"]
 
 use std::fmt::{Formatter,FormatError,Show};
+use std::kinds::marker::ContravariantLifetime;
 use std::iter;
 use std::mem;
 use std::num::Zero;
@@ -68,15 +69,15 @@ impl Prim for u64 {}
 /// never used.
 enum MaybeOwnedBuffer<'a> {
   OwnedBuffer(Vec<u8>),
-  BorrowedBuffer(raw::Slice<u8>),
+  BorrowedBuffer(raw::Slice<u8>, ContravariantLifetime<'a>),
 }
 
 impl<'a> MaybeOwnedBuffer<'a> {
   #[inline(always)]
   unsafe fn as_raw_slice(&self) -> raw::Slice<u8> {
     match *self {
-      OwnedBuffer(ref v)    => mem::transmute(v.as_slice()),
-      BorrowedBuffer(ref s) => *s,
+      OwnedBuffer(ref v)       => mem::transmute(v.as_slice()),
+      BorrowedBuffer(ref s, _) => *s,
     }
   }
 
@@ -133,7 +134,10 @@ impl<'a> RawIobuf<'a> {
 
   fn from_str<'a>(s: &'a str) -> RawIobuf<'a> {
     unsafe {
-      RawIobuf::of_buf(BorrowedBuffer(mem::transmute(s.as_bytes())))
+      RawIobuf::of_buf(
+          BorrowedBuffer(
+              mem::transmute(s.as_bytes()),
+              ContravariantLifetime))
     }
   }
 
@@ -143,7 +147,7 @@ impl<'a> RawIobuf<'a> {
 
   fn from_slice<'a>(s: &'a [u8]) -> RawIobuf<'a> {
     unsafe {
-      RawIobuf::of_buf(BorrowedBuffer(mem::transmute(s)))
+      RawIobuf::of_buf(BorrowedBuffer(mem::transmute(s), ContravariantLifetime))
     }
   }
 
