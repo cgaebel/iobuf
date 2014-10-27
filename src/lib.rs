@@ -105,15 +105,15 @@ struct RawIobuf<'a> {
 }
 
 impl<'a> Clone for RawIobuf<'a> {
-    fn clone(&self) -> RawIobuf<'a> {
-        RawIobuf {
-            buf: self.buf.clone(),
-            lo_min: self.lo_min,
-            lo: self.lo,
-            hi: self.hi,
-            hi_max: self.hi_max,
-        }
+  fn clone(&self) -> RawIobuf<'a> {
+    RawIobuf {
+      buf: self.buf.clone(),
+      lo_min: self.lo_min,
+      lo: self.lo,
+      hi: self.hi,
+      hi_max: self.hi_max,
     }
+  }
 }
 
 impl<'a> RawIobuf<'a> {
@@ -152,10 +152,10 @@ impl<'a> RawIobuf<'a> {
   }
 
   fn deep_clone(&self) -> RawIobuf<'static> {
+    let my_data: &[u8] = unsafe { mem::transmute(self.as_raw_slice()) };
+
     RawIobuf {
-      buf:
-        Rc::new(OwnedBuffer(
-          Vec::from_slice(unsafe { mem::transmute(self.as_raw_slice()) }))),
+      buf: Rc::new(OwnedBuffer(my_data.iter().map(|&x| x).collect())),
       lo_min: self.lo_min,
       lo:     self.lo,
       hi:     self.hi,
