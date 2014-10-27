@@ -141,6 +141,10 @@ impl<'a> RawIobuf<'a> {
     }
   }
 
+  fn from_string(s: String) -> RawIobuf<'static> {
+    RawIobuf::from_vec(s.into_bytes())
+  }
+
   fn from_vec(v: Vec<u8>) -> RawIobuf<'static> {
     RawIobuf::of_buf(OwnedBuffer(v))
   }
@@ -1325,6 +1329,23 @@ impl<'a> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_str(s) }
   }
 
+  /// Directly converts a string into a read-only Iobuf. The Iobuf will take
+  /// ownership of the string, therefore there will be no copying.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_string("hello".into_string());
+  ///
+  /// assert_eq!(b.cap(), 5);
+  /// assert_eq!(b.len(), 5);
+  /// unsafe { assert_eq!(b.as_slice(), b"hello"); }
+  /// ```
+  #[inline]
+  pub fn from_string(s: String) -> ROIobuf<'static> {
+    ROIobuf { raw: RawIobuf::from_string(s) }
+  }
+
   /// Directly converts a byte vector into a read-only Iobuf. The Iobuf will
   /// take ownership of the vector, therefore there will be no copying.
   ///
@@ -1379,6 +1400,25 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn new(len: uint) -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::new(len) }
+  }
+
+  /// Directly converts a string into a writeable Iobuf. The Iobuf will take
+  /// ownership of the string, therefore there will be no copying.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::from_string("hello".into_string());
+  ///
+  /// b.poke_be(1, b'4').unwrap();
+  ///
+  /// assert_eq!(b.len(), 5);
+  /// assert_eq!(b.cap(), 5);
+  /// unsafe { assert_eq!(b.as_slice(), b"h4llo"); }
+  /// ```
+  #[inline(always)]
+  pub fn from_string(s: String) -> RWIobuf<'static> {
+    RWIobuf { raw: RawIobuf::from_string(s) }
   }
 
   /// Directly converts a byte vector into a writeable Iobuf. The Iobuf will
