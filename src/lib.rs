@@ -105,12 +105,13 @@ struct RawIobuf<'a> {
 }
 
 impl<'a> Clone for RawIobuf<'a> {
+  #[inline]
   fn clone(&self) -> RawIobuf<'a> {
     RawIobuf {
-      buf: self.buf.clone(),
+      buf:    self.buf.clone(),
       lo_min: self.lo_min,
-      lo: self.lo,
-      hi: self.hi,
+      lo:     self.lo,
+      hi:     self.hi,
       hi_max: self.hi_max,
     }
   }
@@ -120,7 +121,7 @@ impl<'a> RawIobuf<'a> {
   fn of_buf<'a>(buf: MaybeOwnedBuffer<'a>) -> RawIobuf<'a> {
     let len = buf.len();
     RawIobuf {
-      buf: Rc::new(buf),
+      buf:    Rc::new(buf),
       lo_min: 0,
       lo:     0,
       hi:     len,
@@ -189,7 +190,49 @@ impl<'a> RawIobuf<'a> {
     }
   }
 
-  #[inline]
+  #[inline(always)]
+  fn sub_window(&mut self, pos: uint, len: uint) -> Result<(), ()> {
+    unsafe {
+      try!(self.check_range(pos, len));
+      Ok(self.unsafe_sub_window(pos, len))
+    }
+  }
+
+  #[inline(always)]
+  fn sub_window_from(&mut self, pos: uint) -> Result<(), ()> {
+    unsafe {
+      try!(self.check_range(pos, 0));
+      Ok(self.unsafe_sub_window_from(pos))
+    }
+  }
+
+  #[inline(always)]
+  fn sub_window_to(&mut self, len: uint) -> Result<(), ()> {
+    unsafe {
+      try!(self.check_range(0, len));
+      Ok(self.unsafe_sub_window_to(len))
+    }
+  }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window(&mut self, pos: uint, len: uint) {
+    self.unsafe_resize(pos);
+    self.flip_hi();
+    self.unsafe_resize(len);
+  }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window_from(&mut self, pos: uint) {
+    self.unsafe_resize(pos);
+    self.flip_hi();
+  }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window_to(&mut self, len: uint) {
+    self.unsafe_resize(len)
+  }
+
+  #[inline(always)]
   fn sub(&mut self, pos: uint, len: uint) -> Result<(), ()> {
     unsafe {
       try!(self.check_range(pos, len));
@@ -197,14 +240,38 @@ impl<'a> RawIobuf<'a> {
     }
   }
 
-  #[inline]
+  #[inline(always)]
+  fn sub_from(&mut self, pos: uint) -> Result<(), ()> {
+    unsafe {
+      try!(self.check_range(pos, 0));
+      Ok(self.unsafe_sub_from(pos))
+    }
+  }
+
+  #[inline(always)]
+  fn sub_to(&mut self, len: uint) -> Result<(), ()> {
+    unsafe {
+      try!(self.check_range(0, len));
+      Ok(self.unsafe_sub_to(len))
+    }
+  }
+
+  #[inline(always)]
   unsafe fn unsafe_sub(&mut self, pos: uint, len: uint) {
-    let lo      = self.lo + pos;
-    let hi      = lo + len;
-    self.lo_min = lo;
-    self.lo     = lo;
-    self.hi     = hi;
-    self.hi_max = hi;
+    self.unsafe_sub_window(pos, len);
+    self.narrow();
+  }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_from(&mut self, pos: uint) {
+    self.unsafe_sub_window_from(pos);
+    self.narrow();
+  }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_to(&mut self, len: uint) {
+    self.unsafe_sub_window_to(len);
+    self.narrow();
   }
 
   /// Both the limits and the window are [lo, hi).
@@ -705,7 +772,76 @@ pub trait Iobuf: Clone + Show {
   /// ```
   unsafe fn as_slice(&self) -> &[u8];
 
-  /// Changes the iobuf's limits and bounds to the subrange specified by
+  /// Changes the Iobuf's bounds to the subrange specified by `pos` and `len`,
+  /// which must lie within the current window.
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.sub_window(1, 3), Ok(()));
+  /// unsafe { assert_eq!(b.as_slice(), b"ell") };
+  /// // The limits are unchanged. If you just want them to match the bounds, use
+  /// // `sub` and friends.
+  /// b.reset();
+  /// unsafe { assert_eq!(b.as_slice(), b"hello") };
+  /// ```
+  /// ```
+  ///
+  /// If your position and length do not lie in the current window, you will get
+  /// an error.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.advance(2), Ok(()));
+  /// assert_eq!(b.sub_window(0, 5), Err(())); // boom
+  /// ```
+  ///
+  /// If you want to slice from the start, use `sub_to`:
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.sub_window_to(3), Ok(()));
+  /// unsafe { assert_eq!(b.as_slice(), b"hel") };
+  /// ```
+  ///
+  /// If you want to slice to the end, use `sub_from`:
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  /// assert_eq!(b.sub_window_from(2), Ok(()));
+  /// unsafe { assert_eq!(b.as_slice(), b"llo") };
+  /// ```
+  fn sub_window(&mut self, pos: uint, len: uint) -> Result<(), ()>;
+
+  /// Changes the Iobuf's bounds to start at `pos`, and go to the end of the
+  /// current window.
+  fn sub_window_from(&mut self, pos: uint) -> Result<(), ()>;
+
+  /// Changes the Iobuf's bounds to extend for only `len` bytes.
+  ///
+  /// This is the same as `resize`, but might make more semantic sense at the
+  /// call site depending on context.
+  fn sub_window_to(&mut self, len: uint) -> Result<(), ()>;
+
+  /// The same as `sub_window`, but no bounds checks are performed. You should
+  /// probably just use `sub_window`.
+  unsafe fn unsafe_sub_window(&mut self, pos: uint, len: uint);
+
+  /// The same as `sub_window_from`, but no bounds checks are performed. You
+  /// should probably just use `sub_window_from`.
+  unsafe fn unsafe_sub_window_from(&mut self, pos: uint);
+
+  /// The same as `sub_window_to`, but no bounds checks are performed. You
+  /// should probably just use `sub_window_to`.
+  unsafe fn unsafe_sub_window_to(&mut self, pos: uint);
+
+  /// Changes the Iobuf's limits and bounds to the subrange specified by
   /// `pos` and `len`, which must lie within the current window.
   ///
   /// ```
@@ -713,6 +849,11 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.sub(1, 3), Ok(()));
+  /// unsafe { assert_eq!(b.as_slice(), b"ell") };
+  ///
+  /// // The limits are changed, too! If you just want to change the bounds, use
+  /// // `sub_window` and friends.
+  /// b.reset();
   /// unsafe { assert_eq!(b.as_slice(), b"ell") };
   /// ```
   ///
@@ -727,31 +868,46 @@ pub trait Iobuf: Clone + Show {
   /// assert_eq!(b.sub(0, 5), Err(())); // boom
   /// ```
   ///
-  /// If you want to slice from the start, set `pos` to `0`.
+  /// If you want to slice from the start, use `sub_to`:
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
-  /// assert_eq!(b.sub(0, 3), Ok(()));
+  /// assert_eq!(b.sub_to(3), Ok(()));
   /// unsafe { assert_eq!(b.as_slice(), b"hel") };
   /// ```
   ///
-  /// If you want to slice to the end, set `len` to `self.len() - pos`.
+  /// If you want to slice to the end, use `sub_from`:
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
-  /// let len = b.len() - 2; // makes borrowck happy
-  /// assert_eq!(b.sub(2, len), Ok(()));
+  /// assert_eq!(b.sub_from(2), Ok(()));
   /// unsafe { assert_eq!(b.as_slice(), b"llo") };
   /// ```
   fn sub(&mut self, pos: uint, len: uint) -> Result<(), ()>;
 
+  /// Changes the Iobuf's limits and bounds to start from `pos` and extend to
+  /// the end of the current window.
+  fn sub_from(&mut self, pos: uint) -> Result<(), ()>;
+
+  /// Changes the Iobuf's limits and bounds to start at the beginning of the
+  /// current window, and extend for `len` bytes.
+  fn sub_to(&mut self, len: uint) -> Result<(), ()>;
+
   /// The same as `sub`, but no bounds checks are performed. You should probably
   /// just use `sub`.
   unsafe fn unsafe_sub(&mut self, pos: uint, len: uint);
+
+  /// The same as `sub_from`, but no bounds checks are performed. You should
+  /// probably just use `sub_from`.
+  unsafe fn unsafe_sub_from(&mut self, pos: uint);
+
+  /// The same as `sub_to`, but no bounds checks are performed. You should
+  /// probably just use `sub_to`.
+  unsafe fn unsafe_sub_to(&mut self, len: uint);
 
   /// Overrides the existing limits and window of the Iobuf, returning `Err(())`
   /// if attempting to widen either of them.
@@ -1911,10 +2067,40 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn as_slice(&self) -> &[u8] { self.raw.as_slice() }
 
   #[inline(always)]
+  fn sub_window(&mut self, pos: uint, len: uint) -> Result<(), ()> { self.raw.sub_window(pos, len) }
+
+  #[inline(always)]
+  fn sub_window_from(&mut self, pos: uint) -> Result<(), ()> { self.raw.sub_window_from(pos) }
+
+  #[inline(always)]
+  fn sub_window_to(&mut self, len: uint) -> Result<(), ()> { self.raw.sub_window_to(len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window(&mut self, pos: uint, len: uint) { self.raw.unsafe_sub_window(pos, len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window_from(&mut self, pos: uint) { self.raw.unsafe_sub_window_from(pos) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window_to(&mut self, len: uint) { self.raw.unsafe_sub_window_to(len) }
+
+  #[inline(always)]
   fn sub(&mut self, pos: uint, len: uint) -> Result<(), ()> { self.raw.sub(pos, len) }
 
   #[inline(always)]
+  fn sub_from(&mut self, pos: uint) -> Result<(), ()> { self.raw.sub_from(pos) }
+
+  #[inline(always)]
+  fn sub_to(&mut self, len: uint) -> Result<(), ()> { self.raw.sub_to(len) }
+
+  #[inline(always)]
   unsafe fn unsafe_sub(&mut self, pos: uint, len: uint) { self.raw.unsafe_sub(pos, len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_from(&mut self, pos: uint) { self.raw.unsafe_sub_from(pos) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_to(&mut self, len: uint) { self.raw.unsafe_sub_to(len) }
 
   #[inline(always)]
   fn set_limits_and_window(&mut self, limits: (uint, uint), window: (uint, uint)) -> Result<(), ()> { self.raw.set_limits_and_window(limits, window) }
@@ -1998,10 +2184,40 @@ impl<'a> Iobuf for RWIobuf<'a> {
   unsafe fn as_slice(&self) -> &[u8] { self.raw.as_slice() }
 
   #[inline(always)]
+  fn sub_window(&mut self, pos: uint, len: uint) -> Result<(), ()> { self.raw.sub_window(pos, len) }
+
+  #[inline(always)]
+  fn sub_window_from(&mut self, pos: uint) -> Result<(), ()> { self.raw.sub_window_from(pos) }
+
+  #[inline(always)]
+  fn sub_window_to(&mut self, len: uint) -> Result<(), ()> { self.raw.sub_window_to(len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window(&mut self, pos: uint, len: uint) { self.raw.unsafe_sub_window(pos, len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window_from(&mut self, pos: uint) { self.raw.unsafe_sub_window_from(pos) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window_to(&mut self, len: uint) { self.raw.unsafe_sub_window_to(len) }
+
+  #[inline(always)]
   fn sub(&mut self, pos: uint, len: uint) -> Result<(), ()> { self.raw.sub(pos, len) }
 
   #[inline(always)]
+  fn sub_from(&mut self, pos: uint) -> Result<(), ()> { self.raw.sub_from(pos) }
+
+  #[inline(always)]
+  fn sub_to(&mut self, len: uint) -> Result<(), ()> { self.raw.sub_to(len) }
+
+  #[inline(always)]
   unsafe fn unsafe_sub(&mut self, pos: uint, len: uint) { self.raw.unsafe_sub(pos, len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_from(&mut self, pos: uint) { self.raw.unsafe_sub_from(pos) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_to(&mut self, len: uint) { self.raw.unsafe_sub_to(len) }
 
   #[inline(always)]
   fn set_limits_and_window(&mut self, limits: (uint, uint), window: (uint, uint)) -> Result<(), ()> { self.raw.set_limits_and_window(limits, window) }
