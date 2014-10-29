@@ -328,6 +328,21 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
+  fn extend(&mut self, len: uint) -> Result<(), ()> {
+    unsafe {
+      if self.hi + len > self.hi_max {
+        return Err(());
+      }
+      Ok(self.unsafe_extend(len))
+    }
+  }
+
+  #[inline(always)]
+  unsafe fn unsafe_extend(&mut self, len: uint) {
+    self.hi += len;
+  }
+
+  #[inline(always)]
   fn resize(&mut self, len: uint) -> Result<(), ()> {
     let new_hi = self.lo + len;
     if new_hi > self.hi_max { return Err(()) }
@@ -1017,6 +1032,25 @@ pub trait Iobuf: Clone + Show {
   /// assert_eq!(b.len(), 0);
   /// ```
   unsafe fn unsafe_advance(&mut self, len: uint);
+
+  /// Advances the upper bound of the window by `len`. `Err(())` will be
+  /// returned if you advance past the upper limit.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  /// b.resize(2).unwrap();
+  /// assert_eq!(b.extend(1), Ok(()));
+  /// unsafe { assert_eq!(b.as_slice(), b"hel"); }
+  /// assert_eq!(b.extend(3), Err(()));
+  /// unsafe { assert_eq!(b.as_slice(), b"hel"); }
+  /// ```
+  fn extend(&mut self, len: uint) -> Result<(), ()>;
+
+  /// Advances the upper bound of the window by `len`. No bounds checking will
+  /// be performed.
+  unsafe fn unsafe_extend(&mut self, len: uint);
 
   /// Sets the length of the window, provided it does not exceed the limits.
   ///
@@ -2115,6 +2149,12 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn unsafe_advance(&mut self, len: uint) { self.raw.unsafe_advance(len) }
 
   #[inline(always)]
+  fn extend(&mut self, len: uint) -> Result<(), ()> { self.raw.extend(len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_extend(&mut self, len: uint) { self.raw.unsafe_extend(len) }
+
+  #[inline(always)]
   fn resize(&mut self, len: uint) -> Result<(), ()> { self.raw.resize(len) }
 
   #[inline(always)]
@@ -2230,6 +2270,12 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_advance(&mut self, len: uint) { self.raw.unsafe_advance(len) }
+
+  #[inline(always)]
+  fn extend(&mut self, len: uint) -> Result<(), ()> { self.raw.extend(len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_extend(&mut self, len: uint) { self.raw.unsafe_extend(len) }
 
   #[inline(always)]
   fn resize(&mut self, len: uint) -> Result<(), ()> { self.raw.resize(len) }
