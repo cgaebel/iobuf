@@ -191,6 +191,13 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
+  fn debug_check_range(&self, pos: uint, len: uint) {
+    if cfg!(debug) {
+      self.check_range_fail(pos, len);
+    }
+  }
+
+  #[inline(always)]
   fn sub_window(&mut self, pos: uint, len: uint) -> Result<(), ()> {
     unsafe {
       try!(self.check_range(pos, len));
@@ -216,6 +223,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_sub_window(&mut self, pos: uint, len: uint) {
+    self.debug_check_range(pos, len);
     self.unsafe_resize(pos);
     self.flip_hi();
     self.unsafe_resize(len);
@@ -223,12 +231,14 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_sub_window_from(&mut self, pos: uint) {
+    self.debug_check_range(pos, 0);
     self.unsafe_resize(pos);
     self.flip_hi();
   }
 
   #[inline(always)]
   unsafe fn unsafe_sub_window_to(&mut self, len: uint) {
+    self.debug_check_range(0, len);
     self.unsafe_resize(len)
   }
 
@@ -258,18 +268,21 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_sub(&mut self, pos: uint, len: uint) {
+    self.debug_check_range(pos, len);
     self.unsafe_sub_window(pos, len);
     self.narrow();
   }
 
   #[inline(always)]
   unsafe fn unsafe_sub_from(&mut self, pos: uint) {
+    self.debug_check_range(pos, 0);
     self.unsafe_sub_window_from(pos);
     self.narrow();
   }
 
   #[inline(always)]
   unsafe fn unsafe_sub_to(&mut self, len: uint) {
+    self.debug_check_range(0, len);
     self.unsafe_sub_window_to(len);
     self.narrow();
   }
@@ -324,6 +337,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_advance(&mut self, len: uint) {
+    self.debug_check_range(0, len);
     self.lo += len;
   }
 
@@ -339,6 +353,11 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_extend(&mut self, len: uint) {
+    if cfg!(debug) {
+      if self.hi + len > self.hi_max {
+        bad_range(self.hi + len, 0);
+      }
+    }
     self.hi += len;
   }
 
@@ -352,6 +371,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_resize(&mut self, len: uint) {
+    self.debug_check_range(0, len);
     self.hi = self.lo + len;
   }
 
@@ -507,6 +527,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn get_at<T: Prim>(&self, pos: uint) -> T {
+    self.debug_check_range(pos, 1);
     let s = self.as_raw_slice();
     FromPrimitive::from_u8(
       ptr::read(s.data.offset((self.lo + pos) as int)))
@@ -515,6 +536,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn set_at<T: Prim>(&self, pos: uint, val: T) {
+    self.debug_check_range(pos, 1);
     let s = self.as_raw_slice();
     ptr::write(s.data.offset((self.lo + pos) as int) as *mut u8,
                val.to_u8().unwrap());
@@ -522,6 +544,8 @@ impl<'a> RawIobuf<'a> {
 
   unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) {
     let len = dst.len();
+    self.debug_check_range(pos, len);
+
     let dst: raw::Slice<u8> = mem::transmute(dst);
     let src: raw::Slice<u8> = self.as_raw_slice();
 
@@ -533,6 +557,8 @@ impl<'a> RawIobuf<'a> {
 
   unsafe fn unsafe_peek_be<T: Prim>(&self, pos: uint) -> T {
     let bytes = mem::size_of::<T>();
+    self.debug_check_range(pos, bytes);
+
     let mut x: T = Zero::zero();
 
     for i in iter::range(0, bytes) {
@@ -544,6 +570,8 @@ impl<'a> RawIobuf<'a> {
 
   unsafe fn unsafe_peek_le<T: Prim>(&self, pos: uint) -> T {
     let bytes = mem::size_of::<T>();
+    self.debug_check_range(pos, bytes);
+
     let mut x: T = Zero::zero();
 
     for i in iter::range(0, bytes) {
@@ -555,6 +583,8 @@ impl<'a> RawIobuf<'a> {
 
   unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) {
     let len = src.len();
+    self.debug_check_range(pos, len);
+
     let dst: raw::Slice<u8> = self.as_raw_slice();
     let src: raw::Slice<u8> = mem::transmute(src);
 
@@ -566,6 +596,7 @@ impl<'a> RawIobuf<'a> {
 
   unsafe fn unsafe_poke_be<T: Prim>(&self, pos: uint, t: T) {
     let bytes = mem::size_of::<T>();
+    self.debug_check_range(pos, bytes);
 
     let msk: T = FromPrimitive::from_u8(0xFFu8).unwrap();
 
@@ -576,6 +607,7 @@ impl<'a> RawIobuf<'a> {
 
   unsafe fn unsafe_poke_le<T: Prim>(&self, pos: uint, t: T) {
     let bytes = mem::size_of::<T>();
+    self.debug_check_range(pos, bytes);
 
     let msk: T = FromPrimitive::from_u8(0xFFu8).unwrap();
 
@@ -586,30 +618,35 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_fill(&mut self, src: &[u8]) {
+    self.debug_check_range(0, src.len());
     self.unsafe_poke(0, src);
     self.lo += src.len();
   }
 
   #[inline(always)]
   unsafe fn unsafe_fill_be<T: Prim>(&mut self, t: T) {
+    self.debug_check_range(0, mem::size_of::<T>());
     self.unsafe_poke_be(0, t);
     self.lo += mem::size_of::<T>();
   }
 
   #[inline(always)]
   unsafe fn unsafe_fill_le<T: Prim>(&mut self, t: T) {
+    self.debug_check_range(0, mem::size_of::<T>());
     self.unsafe_poke_le(0, t);
     self.lo += mem::size_of::<T>();
   }
 
   #[inline(always)]
   unsafe fn unsafe_consume(&mut self, dst: &mut [u8]) {
+    self.debug_check_range(0, dst.len());
     self.unsafe_peek(0, dst);
     self.lo += dst.len();
   }
 
   #[inline(always)]
   unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T {
+    self.debug_check_range(0, mem::size_of::<T>());
     let ret = self.unsafe_peek_le::<T>(0);
     self.lo += mem::size_of::<T>();
     ret
@@ -617,6 +654,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T {
+    self.debug_check_range(0, mem::size_of::<T>());
     let ret = self.unsafe_peek_be::<T>(0);
     self.lo += mem::size_of::<T>();
     ret
