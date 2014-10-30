@@ -362,6 +362,26 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
+  fn is_extended_by_raw<'b>(&self, other: &RawIobuf<'b>) -> bool {
+    unsafe {
+      let a: raw::Slice<u8> = self.as_raw_slice();
+      let b: raw::Slice<u8> = other.as_raw_slice();
+
+      a.data.offset(self.hi as int) == b.data.offset(other.lo as int)
+    }
+  }
+
+  #[inline(always)]
+  fn is_extended_by_ro<'b>(&self, other: &ROIobuf<'b>) -> bool {
+    self.is_extended_by_raw(&other.raw)
+  }
+
+  #[inline(always)]
+  fn is_extended_by_rw<'b>(&self, other: &RWIobuf<'b>) -> bool {
+    self.is_extended_by_raw(&other.raw)
+  }
+
+  #[inline(always)]
   fn resize(&mut self, len: uint) -> Result<(), ()> {
     let new_hi = self.lo + len;
     if new_hi > self.hi_max { return Err(()) }
@@ -1089,6 +1109,38 @@ pub trait Iobuf: Clone + Show {
   /// Advances the upper bound of the window by `len`. No bounds checking will
   /// be performed.
   unsafe fn unsafe_extend(&mut self, len: uint);
+
+  /// Returns `true` if the `other` Iobuf's window is the region directly after
+  /// our window. This does not inspect the buffer -- it only compares raw
+  /// pointers.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut a = ROIobuf::from_string("hello".to_string());
+  /// let mut b = a.clone();
+  /// let mut c = a.clone();
+  /// let mut d = ROIobuf::from_string("hello".to_string());
+  ///
+  /// assert_eq!(a.sub_window_to(2), Ok(()));
+  ///
+  /// // b actually IS an extension of a.
+  /// assert_eq!(b.sub_window_from(2), Ok(()));
+  /// assert_eq!(a.is_extended_by_ro(&b), true);
+  ///
+  /// // a == "he", b == "lo", it's missing the "l", therefore not an extension.
+  /// assert_eq!(c.sub_window_from(3), Ok(()));
+  /// assert_eq!(b.is_extended_by_ro(&a), false);
+  ///
+  /// // Different allocations => not an extension.
+  /// assert_eq!(d.sub_window_from(2), Ok(()));
+  /// assert_eq!(a.is_extended_by_ro(&d), false);
+  /// ```
+  fn is_extended_by_ro<'a>(&self, other: &ROIobuf<'a>) -> bool;
+
+  /// The same as `is_extended_by_ro`, but the `other` buf is writable. They
+  /// both work the same, so just use whatever works for the type you have.
+  fn is_extended_by_rw<'a>(&self, other: &RWIobuf<'a>) -> bool;
 
   /// Sets the length of the window, provided it does not exceed the limits.
   ///
@@ -2005,7 +2057,6 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub unsafe fn unsafe_poke_le<T: Prim>(&self, pos: uint, t: T) { self.raw.unsafe_poke_le(pos, t) }
 
-
   /// Writes bytes from the supplied buffer, starting from the front of the
   /// window. It is undefined behavior to write outside the iobuf window.
   ///
@@ -2193,6 +2244,12 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn unsafe_extend(&mut self, len: uint) { self.raw.unsafe_extend(len) }
 
   #[inline(always)]
+  fn is_extended_by_ro<'a>(&self, other: &ROIobuf<'a>) -> bool { self.raw.is_extended_by_ro(other) }
+
+  #[inline(always)]
+  fn is_extended_by_rw<'a>(&self, other: &RWIobuf<'a>) -> bool { self.raw.is_extended_by_rw(other) }
+
+  #[inline(always)]
   fn resize(&mut self, len: uint) -> Result<(), ()> { self.raw.resize(len) }
 
   #[inline(always)]
@@ -2314,6 +2371,12 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_extend(&mut self, len: uint) { self.raw.unsafe_extend(len) }
+
+  #[inline(always)]
+  fn is_extended_by_ro<'a>(&self, other: &ROIobuf<'a>) -> bool { self.raw.is_extended_by_ro(other) }
+
+  #[inline(always)]
+  fn is_extended_by_rw<'a>(&self, other: &RWIobuf<'a>) -> bool { self.raw.is_extended_by_rw(other) }
 
   #[inline(always)]
   fn resize(&mut self, len: uint) -> Result<(), ()> { self.raw.resize(len) }
