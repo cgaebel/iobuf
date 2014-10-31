@@ -39,7 +39,6 @@ extern crate collections;
 #[phase(plugin, link)]
 extern crate core;
 
-
 #[cfg(test)] #[phase(plugin,link)] extern crate std;
 
 #[cfg(test)] extern crate native;
