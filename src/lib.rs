@@ -52,7 +52,7 @@ use core::clone::Clone;
 use core::collections::Collection;
 use core::fmt::{Formatter,FormatError,Show};
 use core::kinds::Copy;
-use core::kinds::marker::ContravariantLifetime;
+use core::kinds::marker::{ContravariantLifetime, NoCopy, NoSend, NoSync};
 use core::iter;
 use core::iter::Iterator;
 use core::mem;
@@ -119,6 +119,9 @@ struct RawIobuf<'a> {
   hi:     uint,
   hi_max: uint,
   lifetm: ContravariantLifetime<'a>,
+  nocopy: NoCopy,
+  nosend: NoSend,
+  nosync: NoSync,
 }
 
 impl<'a> Clone for RawIobuf<'a> {
@@ -133,6 +136,9 @@ impl<'a> Clone for RawIobuf<'a> {
       hi:     self.hi,
       hi_max: self.hi_max,
       lifetm: self.lifetm,
+      nocopy: NoCopy,
+      nosend: NoSend,
+      nosync: NoSync,
     }
   }
 }
@@ -185,6 +191,9 @@ impl<'a> RawIobuf<'a> {
         hi:     len,
         hi_max: len,
         lifetm: ContravariantLifetime,
+        nocopy: NoCopy,
+        nosend: NoSend,
+        nosync: NoSync,
       }
     }
   }
@@ -198,6 +207,9 @@ impl<'a> RawIobuf<'a> {
       hi:     0,
       hi_max: 0,
       lifetm: ContravariantLifetime,
+      nocopy: NoCopy,
+      nosend: NoSend,
+      nosync: NoSync,
     }
   }
 
@@ -297,6 +309,9 @@ impl<'a> RawIobuf<'a> {
         hi:     len,
         hi_max: len,
         lifetm: ContravariantLifetime,
+        nocopy: NoCopy,
+        nosend: NoSend,
+        nosync: NoSync,
       }
     }
   }
