@@ -133,6 +133,10 @@ impl<'a> RawIobuf<'a> {
     RawIobuf::of_buf(OwnedBuffer(Vec::from_elem(len, 0u8)))
   }
 
+  fn empty() -> RawIobuf<'static> {
+    RawIobuf::of_buf(OwnedBuffer(Vec::new()))
+  }
+
   fn from_str<'a>(s: &'a str) -> RawIobuf<'a> {
     unsafe {
       RawIobuf::of_buf(
@@ -1592,6 +1596,23 @@ pub struct RWIobuf<'a> {
 }
 
 impl<'a> ROIobuf<'a> {
+  /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
+  /// an empty backing buffer. Unfortunately, that backing buffer is refcounted,
+  /// so this still needs an allocation.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::empty();
+  ///
+  /// assert_eq!(b.cap(), 0);
+  /// assert_eq!(b.len(), 0);
+  /// ```
+  #[inline]
+  pub fn empty() -> ROIobuf<'static> {
+    ROIobuf { raw: RawIobuf::empty() }
+  }
+
   /// Constructs an Iobuf with the same contents as a string. The limits and
   /// window will be initially set to cover the whole string.
   ///
@@ -1666,6 +1687,23 @@ impl<'a> ROIobuf<'a> {
 }
 
 impl<'a> RWIobuf<'a> {
+  /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
+  /// an empty backing buffer. Unfortunately, that backing buffer is refcounted,
+  /// so this still needs an allocation.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::empty();
+  ///
+  /// assert_eq!(b.len(), 0);
+  /// assert_eq!(b.cap(), 0);
+  /// ```
+  #[inline]
+  pub fn empty() -> RWIobuf<'static> {
+    RWIobuf { raw: RawIobuf::empty() }
+  }
+
   /// Constructs a new Iobuf with a buffer of size `len`, undefined contents,
   /// and the limits and window set to the full size of the buffer.
   ///
