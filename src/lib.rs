@@ -110,7 +110,7 @@ struct RawIobuf<'a> {
   // The -2st size_of<uint>() bytes of `buf` is the length of the allocation.
   // Starting at `buf` is the raw data itself.
   buf:    *mut u8,
-  // If the lowest bit of this is set, `buf` is owned and the data before the
+  // If the highest bit of this is set, `buf` is owned and the data before the
   // pointer is valid. If it is not set, then the buffer wasn't allocated by us:
   // it's owned by someone else. Therefore, there's no header, and no need to
   // deallocate or refcount.
