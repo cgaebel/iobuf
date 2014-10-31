@@ -29,16 +29,48 @@
 
 #![license = "MIT"]
 
-use std::fmt::{Formatter,FormatError,Show};
-use std::kinds::marker::ContravariantLifetime;
-use std::iter;
-use std::mem;
-use std::num::Zero;
-use std::ptr;
-use std::raw;
-use std::rc;
-use std::rc::Rc;
-use std::result::{Result,Ok,Err};
+#![feature(phase)]
+#![feature(unsafe_destructor)]
+#![no_std]
+
+extern crate alloc;
+extern crate collections;
+
+#[phase(plugin, link)]
+extern crate core;
+
+
+#[cfg(test)] #[phase(plugin,link)] extern crate std;
+
+#[cfg(test)] extern crate native;
+#[cfg(test)] extern crate test;
+
+use alloc::heap;
+
+use collections::string::String;
+use collections::vec::Vec;
+use core::clone::Clone;
+use core::collections::Collection;
+use core::fmt::{Formatter,FormatError,Show};
+use core::kinds::Copy;
+use core::kinds::marker::ContravariantLifetime;
+use core::iter;
+use core::iter::Iterator;
+use core::mem;
+use core::num::{Zero, FromPrimitive, ToPrimitive};
+use core::ops::{Drop, Shl, Shr, BitOr, BitAnd};
+use core::option::{Option, Some, None};
+use core::ptr;
+use core::ptr::RawPtr;
+use core::raw;
+use core::result::{Result,Ok,Err};
+use core::slice::{ImmutableSlice, AsSlice};
+use core::str::StrSlice;
+use core::uint;
+
+// https://github.com/rust-lang/rust/issues/18491#issuecomment-61293267
+#[cfg(not(test))]
+mod std { pub use core::fmt; }
 
 /// A generic, over all built-in number types. Think of it as [u,i][8,16,32,64].
 ///
@@ -64,117 +96,262 @@ impl Prim for u32 {}
 impl Prim for i64 {}
 impl Prim for u64 {}
 
-/// Both owned vectors of memory and slices of memory are supported.
-/// In the case of a `ROIobuf`, although there is mutable slice access, it is
-/// never used.
-enum MaybeOwnedBuffer<'a> {
-  OwnedBuffer(Vec<u8>),
-  BorrowedBuffer(raw::Slice<u8>, ContravariantLifetime<'a>),
-}
-
-impl<'a> MaybeOwnedBuffer<'a> {
-  #[inline(always)]
-  unsafe fn as_raw_slice(&self) -> raw::Slice<u8> {
-    match *self {
-      OwnedBuffer(ref v)       => mem::transmute(v.as_slice()),
-      BorrowedBuffer(ref s, _) => *s,
-    }
-  }
-
-  #[inline]
-  fn len(&self) -> uint {
-    unsafe { self.as_raw_slice().len }
-  }
-}
-
 /// By factoring out the range check, we prevent rustc from emitting a ton of
 /// formatting code in our tight, little functions.
 #[cold]
 fn bad_range(pos: uint, len: uint) {
-  fail!("Iobuf got invalid range: pos={}, len={}", pos, len);
+  panic!("Iobuf got invalid range: pos={}, len={}", pos, len);
 }
 
 /// A `RawIobuf` is the representation of both a `RWIobuf` and a `ROIobuf`.
 /// It is very cheap to clone, as the backing buffer is shared and refcounted.
+#[unsafe_no_drop_flag]
 struct RawIobuf<'a> {
-  buf:    Rc<MaybeOwnedBuffer<'a>>,
-  lo_min: uint,
+  // The -1nd size_of<uint>() bytes of `buf` is the refcount.
+  // The -2st size_of<uint>() bytes of `buf` is the length of the allocation.
+  // Starting at `buf` is the raw data itself.
+  buf:    *mut u8,
+  // If the lowest bit of this is set, `buf` is owned and the data before the
+  // pointer is valid. If it is not set, then the buffer wasn't allocated by us:
+  // it's owned by someone else. Therefore, there's no header, and no need to
+  // deallocate or refcount.
+  lo_min_and_owned_bit: uint,
   lo:     uint,
   hi:     uint,
   hi_max: uint,
+  lifetm: ContravariantLifetime<'a>,
 }
 
 impl<'a> Clone for RawIobuf<'a> {
   #[inline]
   fn clone(&self) -> RawIobuf<'a> {
+    self.inc_ref_count();
+
     RawIobuf {
-      buf:    self.buf.clone(),
-      lo_min: self.lo_min,
+      buf:    self.buf,
+      lo_min_and_owned_bit: self.lo_min_and_owned_bit,
       lo:     self.lo,
       hi:     self.hi,
       hi_max: self.hi_max,
+      lifetm: self.lifetm,
     }
   }
 }
 
+/// The bitmask to get the "is the buffer owned" bit.
+static OWNED_MASK: uint = 1u << (uint::BITS - 1);
+
+#[unsafe_destructor]
+impl<'a> Drop for RawIobuf<'a> {
+  fn drop(&mut self) {
+    unsafe {
+      match self.dec_ref_count() {
+        None => {},
+        Some(bytes_allocated) =>
+          heap::deallocate(
+            self.buf.offset(
+              -2 * (uint::BYTES as int)),
+            bytes_allocated,
+            mem::align_of::<uint>()),
+      }
+    }
+
+    self.buf     = ptr::null_mut();
+    self.lo_min_and_owned_bit = 0;
+    self.lo     = 0;
+    self.hi     = 0;
+    self.hi_max = 0;
+  }
+}
+
 impl<'a> RawIobuf<'a> {
-  fn of_buf<'a>(buf: MaybeOwnedBuffer<'a>) -> RawIobuf<'a> {
-    let len = buf.len();
-    RawIobuf {
-      buf:    Rc::new(buf),
-      lo_min: 0,
-      lo:     0,
-      hi:     len,
-      hi_max: len,
-    }
-  }
-
   fn new(len: uint) -> RawIobuf<'static> {
-    RawIobuf::of_buf(OwnedBuffer(Vec::from_elem(len, 0u8)))
-  }
-
-  fn empty() -> RawIobuf<'static> {
-    RawIobuf::of_buf(OwnedBuffer(Vec::new()))
-  }
-
-  fn from_str<'a>(s: &'a str) -> RawIobuf<'a> {
     unsafe {
-      RawIobuf::of_buf(
-          BorrowedBuffer(
-              mem::transmute(s.as_bytes()),
-              ContravariantLifetime))
-    }
-  }
+      let data_len = 2*uint::BYTES + len;
 
-  fn from_string(s: String) -> RawIobuf<'static> {
-    RawIobuf::from_vec(s.into_bytes())
-  }
+      let buf: *mut u8 = heap::allocate(data_len, mem::align_of::<uint>());
 
-  fn from_vec(v: Vec<u8>) -> RawIobuf<'static> {
-    RawIobuf::of_buf(OwnedBuffer(v))
-  }
+      let allocated_len: *mut uint = buf as *mut uint;
+      let ref_count: *mut uint = buf.offset(uint::BYTES as int) as *mut uint;
 
-  fn from_slice<'a>(s: &'a [u8]) -> RawIobuf<'a> {
-    unsafe {
-      RawIobuf::of_buf(BorrowedBuffer(mem::transmute(s), ContravariantLifetime))
-    }
-  }
+      *allocated_len = data_len;
+      *ref_count     = 1;
 
-  fn deep_clone(&self) -> RawIobuf<'static> {
-    let my_data: &[u8] = unsafe { mem::transmute(self.as_raw_slice()) };
+      let buf: *mut u8 = buf.offset(2 * (uint::BYTES as int));
 
-    RawIobuf {
-      buf: Rc::new(OwnedBuffer(my_data.iter().map(|&x| x).collect())),
-      lo_min: self.lo_min,
-      lo:     self.lo,
-      hi:     self.hi,
-      hi_max: self.hi_max,
+      RawIobuf {
+        buf:    buf,
+        lo_min_and_owned_bit: OWNED_MASK,
+        lo:     0,
+        hi:     len,
+        hi_max: len,
+        lifetm: ContravariantLifetime,
+      }
     }
   }
 
   #[inline(always)]
-  unsafe fn as_raw_slice(&self) -> raw::Slice<u8> {
-    self.buf.as_raw_slice()
+  fn empty() -> RawIobuf<'static> {
+    RawIobuf {
+      buf:    ptr::null_mut(),
+      lo_min_and_owned_bit: 0,
+      lo:     0,
+      hi:     0,
+      hi_max: 0,
+      lifetm: ContravariantLifetime,
+    }
+  }
+
+  #[inline(always)]
+  fn lo_min(&self) -> uint {
+    self.lo_min_and_owned_bit & !OWNED_MASK
+  }
+
+  #[inline(always)]
+  fn set_lo_min(&mut self, new_value: uint) {
+    self.lo_min_and_owned_bit &= OWNED_MASK;
+    self.lo_min_and_owned_bit |= new_value;
+  }
+
+  #[inline(always)]
+  fn is_owned(&self) -> bool {
+    self.lo_min_and_owned_bit & OWNED_MASK != 0
+  }
+
+  #[inline(always)]
+  fn ref_count(&self) -> Option<*mut uint> {
+    unsafe {
+      if self.is_owned() {
+        Some(self.buf.offset(-(uint::BYTES as int)) as *mut uint)
+      } else {
+        None
+      }
+    }
+  }
+
+  #[inline(always)]
+  fn amount_allocated(&self) -> Option<*mut uint> {
+    unsafe {
+      if self.is_owned() {
+        Some(self.buf.offset(-2 * (uint::BYTES as int)) as *mut uint)
+      } else {
+        None
+      }
+    }
+  }
+
+  #[inline(always)]
+  fn inc_ref_count(&self) {
+    match self.ref_count() {
+      Some(dst) => unsafe { *dst += 1; },
+      None      => {},
+    }
+  }
+
+  /// Returns `Some(bytes_allocated)` if the buffer needs to be freed.
+  #[inline]
+  fn dec_ref_count(&self) -> Option<uint> {
+    match self.ref_count() {
+      None => None,
+      Some(ref_count) => unsafe {
+        *ref_count -= 1;
+        if *ref_count == 0 {
+          self.amount_allocated().map(|p| *p)
+        } else {
+          None
+        }
+      }
+    }
+  }
+
+  #[inline(always)]
+  fn from_str<'a>(s: &'a str) -> RawIobuf<'a> {
+    RawIobuf::from_slice(s.as_bytes())
+  }
+
+  #[inline(always)]
+  fn from_string(s: String) -> RawIobuf<'static> {
+    RawIobuf::from_vec(s.into_bytes())
+  }
+
+  #[inline(always)]
+  fn from_vec(v: Vec<u8>) -> RawIobuf<'static> {
+    unsafe {
+      let b = RawIobuf::new(v.len());
+      let s: raw::Slice<u8> = mem::transmute(v.as_slice());
+      ptr::copy_nonoverlapping_memory(b.buf, s.data, s.len);
+      b
+    }
+  }
+
+  #[inline(always)]
+  fn from_slice<'a>(s: &'a [u8]) -> RawIobuf<'a> {
+    unsafe {
+      let s_slice: raw::Slice<u8> = mem::transmute(s);
+      let ptr = s_slice.data as *mut u8;
+      let len = s_slice.len;
+
+      RawIobuf {
+        buf:    ptr,
+        lo_min_and_owned_bit: 0,
+        lo:     0,
+        hi:     len,
+        hi_max: len,
+        lifetm: ContravariantLifetime,
+      }
+    }
+  }
+
+  #[inline]
+  fn deep_clone(&self) -> RawIobuf<'static> {
+    unsafe {
+      let my_data = self.as_raw_limit_slice();
+
+      let mut b = RawIobuf::new(my_data.len);
+
+      b.lo = self.lo;
+      b.hi = self.hi;
+
+      ptr::copy_memory(b.buf, my_data.data, my_data.len);
+
+      b
+    }
+  }
+
+  #[inline(always)]
+  unsafe fn as_raw_limit_slice(&self) -> raw::Slice<u8> {
+    raw::Slice {
+      data: self.buf.offset(self.lo_min() as int) as *const u8,
+      len:  self.cap(),
+    }
+  }
+
+  #[inline(always)]
+  unsafe fn as_limit_slice<'b>(&'b self) -> &'b [u8] {
+    mem::transmute(self.as_raw_limit_slice())
+  }
+
+  #[inline(always)]
+  unsafe fn as_limit_slice_mut<'b>(&'b self) -> &'b mut [u8] {
+    mem::transmute(self.as_raw_limit_slice())
+  }
+
+  #[inline(always)]
+  unsafe fn as_raw_window_slice(&self) -> raw::Slice<u8> {
+    raw::Slice {
+      data: self.buf.offset(self.lo as int) as *const u8,
+      len:  self.len(),
+    }
+  }
+
+  #[inline(always)]
+  unsafe fn as_window_slice<'b>(&'b self) -> &'b [u8] {
+    mem::transmute(self.as_raw_window_slice())
+  }
+
+  #[inline(always)]
+  unsafe fn as_window_slice_mut<'b>(&'b self) -> &'b mut [u8] {
+    mem::transmute(self.as_raw_window_slice())
   }
 
   #[inline(always)]
@@ -296,13 +473,14 @@ impl<'a> RawIobuf<'a> {
   fn set_limits_and_window(&mut self, limits: (uint, uint), window: (uint, uint)) -> Result<(), ()> {
     let (new_lo_min, new_hi_max) = limits;
     let (new_lo, new_hi) = window;
+    let lo_min = self.lo_min();
     if new_hi_max < new_lo_min  { return Err(()); }
     if new_hi     < new_lo      { return Err(()); }
-    if new_lo_min < self.lo_min { return Err(()); }
+    if new_lo_min < lo_min      { return Err(()); }
     if new_hi_max > self.hi_max { return Err(()); }
     if new_lo     < self.lo     { return Err(()); }
     if new_hi     > self.hi     { return Err(()); }
-    self.lo_min = new_lo_min;
+    self.set_lo_min(new_lo_min);
     self.lo     = new_lo;
     self.hi     = new_hi;
     self.hi_max = new_hi_max;
@@ -316,7 +494,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   fn cap(&self) -> uint {
-    self.hi_max - self.lo_min
+    self.hi_max - self.lo_min()
   }
 
   #[inline(always)]
@@ -326,7 +504,8 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   fn narrow(&mut self) {
-    self.lo_min = self.lo;
+    let lo = self.lo;
+    self.set_lo_min(lo);
     self.hi_max = self.hi;
   }
 
@@ -368,10 +547,7 @@ impl<'a> RawIobuf<'a> {
   #[inline(always)]
   fn is_extended_by_raw<'b>(&self, other: &RawIobuf<'b>) -> bool {
     unsafe {
-      let a: raw::Slice<u8> = self.as_raw_slice();
-      let b: raw::Slice<u8> = other.as_raw_slice();
-
-      a.data.offset(self.hi as int) == b.data.offset(other.lo as int)
+      self.buf.offset(self.hi as int) == other.buf.offset(other.lo as int)
     }
   }
 
@@ -401,19 +577,19 @@ impl<'a> RawIobuf<'a> {
 
   #[inline(always)]
   fn rewind(&mut self) {
-    self.lo = self.lo_min;
+    self.lo = self.lo_min();
   }
 
   #[inline(always)]
   fn reset(&mut self) {
-    self.lo = self.lo_min;
+    self.lo = self.lo_min();
     self.hi = self.hi_max;
   }
 
   #[inline(always)]
   fn flip_lo(&mut self) {
     self.hi = self.lo;
-    self.lo = self.lo_min;
+    self.lo = self.lo_min();
   }
 
   #[inline(always)]
@@ -425,32 +601,14 @@ impl<'a> RawIobuf<'a> {
   fn compact(&mut self) {
     unsafe {
       let len = self.len();
-      let s = self.as_raw_slice();
+      let lo_min = self.lo_min();
       ptr::copy_memory(
-        s.data as *mut u8,
-        s.data.offset(self.lo as int) as *const u8,
+        self.buf.offset(lo_min as int),
+        self.buf.offset(self.lo as int) as *const u8,
         len);
-      self.lo = self.lo_min + len;
+      self.lo = lo_min + len;
       self.hi = self.hi_max;
     }
-  }
-
-  #[inline]
-  unsafe fn as_slice(&self) -> &[u8] {
-    let s = self.as_raw_slice();
-    mem::transmute(raw::Slice {
-      data: s.data.offset(self.lo as int),
-      len:  self.hi - self.lo,
-    })
-  }
-
-  #[inline]
-  unsafe fn as_mut_slice(&mut self) -> &mut [u8] {
-    let s = self.as_raw_slice();
-    mem::transmute(raw::Slice {
-      data: s.data.offset(self.lo as int),
-      len:  self.hi - self.lo,
-    })
   }
 
   #[inline(always)]
@@ -521,7 +679,7 @@ impl<'a> RawIobuf<'a> {
   fn fill_le<T: Prim>(&mut self, t: T) -> Result<(), ()> {
     unsafe {
       try!(self.check_range(0, mem::size_of::<T>()));
-      Ok(self.unsafe_fill_le(t)) // ok, unsafe fillet? om nom.
+      Ok(self.unsafe_fill_le(t)) // Ok, unsafe fillet? om nom.
     }
   }
 
@@ -552,30 +710,29 @@ impl<'a> RawIobuf<'a> {
   #[inline(always)]
   unsafe fn get_at<T: Prim>(&self, pos: uint) -> T {
     self.debug_check_range(pos, 1);
-    let s = self.as_raw_slice();
     FromPrimitive::from_u8(
-      ptr::read(s.data.offset((self.lo + pos) as int)))
-    .unwrap()
+      ptr::read(self.buf.offset((self.lo + pos) as int) as *const u8))
+      .unwrap()
   }
 
   #[inline(always)]
   unsafe fn set_at<T: Prim>(&self, pos: uint, val: T) {
     self.debug_check_range(pos, 1);
-    let s = self.as_raw_slice();
-    ptr::write(s.data.offset((self.lo + pos) as int) as *mut u8,
-               val.to_u8().unwrap());
+    ptr::write(
+      self.buf.offset((self.lo + pos) as int),
+      val.to_u8().unwrap())
   }
 
+  #[inline]
   unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]) {
     let len = dst.len();
     self.debug_check_range(pos, len);
 
     let dst: raw::Slice<u8> = mem::transmute(dst);
-    let src: raw::Slice<u8> = self.as_raw_slice();
 
     ptr::copy_nonoverlapping_memory(
       dst.data as *mut u8,
-      src.data.offset((self.lo + pos) as int) as *const u8,
+      self.buf.offset((self.lo + pos) as int) as *const u8,
       len);
   }
 
@@ -599,21 +756,21 @@ impl<'a> RawIobuf<'a> {
     let mut x: T = Zero::zero();
 
     for i in iter::range(0, bytes) {
-      x = (x >> 8) | (self.get_at::<T>(pos+i) << ((bytes - 1)* 8));
+      x = (x >> 8) | (self.get_at::<T>(pos+i) << ((bytes - 1) * 8));
     }
 
     x
   }
 
+  #[inline]
   unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) {
     let len = src.len();
     self.debug_check_range(pos, len);
 
-    let dst: raw::Slice<u8> = self.as_raw_slice();
     let src: raw::Slice<u8> = mem::transmute(src);
 
     ptr::copy_nonoverlapping_memory(
-      dst.data.offset((self.lo + pos) as int) as *mut u8,
+      self.buf.offset((self.lo + pos) as int),
       src.data as *const u8,
       len);
   }
@@ -741,12 +898,12 @@ impl<'a> RawIobuf<'a> {
   }
 
   fn show(&self, f: &mut Formatter, ty: &str) -> Result<(), FormatError> {
-    try!(write!(f, "{} IObuf, raw length={}, limits=[{},{}), bounds=[{},{})\n",
-                ty, unsafe { self.as_raw_slice().len }, self.lo_min, self.hi_max, self.lo, self.hi));
+    try!(write!(f, "{} IObuf, limits=[{},{}), bounds=[{},{})\n",
+                ty, self.lo_min(), self.hi_max, self.lo, self.hi));
 
     if self.lo == self.hi { return write!(f, "<empty buffer>"); }
 
-    let b = unsafe { self.as_slice() };
+    let b = unsafe { self.as_window_slice() };
 
     for (i, c) in b.chunks(8).enumerate() {
       try!(self.show_line(f, i, c));
@@ -842,12 +999,36 @@ pub trait Iobuf: Clone + Show {
   ///
   /// unsafe {
   ///   let mut b = ROIobuf::from_str("hello");
-  ///   assert_eq!(b.as_slice(), b"hello");
+  ///   assert_eq!(b.as_window_slice(), b"hello");
   ///   assert_eq!(b.advance(2), Ok(()));
-  ///   assert_eq!(b.as_slice(), b"llo");
+  ///   assert_eq!(b.as_window_slice(), b"llo");
   /// }
   /// ```
-  unsafe fn as_slice(&self) -> &[u8];
+  unsafe fn as_window_slice<'b>(&'b self) -> &'b [u8];
+
+  /// Reads the data in the limits as an immutable slice. Note that `Peek`s
+  /// and `Poke`s into the iobuf will change the contents of the slice, even
+  /// though it advertises itself as immutable. Therefore, this function is
+  /// `unsafe`.
+  ///
+  /// To use this function safely, you must manually ensure that the slice never
+  /// interacts with the same Iobuf. If you take a slice of an Iobuf, you can
+  /// immediately poke it into itself. This is unsafe, and undefined. However,
+  /// it can be safely poked into a _different_ iobuf without issue.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// unsafe {
+  ///   let mut b = ROIobuf::from_str("hello");
+  ///   assert_eq!(b.as_limit_slice(), b"hello");
+  ///   assert_eq!(b.advance(2), Ok(()));
+  ///   assert_eq!(b.as_limit_slice(), b"hello");
+  ///   b.narrow();
+  ///   assert_eq!(b.as_limit_slice(), b"llo");
+  /// }
+  /// ```
+  unsafe fn as_limit_slice<'b>(&'b self) -> &'b [u8];
 
   /// Changes the Iobuf's bounds to the subrange specified by `pos` and `len`,
   /// which must lie within the current window.
@@ -856,11 +1037,11 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.sub_window(1, 3), Ok(()));
-  /// unsafe { assert_eq!(b.as_slice(), b"ell") };
+  /// unsafe { assert_eq!(b.as_window_slice(), b"ell") };
   /// // The limits are unchanged. If you just want them to match the bounds, use
   /// // `sub` and friends.
   /// b.reset();
-  /// unsafe { assert_eq!(b.as_slice(), b"hello") };
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hello") };
   /// ```
   /// ```
   ///
@@ -882,7 +1063,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.sub_window_to(3), Ok(()));
-  /// unsafe { assert_eq!(b.as_slice(), b"hel") };
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hel") };
   /// ```
   ///
   /// If you want to slice to the end, use `sub_from`:
@@ -892,7 +1073,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.sub_window_from(2), Ok(()));
-  /// unsafe { assert_eq!(b.as_slice(), b"llo") };
+  /// unsafe { assert_eq!(b.as_window_slice(), b"llo") };
   /// ```
   fn sub_window(&mut self, pos: uint, len: uint) -> Result<(), ()>;
 
@@ -926,12 +1107,12 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.sub(1, 3), Ok(()));
-  /// unsafe { assert_eq!(b.as_slice(), b"ell") };
+  /// unsafe { assert_eq!(b.as_window_slice(), b"ell") };
   ///
   /// // The limits are changed, too! If you just want to change the bounds, use
   /// // `sub_window` and friends.
   /// b.reset();
-  /// unsafe { assert_eq!(b.as_slice(), b"ell") };
+  /// unsafe { assert_eq!(b.as_window_slice(), b"ell") };
   /// ```
   ///
   /// If your position and length do not lie in the current window, you will get
@@ -952,7 +1133,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.sub_to(3), Ok(()));
-  /// unsafe { assert_eq!(b.as_slice(), b"hel") };
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hel") };
   /// ```
   ///
   /// If you want to slice to the end, use `sub_from`:
@@ -962,7 +1143,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.sub_from(2), Ok(()));
-  /// unsafe { assert_eq!(b.as_slice(), b"llo") };
+  /// unsafe { assert_eq!(b.as_window_slice(), b"llo") };
   /// ```
   fn sub(&mut self, pos: uint, len: uint) -> Result<(), ()>;
 
@@ -1104,9 +1285,9 @@ pub trait Iobuf: Clone + Show {
   /// let mut b = ROIobuf::from_str("hello");
   /// b.resize(2).unwrap();
   /// assert_eq!(b.extend(1), Ok(()));
-  /// unsafe { assert_eq!(b.as_slice(), b"hel"); }
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hel"); }
   /// assert_eq!(b.extend(3), Err(()));
-  /// unsafe { assert_eq!(b.as_slice(), b"hel"); }
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hel"); }
   /// ```
   fn extend(&mut self, len: uint) -> Result<(), ()>;
 
@@ -1154,7 +1335,7 @@ pub trait Iobuf: Clone + Show {
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.resize(3), Ok(()));
   /// assert_eq!(b.peek_be(2), Ok(b'l'));
-  /// assert_eq!(unsafe { b.as_slice() }, b"hel");
+  /// assert_eq!(unsafe { b.as_window_slice() }, b"hel");
   /// assert_eq!(b.peek_be::<u8>(3), Err(()));
   /// assert_eq!(b.advance(1), Ok(()));
   /// assert_eq!(b.resize(5), Err(()));
@@ -1190,11 +1371,11 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.resize(3), Ok(()));
-  /// assert_eq!(unsafe { b.as_slice() }, b"hel");
+  /// assert_eq!(unsafe { b.as_window_slice() }, b"hel");
   /// assert_eq!(b.advance(2), Ok(()));
-  /// assert_eq!(unsafe { b.as_slice() }, b"l");
+  /// assert_eq!(unsafe { b.as_window_slice() }, b"l");
   /// b.reset();
-  /// assert_eq!(unsafe { b.as_slice() }, b"hello");
+  /// assert_eq!(unsafe { b.as_window_slice() }, b"hello");
   /// ```
   fn reset(&mut self);
 
@@ -1463,7 +1644,8 @@ pub trait Iobuf: Clone + Show {
   ///   b.unsafe_peek(1, &mut dst);
   /// }
   ///
-  /// assert_eq!(dst.as_slice(), [2u8, 3, 4, 5].as_slice());
+  /// let expected = [ 2u8, 3, 4, 5 ];
+  /// assert_eq!(dst.as_slice(), expected.as_slice());
   /// ```
   unsafe fn unsafe_peek(&self, pos: uint, dst: &mut [u8]);
 
@@ -1570,9 +1752,16 @@ pub trait Iobuf: Clone + Show {
 /// If your function only needs to do read-only operations on an Iobuf, consider
 /// taking a generic `Iobuf` trait instead. That way, it can be used with either
 /// a ROIobuf or a RWIobuf, generically.
-#[deriving(Clone)]
 pub struct ROIobuf<'a> {
   raw: RawIobuf<'a>,
+}
+
+impl<'a> Clone for ROIobuf<'a> {
+  fn clone(&self) -> ROIobuf<'a> {
+    ROIobuf {
+      raw: self.raw.clone()
+    }
+  }
 }
 
 /// An `Iobuf` which can read and write into a buffer.
@@ -1590,9 +1779,16 @@ pub struct ROIobuf<'a> {
 ///
 /// The `unsafe_` prefix means the function omits bounds checks. Misuse can
 /// easily cause security issues. Be careful!
-#[deriving(Clone)]
 pub struct RWIobuf<'a> {
   raw: RawIobuf<'a>,
+}
+
+impl<'a> Clone for RWIobuf<'a> {
+  fn clone(&self) -> RWIobuf<'a> {
+    RWIobuf {
+      raw: self.raw.clone()
+    }
+  }
 }
 
 impl<'a> ROIobuf<'a> {
@@ -1623,7 +1819,8 @@ impl<'a> ROIobuf<'a> {
   ///
   /// assert_eq!(b.cap(), 5);
   /// assert_eq!(b.len(), 5);
-  /// unsafe { assert_eq!(b.as_slice(), b"hello"); }
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hello"); }
+  /// unsafe { assert_eq!(b.as_limit_slice(), b"hello"); }
   /// ```
   #[inline]
   pub fn from_str<'a>(s: &'a str) -> ROIobuf<'a> {
@@ -1640,7 +1837,8 @@ impl<'a> ROIobuf<'a> {
   ///
   /// assert_eq!(b.cap(), 5);
   /// assert_eq!(b.len(), 5);
-  /// unsafe { assert_eq!(b.as_slice(), b"hello"); }
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hello"); }
+  /// unsafe { assert_eq!(b.as_limit_slice(), b"hello"); }
   /// ```
   #[inline]
   pub fn from_string(s: String) -> ROIobuf<'static> {
@@ -1653,12 +1851,13 @@ impl<'a> ROIobuf<'a> {
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
   ///
-  /// let mut v = vec!(1u8, 2, 3, 4, 5, 6, 10);
+  /// let mut v = vec!(1u8, 2, 3, 4, 5, 6);
   /// v.as_mut_slice()[1] = 20;
   ///
   /// let mut b = ROIobuf::from_vec(v);
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [1, 20, 3, 4, 5, 6, 10].as_slice()); }
+  /// let expected = [ 1,20,3,4,5,6 ];
+  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
   /// ```
   #[inline]
   pub fn from_vec(v: Vec<u8>) -> ROIobuf<'static> {
@@ -1732,7 +1931,8 @@ impl<'a> RWIobuf<'a> {
   ///
   /// assert_eq!(b.len(), 5);
   /// assert_eq!(b.cap(), 5);
-  /// unsafe { assert_eq!(b.as_slice(), b"h4llo"); }
+  /// unsafe { assert_eq!(b.as_window_slice(), b"h4llo"); }
+  /// unsafe { assert_eq!(b.as_limit_slice(), b"h4llo"); }
   /// ```
   #[inline(always)]
   pub fn from_string(s: String) -> RWIobuf<'static> {
@@ -1750,7 +1950,8 @@ impl<'a> RWIobuf<'a> {
   ///
   /// let mut b = RWIobuf::from_vec(v);
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [1, 20, 3, 4, 5, 6, 10].as_slice()); }
+  /// let expected = [ 1,20,3,4,5,6,10 ];
+  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
   /// ```
   #[inline(always)]
   pub fn from_vec(v: Vec<u8>) -> RWIobuf<'static> {
@@ -1779,6 +1980,61 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn from_slice<'a>(s: &'a mut [u8]) -> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::from_slice(s) }
+  }
+
+  /// Reads the data in the window as a mutable slice. Note that since `&mut`
+  /// in rust really means `&unique`, this function lies. There can exist
+  /// multiple slices of the same data. Therefore, this function is unsafe.
+  ///
+  /// It may only be used safely if you ensure that the data in the iobuf never
+  /// interacts with the slice, as they point to the same data. `peek`ing or
+  /// `poke`ing the slice returned from this function is a big no-no.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf, Iobuf};
+  ///
+  /// let mut s = [1,2,3];
+  ///
+  /// {
+  ///   let mut b = RWIobuf::from_slice(&mut s);
+  ///
+  ///   assert_eq!(b.advance(1), Ok(()));
+  ///   unsafe { b.as_window_slice_mut()[1] = 30; }
+  /// }
+  ///
+  /// let expected = [ 1,2,30 ];
+  /// assert_eq!(s.as_slice(), expected.as_slice());
+  /// ```
+  #[inline(always)]
+  pub unsafe fn as_window_slice_mut<'b>(&'b self) -> &'b mut [u8] {
+    self.raw.as_window_slice_mut()
+  }
+
+  /// Reads the data in the window as a mutable slice. Note that since `&mut`
+  /// in rust really means `&unique`, this function lies. There can exist
+  /// multiple slices of the same data. Therefore, this function is unsafe.
+  ///
+  /// It may only be used safely if you ensure that the data in the iobuf never
+  /// interacts with the slice, as they point to the same data. `peek`ing or
+  /// `poke`ing the slice returned from this function is a big no-no.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf, Iobuf};
+  ///
+  /// let mut s = [1,2,3];
+  ///
+  /// {
+  ///   let mut b = RWIobuf::from_slice(&mut s);
+  ///
+  ///   assert_eq!(b.advance(1), Ok(()));
+  ///   unsafe { b.as_limit_slice_mut()[1] = 20; }
+  /// }
+  ///
+  /// assert_eq!(s.as_slice(), [1,20,3].as_slice());
+  /// ```
+  #[inline(always)]
+  pub unsafe fn as_limit_slice_mut<'b>(&'b self) -> &'b mut [u8] {
+    self.raw.as_limit_slice_mut()
   }
 
   /// Gets a read-only copy of this Iobuf. This is a very cheap operation, as
@@ -1856,31 +2112,6 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn compact(&mut self) { self.raw.compact() }
 
-  /// Reads the data in the window as a mutable slice. Note that since `&mut`
-  /// in rust really means `&unique`, this function lies. There can exist
-  /// multiple slices of the same data. Therefore, this function is unsafe.
-  ///
-  /// It may only be used safely if you ensure that the data in the iobuf never
-  /// interacts with the slice, as they point to the same data. `peek`ing or
-  /// `poke`ing the slice returned from this function is a big no-no.
-  ///
-  /// ```
-  /// use iobuf::{RWIobuf, Iobuf};
-  ///
-  /// let mut s = [1,2,3];
-  ///
-  /// {
-  ///   let mut b = RWIobuf::from_slice(&mut s);
-  ///
-  ///   assert_eq!(b.advance(1), Ok(()));
-  ///   unsafe { b.as_mut_slice()[1] = 30; }
-  /// }
-  ///
-  /// assert_eq!(s.as_slice(), [1,2,30].as_slice());
-  /// ```
-  #[inline(always)]
-  pub unsafe fn as_mut_slice(&mut self) -> &mut [u8] { self.raw.as_mut_slice() }
-
   /// Writes the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. Either the entire buffer is copied, or an error is
   /// returned because bytes outside of the window would be written.
@@ -1896,7 +2127,9 @@ impl<'a> RWIobuf<'a> {
   /// assert_eq!(b.poke(3, data.as_slice()), Ok(()));
   /// assert_eq!(b.resize(7), Ok(()));
   /// assert_eq!(b.poke(4, data.as_slice()), Err(())); // no partial write, just failure
-  /// unsafe { assert_eq!(b.as_slice(), [ 1,2,3,1,2,3,4 ].as_slice()); }
+  ///
+  /// let expected = [ 1,2,3,1,2,3,4 ];
+  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
   /// ```
   #[inline(always)]
   pub fn poke(&self, pos: uint, src: &[u8]) -> Result<(), ()> { self.raw.poke(pos, src) }
@@ -1917,7 +2150,8 @@ impl<'a> RWIobuf<'a> {
   ///
   /// assert_eq!(b.resize(7), Ok(()));
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 3, 5, 5, 6, 7, 8, 9 ].as_slice()); }
+  /// let expected = [ 3,5,5,6,7,8,9 ];
+  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
   /// ```
   #[inline(always)]
   pub fn poke_be<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
@@ -1938,7 +2172,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// assert_eq!(b.resize(7), Ok(()));
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub fn poke_le<T: Prim>(&self, pos: uint, t: T) -> Result<(), ()> { self.raw.poke_le(pos, t) }
@@ -1963,7 +2197,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 1,2,3,4,1,2,3,4 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 1,2,3,4,1,2,3,4 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub fn fill(&mut self, src: &[u8]) -> Result<(), ()> { self.raw.fill(src) }
@@ -1987,9 +2221,9 @@ impl<'a> RWIobuf<'a> {
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 0x12, 0x34, 0x56, 0x78
-  ///                                   , 0x11, 0x22, 0x33, 0x44
-  ///                                   , 0x88, 0x77 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 0x12, 0x34, 0x56, 0x78
+  ///                                          , 0x11, 0x22, 0x33, 0x44
+  ///                                          , 0x88, 0x77 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub fn fill_be<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_be(t) }
@@ -2013,9 +2247,9 @@ impl<'a> RWIobuf<'a> {
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 0x78, 0x56, 0x34, 0x12
-  ///                                   , 0x44, 0x33, 0x22, 0x11
-  ///                                   , 0x77, 0x88 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 0x78, 0x56, 0x34, 0x12
+  ///                                          , 0x44, 0x33, 0x22, 0x11
+  ///                                          , 0x77, 0x88 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub fn fill_le<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
@@ -2044,7 +2278,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 1,2,3,1,2,3,4 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 1,2,3,1,2,3,4 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_poke(&self, pos: uint, src: &[u8]) { self.raw.unsafe_poke(pos, src) }
@@ -2067,7 +2301,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// assert_eq!(b.resize(7), Ok(()));
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 3, 5, 5, 6, 7, 8, 9 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 3, 5, 5, 6, 7, 8, 9 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_poke_be<T: Prim>(&self, pos: uint, t: T) { self.raw.unsafe_poke_be(pos, t) }
@@ -2090,7 +2324,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// assert_eq!(b.resize(7), Ok(()));
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_poke_le<T: Prim>(&self, pos: uint, t: T) { self.raw.unsafe_poke_le(pos, t) }
@@ -2117,7 +2351,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 1,2,3,4,1,2,3,4 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 1,2,3,4,1,2,3,4 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill(&mut self, src: &[u8]) { self.raw.unsafe_fill(src) }
@@ -2144,9 +2378,9 @@ impl<'a> RWIobuf<'a> {
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 0x12, 0x34, 0x56, 0x78
-  ///                                   , 0x11, 0x22, 0x33, 0x44
-  ///                                   , 0x88, 0x77 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 0x12, 0x34, 0x56, 0x78
+  ///                                          , 0x11, 0x22, 0x33, 0x44
+  ///                                          , 0x88, 0x77 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill_be<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_be(t) }
@@ -2173,42 +2407,12 @@ impl<'a> RWIobuf<'a> {
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_slice(), [ 0x78, 0x56, 0x34, 0x12
-  ///                                   , 0x44, 0x33, 0x22, 0x11
-  ///                                   , 0x77, 0x88 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 0x78, 0x56, 0x34, 0x12
+  ///                                          , 0x44, 0x33, 0x22, 0x11
+  ///                                          , 0x77, 0x88 ].as_slice()); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill_le<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_le(t) }
-}
-
-impl RWIobuf<'static> {
-  /// Converts an `RWIobuf` into a vector of bytes, representing the whole
-  /// internal buffer. This will forever lose the limits and window.
-  ///
-  /// This function returns `None` if the backing buffer of this iobuf is shared
-  /// with any other iobufs, or the buffer is borrowed as opposed to owned.
-  ///
-  /// ```
-  /// use iobuf::{RWIobuf};
-  ///
-  /// let mut a = RWIobuf::new(1);
-  /// a.fill_be(0xABu8).unwrap();
-  /// assert_eq!(a.into_vec(), Some(vec!(0xAB)));
-  ///
-  /// let b = RWIobuf::new(1);
-  /// let c = b.clone();
-  /// assert_eq!(b.into_vec(), None);
-  /// let d = c.clone();
-  /// assert_eq!(d.into_vec(), None);
-  /// // At this point, `c` is the only one left.
-  /// assert!(c.into_vec().is_some());
-  /// ```
-  pub fn into_vec(self) -> Option<Vec<u8>> {
-    match rc::try_unwrap(self.raw.buf) {
-        Ok(OwnedBuffer(buf)) => Some(buf),
-        _                    => None,
-    }
-  }
 }
 
 impl<'a> Iobuf for ROIobuf<'a> {
@@ -2225,7 +2429,10 @@ impl<'a> Iobuf for ROIobuf<'a> {
   fn is_empty(&self) -> bool { self.raw.is_empty() }
 
   #[inline(always)]
-  unsafe fn as_slice(&self) -> &[u8] { self.raw.as_slice() }
+  unsafe fn as_window_slice<'b>(&'b self) -> &'b [u8] { self.raw.as_window_slice() }
+
+  #[inline(always)]
+  unsafe fn as_limit_slice<'b>(&'b self) -> &'b [u8] { self.raw.as_limit_slice() }
 
   #[inline(always)]
   fn sub_window(&mut self, pos: uint, len: uint) -> Result<(), ()> { self.raw.sub_window(pos, len) }
@@ -2354,7 +2561,10 @@ impl<'a> Iobuf for RWIobuf<'a> {
   fn is_empty(&self) -> bool { self.raw.is_empty() }
 
   #[inline(always)]
-  unsafe fn as_slice(&self) -> &[u8] { self.raw.as_slice() }
+  unsafe fn as_window_slice<'b>(&'b self) -> &'b [u8] { self.raw.as_window_slice() }
+
+  #[inline(always)]
+  unsafe fn as_limit_slice<'b>(&'b self) -> &'b [u8] { self.raw.as_limit_slice() }
 
   #[inline(always)]
   fn sub_window(&mut self, pos: uint, len: uint) -> Result<(), ()> { self.raw.sub_window(pos, len) }
@@ -2566,12 +2776,14 @@ fn peek_le() {
 fn poke_be() {
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_be(0, 0x01020304u32), Ok(()));
-  unsafe { assert_eq!(b.as_slice(), [1,2,3,4].as_slice()); }
+  let expected = [ 1,2,3,4 ];
+  unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
 }
 
 #[test]
 fn poke_le() {
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_le(0, 0x01020304u32), Ok(()));
-  unsafe { assert_eq!(b.as_slice(), [4,3,2,1].as_slice()); }
+  let expected = [ 4,3,2,1 ];
+  unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
 }
