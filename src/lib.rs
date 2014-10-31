@@ -18,6 +18,13 @@
 //! Iobufs are cheap to `clone`, since the buffers are refcounted. Use this to
 //! construct multiple views into the same data.
 //!
+//! To keep the struct small (24 bytes!), the maximum size of an Iobuf is 2 GB.
+//! Please let me know if you need more than this. I have never before seen a
+//! use case for Iobufs larger than 2 GB, and it gives us a 40% smaller struct
+//! compared to support INT64_MAX bytes. The improved size allows much better
+//! register/cache usage and faster moves, both of which are critical for
+//! performance.
+//!
 //! Although this library is designed for efficiency, and hence gives you lots
 //! of ways to omit bounds checks, that does not mean it's recommended you do.
 //! They merely provide a way for you to manually bounds check a whole bunch
