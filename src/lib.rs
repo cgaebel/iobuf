@@ -248,7 +248,7 @@ impl<'a> RawIobuf<'a> {
   fn set_lo_min(&mut self, new_value: u32) {
     if cfg!(debug) {
       if new_value > MAX_BUFFER_LEN as u32 {
-        panic!("new lo_min out of range (max = 0x7FFF_FFFF): {:X}", new_value);
+        panic!("new lo_min out of range (max = {:X}): {:X}", MAX_BUFFER_LEN, new_value);
       }
     }
     self.lo_min_and_owned_bit &= OWNED_MASK;
