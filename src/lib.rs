@@ -53,10 +53,10 @@ extern crate core;
 
 use alloc::heap;
 
+use collections::slice::ImmutableSlice;
 use collections::string::String;
 use collections::vec::Vec;
 use core::clone::Clone;
-use core::collections::Collection;
 use core::fmt::{Formatter,FormatError,Show};
 use core::kinds::Copy;
 use core::kinds::marker::{ContravariantLifetime, NoCopy, NoSend, NoSync};
@@ -70,7 +70,7 @@ use core::ptr;
 use core::ptr::RawPtr;
 use core::raw;
 use core::result::{Result,Ok,Err};
-use core::slice::{ImmutableSlice, AsSlice};
+use core::slice::AsSlice;
 use core::str::StrSlice;
 use core::u32;
 use core::uint;
