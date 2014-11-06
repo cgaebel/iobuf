@@ -10,6 +10,5 @@ install:
 script:
   - cargo build
   - cargo test
-  - cargo doc
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
