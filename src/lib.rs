@@ -53,7 +53,7 @@ extern crate core;
 
 use alloc::heap;
 
-use collections::slice::ImmutableSlice;
+use collections::slice::SlicePrelude;
 use collections::string::String;
 use collections::vec::Vec;
 use core::clone::Clone;
@@ -71,7 +71,7 @@ use core::ptr::RawPtr;
 use core::raw;
 use core::result::{Result,Ok,Err};
 use core::slice::AsSlice;
-use core::str::StrSlice;
+use core::str::StrPrelude;
 use core::u32;
 use core::uint;
 
