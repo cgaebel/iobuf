@@ -26,12 +26,48 @@ pub enum BufSpan<Buf> {
 
 impl<Buf: Iobuf> BufSpan<Buf> {
   /// Creates a new, empty `Bufspan`.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, ROIobuf};
+  ///
+  /// let s: BufSpan<ROIobuf<'static>> = BufSpan::new();
+  /// assert!(s.is_empty());
+  /// ```
   #[inline]
   pub fn new() -> BufSpan<Buf> {
     Empty
   }
 
+  /// Creates a new `BufSpan` from a slice of bytes.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, Iobuf, ROIobuf};
+  /// use std::iter::AdditiveIterator;
+  ///
+  /// let s = BufSpan::from_buf(ROIobuf::from_slice(b"hello"));
+  /// assert_eq!(s.iter().count(), 1);
+  /// assert_eq!(s.iter().map(|b| b.len()).sum(), 5);
+  /// ```
+  #[inline]
+  pub fn from_buf(b: Buf) -> BufSpan<Buf> {
+    One(b)
+  }
+
   /// Returns `true` iff the span is over an empty range.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, Iobuf, ROIobuf};
+  ///
+  /// let mut s = BufSpan::new();
+  ///
+  /// assert!(s.is_empty());
+  ///
+  /// s.push(ROIobuf::from_str(""));
+  /// assert!(s.is_empty());
+  ///
+  /// s.push(ROIobuf::from_str("hello, world!"));
+  /// assert!(!s.is_empty());
+  /// ```
   #[inline]
   pub fn is_empty(&self) -> bool {
     match *self {
@@ -48,9 +84,9 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// done. Returns `Some` if we need to do a slow push.
   #[inline]
   fn try_to_extend(&mut self, b: Buf) -> Option<Buf> {
-    match self {
-      &Empty => {},
-      &One(ref mut b0) => {
+    match *self {
+      Empty => {},
+      One(ref mut b0) => {
         unsafe {
           if b0.is_extended_by(&b) {
             b0.unsafe_extend(b.len());
@@ -60,7 +96,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
           }
         }
       }
-      &Many(ref mut v) => {
+      Many(ref mut v) => {
         // I wish this wouldn't unwind, and just abort... :(
         let last = v.last_mut().unwrap();
         unsafe {
@@ -135,6 +171,46 @@ impl<Buf: Iobuf> BufSpan<Buf> {
     self.iter()
         .flat_map(|buf| unsafe { buf.as_window_slice().iter() })
         .map(|&b| b)
+  }
+
+  /// Returns `true` iff the bytes in this `BufSpan` are the same as the bytes
+  /// in the other `BufSpan`.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, ROIobuf, RWIobuf};
+  ///
+  /// let a = BufSpan::from_buf(ROIobuf::from_str("hello"));
+  /// let b = BufSpan::from_buf(RWIobuf::from_string("hello".into_string()));
+  ///
+  /// assert!(a.byte_equal(&b));
+  ///
+  /// let mut c = BufSpan::from_buf(ROIobuf::from_str("hel"));
+  /// c.push(ROIobuf::from_str("lo"));
+  ///
+  /// assert!(a.byte_equal(&c)); assert!(c.byte_equal(&a));
+  ///
+  /// let d = BufSpan::from_buf(ROIobuf::from_str("helo"));
+  /// assert!(!a.byte_equal(&d));
+  /// ```
+  #[inline]
+  pub fn byte_equal<Buf2: Iobuf>(&self, other: &BufSpan<Buf2>) -> bool {
+    self.iter_bytes().zip(other.iter_bytes()).all(|(a, b)| a == b)
+  }
+
+  /// A more efficient version of byte_equal, specialized to work exclusively on
+  /// slices.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, ROIobuf};
+  ///
+  /// let a = BufSpan::from_buf(ROIobuf::from_str("hello"));
+  ///
+  /// assert!(a.byte_equal_slice(b"hello"));
+  /// assert!(!a.byte_equal_slice(b"helo"));
+  /// ```
+  #[inline]
+  pub fn byte_equal_slice(&self, other: &[u8]) -> bool {
+    self.iter_bytes().zip(other.iter()).all(|(a, &b)| a == b)
   }
 }
 
