@@ -939,11 +939,11 @@ impl<'a> RawIobuf<'a> {
 
   fn show_ascii(&self, f: &mut Formatter, half_line: &[u8])
       -> Result<(), FormatError> {
-     for &x in half_line.iter() {
-       let c = if x >= 32 && x < 126 { x as char } else { '.' };
-       try!(write!(f, "{}", c));
-     }
-     Ok(())
+    for &x in half_line.iter() {
+      let c = if x >= 32 && x < 126 { x as char } else { '.' };
+      try!(write!(f, "{}", c));
+    }
+    Ok(())
   }
 
   fn show_line(&self, f: &mut Formatter, line_number: uint, chunk: &[u8])
