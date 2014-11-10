@@ -82,7 +82,6 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   ///
   /// Returns `None` if the fast path was taken and nothing more needs to be
   /// done. Returns `Some` if we need to do a slow push.
-  #[inline]
   fn try_to_extend(&mut self, b: Buf) -> Option<Buf> {
     match *self {
       Empty => {},
@@ -119,7 +118,6 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// Appends a buffer to a `BufSpan`. If the buffer is an extension of the
   /// previously pushed buffer, the range will be extended. Otherwise, the new
   /// non-extension buffer will be added to the end of a vector.
-  #[inline]
   pub fn push(&mut self, b: Buf) {
     match self.try_to_extend(b) {
       None    => {},
