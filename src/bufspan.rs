@@ -219,7 +219,13 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// `O(self.iter().len())`.
   #[inline]
   pub fn count_bytes(&self) -> u32 {
-    self.iter().map(|b| b.len()).sum()
+    // `self.iter().map(|b| b.len()).sum()` would be shorter, but I like to
+    // specialize for the much more common case of empty or singular `BufSpan`s.
+    match *self {
+      Empty       => 0,
+      One (ref b) => b.len(),
+      Many(ref v) => v.iter().map(|b| b.len()).sum(),
+    }
   }
 }
 
