@@ -252,6 +252,14 @@ impl<'a, Buf: Iobuf> Iterator<&'a Buf> for SpanIter<'a, Buf> {
       Lot(ref mut iter) => iter.next(),
     }
   }
+
+  #[inline(always)]
+  fn size_hint(&self) -> (uint, Option<uint>) {
+    match *self {
+      Opt(ref iter) => iter.size_hint(),
+      Lot(ref iter) => iter.size_hint(),
+    }
+  }
 }
 
 /// A moving iterator over buffers inside a `BufSpan`.
@@ -268,6 +276,14 @@ impl<Buf: Iobuf> Iterator<Buf> for SpanMoveIter<Buf> {
     match *self {
       MoveOpt(ref mut iter) => iter.next(),
       MoveLot(ref mut iter) => iter.next(),
+    }
+  }
+
+  #[inline(always)]
+  fn size_hint(&self) -> (uint, Option<uint>) {
+    match *self {
+      MoveOpt(ref iter) => iter.size_hint(),
+      MoveLot(ref iter) => iter.size_hint(),
     }
   }
 }
