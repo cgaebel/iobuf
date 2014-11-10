@@ -1,7 +1,7 @@
 use collections::slice::{mod, AsSlice, SlicePrelude};
 use collections::vec::{mod, Vec};
 use core::mem;
-use core::iter::Iterator;
+use core::iter::{mod, Iterator};
 use core::option::{mod, Some, None, Option};
 
 use iobuf::Iobuf;
@@ -9,6 +9,12 @@ use iobuf::Iobuf;
 /// A span over potentially many Iobufs. This is useful as a "string" type where
 /// the contents of the string can potentially come from multiple IObufs, and
 /// you want to avoid copying.
+///
+/// As an optimization, pushing an Iobuf that points to data immediately after
+/// the range represented by the last Iobuf pushed will result in just expanding
+/// the held Iobuf's range. This prevents allocating lots of unnecessary
+/// intermediate buffers, while still maintaining the illusion of "pushing lots
+/// of buffers" while incrementally parsing.
 ///
 /// A `BufSpan` is internally represented as either an `Iobuf` or a `Vec<Iobuf>`,
 /// depending on how many different buffers were used.
@@ -19,13 +25,75 @@ pub enum BufSpan<Buf> {
 }
 
 impl<Buf: Iobuf> BufSpan<Buf> {
+  /// Creates a new, empty `Bufspan`.
   #[inline]
   pub fn new() -> BufSpan<Buf> {
     Empty
   }
 
+  /// Returns `true` iff the span is over an empty range.
+  #[inline]
+  pub fn is_empty(&self) -> bool {
+    match *self {
+      Empty => true,
+      _     => false,
+    }
+  }
+
+  /// The fast path during pushing -- either fills in the first buffer, or
+  /// extends an existing one.
+  ///
+  /// Returns `None` if the fast path was taken and nothing more needs to be
+  /// done. Returns `Some` if we need to do a slow push.
+  #[inline]
+  fn try_to_extend(&mut self, b: Buf) -> Option<Buf> {
+    match self {
+      &Empty => {},
+      &One(ref mut b0) => {
+        unsafe {
+          if b0.is_extended_by(&b) {
+            b0.unsafe_extend(b.len());
+            return None;
+          } else {
+            return Some(b); // Upgrade the `One` into a `Many` in the slow path.
+          }
+        }
+      }
+      &Many(ref mut v) => {
+        // I wish this wouldn't unwind, and just abort... :(
+        let last = v.last_mut().unwrap();
+        unsafe {
+          if last.is_extended_by(&b) {
+            last.unsafe_extend(b.len());
+            return None;
+          } else {
+            return Some(b);
+          }
+        }
+      }
+    }
+
+    // Handle this case in the fast path, instead of leaving it for slow_push
+    // to clean up.
+    *self = One(b);
+    None
+  }
+
+  /// Appends a buffer to a `BufSpan`. If the buffer is an extension of the
+  /// previously pushed buffer, the range will be extended. Otherwise, the new
+  /// non-extension buffer will be added to the end of a vector.
   #[inline]
   pub fn push(&mut self, b: Buf) {
+    match self.try_to_extend(b) {
+      None    => {},
+      Some(b) => self.slow_push(b),
+    }
+  }
+
+  /// The slow path during a push. This is only taken if a `BufSpan` must span
+  /// multiple backing buffers.
+  #[cold]
+  fn slow_push(&mut self, b: Buf) {
     let this = mem::replace(self, Empty);
     *self =
       match this {
@@ -40,6 +108,8 @@ impl<Buf: Iobuf> BufSpan<Buf> {
       };
   }
 
+  /// Returns an iterator over references to the buffers inside the `BufSpan`.
+  #[inline]
   pub fn iter<'a>(&'a self) -> SpanIter<'a, Buf> {
     match *self {
       Empty       => Opt(None.into_iter()),
@@ -48,6 +118,8 @@ impl<Buf: Iobuf> BufSpan<Buf> {
     }
   }
 
+  /// Returns a moving iterator over the buffers inside the `BufSpan`.
+  #[inline]
   pub fn into_iter(self) -> SpanMoveIter<Buf> {
     match self {
       Empty   => MoveOpt(None.into_iter()),
@@ -55,8 +127,24 @@ impl<Buf: Iobuf> BufSpan<Buf> {
       Many(v) => MoveLot(v.into_iter()),
     }
   }
+
+  /// Returns an iterator over the bytes in the `BufSpan`.
+  #[inline]
+  pub fn iter_bytes<'a>(&'a self) -> ByteIter<'a, Buf> {
+    self.iter()
+        .flat_map(|buf| unsafe { buf.as_window_slice().iter() })
+        .map(|&b| b)
+  }
 }
 
+/// An iterator over the bytes in a `BufSpan`.
+pub type ByteIter<'a, Buf> =
+  iter::Map<'static, &'a u8, u8,
+    iter::FlatMap<'static, &'a Buf,
+      SpanIter<'a, Buf>,
+      slice::Items<'a, u8>>>;
+
+/// An iterator over references to buffers inside a `BufSpan`.
 pub enum SpanIter<'a, Buf: 'a> {
   Opt(option::Item<&'a Buf>),
   Lot(slice::Items<'a, Buf>),
@@ -74,6 +162,7 @@ impl<'a, Buf: Iobuf> Iterator<&'a Buf> for SpanIter<'a, Buf> {
   }
 }
 
+/// A moving iterator over buffers inside a `BufSpan`.
 pub enum SpanMoveIter<Buf> {
   MoveOpt(option::Item<Buf>),
   MoveLot(vec::MoveItems<Buf>),
@@ -82,6 +171,8 @@ pub enum SpanMoveIter<Buf> {
 impl<Buf: Iobuf> Iterator<Buf> for SpanMoveIter<Buf> {
   #[inline(always)]
   fn next(&mut self) -> Option<Buf> {
+    // I'm couting on this match getting lifted out of the loop with
+    // loop-invariant code motion.
     match *self {
       MoveOpt(ref mut iter) => iter.next(),
       MoveLot(ref mut iter) => iter.next(),

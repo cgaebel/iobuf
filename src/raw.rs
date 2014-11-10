@@ -575,6 +575,8 @@ impl<'a> RawIobuf<'a> {
   pub fn is_extended_by<'b>(&self, other: &RawIobuf<'b>) -> bool {
     unsafe {
       self.buf.offset(self.hi as int) == other.buf.offset(other.lo as int)
+         // check_range, but with `cap()` instead of `len()`.
+      && self.hi as u64 + other.len() as u64 <= self.cap() as u64
     }
   }
 

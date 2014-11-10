@@ -2,8 +2,8 @@ use core::clone::Clone;
 use core::fmt::Show;
 use core::result::Result;
 
-use raw::Prim;
-use impls::{ROIobuf, RWIobuf};
+use raw::{Prim, RawIobuf};
+use impls::RWIobuf;
 
 /// Have your functions take a generic IObuf whenever they don't modify the
 /// window or bounds. This way, the functions can be used with both `ROIobuf`s
@@ -405,21 +405,17 @@ pub trait Iobuf: Clone + Show {
   ///
   /// // b actually IS an extension of a.
   /// assert_eq!(b.sub_window_from(2), Ok(()));
-  /// assert_eq!(a.is_extended_by_ro(&b), true);
+  /// assert_eq!(a.is_extended_by(&b), true);
   ///
   /// // a == "he", b == "lo", it's missing the "l", therefore not an extension.
   /// assert_eq!(c.sub_window_from(3), Ok(()));
-  /// assert_eq!(b.is_extended_by_ro(&a), false);
+  /// assert_eq!(b.is_extended_by(&a), false);
   ///
   /// // Different allocations => not an extension.
   /// assert_eq!(d.sub_window_from(2), Ok(()));
-  /// assert_eq!(a.is_extended_by_ro(&d), false);
+  /// assert_eq!(a.is_extended_by(&d), false);
   /// ```
-  fn is_extended_by_ro<'a>(&self, other: &ROIobuf<'a>) -> bool;
-
-  /// The same as `is_extended_by_ro`, but the `other` buf is writable. They
-  /// both work the same, so just use whatever works for the type you have.
-  fn is_extended_by_rw<'a>(&self, other: &RWIobuf<'a>) -> bool;
+  fn is_extended_by<Buf: Iobuf>(&self, other: &Buf) -> bool;
 
   /// Sets the length of the window, provided it does not exceed the limits.
   ///
@@ -862,4 +858,7 @@ pub trait Iobuf: Clone + Show {
   /// }
   /// ```
   unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T;
+
+  /// For internal use only.
+  unsafe fn get_raw<'a>(&self) -> &RawIobuf<'a>;
 }
