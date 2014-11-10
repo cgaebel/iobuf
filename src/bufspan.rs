@@ -35,8 +35,9 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   #[inline]
   pub fn is_empty(&self) -> bool {
     match *self {
-      Empty => true,
-      _     => false,
+      Empty       => true,
+      One (ref b) => b.is_empty(),
+      Many(ref v) => v.iter().all(|b| b.is_empty()),
     }
   }
 
