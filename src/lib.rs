@@ -40,16 +40,12 @@
 #![feature(unsafe_destructor)]
 #![no_std]
 
-extern crate alloc;
-extern crate collections;
-
-#[phase(plugin, link)]
-extern crate core;
-
+                                   extern crate alloc;
+                                   extern crate collections;
+             #[phase(plugin,link)] extern crate core;
 #[cfg(test)] #[phase(plugin,link)] extern crate std;
-
-#[cfg(test)] extern crate native;
-#[cfg(test)] extern crate test;
+#[cfg(test)]                       extern crate native;
+#[cfg(test)]                       extern crate test;
 
 pub use raw::Prim;
 pub use iobuf::Iobuf;
