@@ -55,6 +55,7 @@ pub use raw::Prim;
 pub use iobuf::Iobuf;
 pub use impls::{ROIobuf, RWIobuf};
 pub use ringbuf::IORingbuf;
+pub use bufspan::{BufSpan, SpanIter, SpanMoveIter};
 
 // https://github.com/rust-lang/rust/issues/18491#issuecomment-61293267
 #[cfg(not(test))]
@@ -64,3 +65,4 @@ mod raw;
 mod iobuf;
 mod impls;
 mod ringbuf;
+mod bufspan;
