@@ -1,7 +1,7 @@
 use collections::slice::{mod, AsSlice, SlicePrelude};
 use collections::vec::{mod, Vec};
 use core::mem;
-use core::iter::{mod, Iterator};
+use core::iter::{mod, AdditiveIterator, Iterator};
 use core::option::{mod, Some, None, Option};
 
 use iobuf::Iobuf;
@@ -194,7 +194,8 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn byte_equal<Buf2: Iobuf>(&self, other: &BufSpan<Buf2>) -> bool {
-    self.iter_bytes().zip(other.iter_bytes()).all(|(a, b)| a == b)
+    self.count_bytes() == other.count_bytes()
+    && self.iter_bytes().zip(other.iter_bytes()).all(|(a, b)| a == b)
   }
 
   /// A more efficient version of byte_equal, specialized to work exclusively on
@@ -210,7 +211,15 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn byte_equal_slice(&self, other: &[u8]) -> bool {
-    self.iter_bytes().zip(other.iter()).all(|(a, &b)| a == b)
+    self.count_bytes() as uint == other.len()
+    && self.iter_bytes().zip(other.iter()).all(|(a, &b)| a == b)
+  }
+
+  /// Counts the number of bytes this `BufSpan` is over. This is
+  /// `O(self.iter().len())`.
+  #[inline]
+  pub fn count_bytes(&self) -> u32 {
+    self.iter().map(|b| b.len()).sum()
   }
 }
 
