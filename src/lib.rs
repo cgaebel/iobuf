@@ -53,7 +53,8 @@ extern crate core;
 
 pub use raw::Prim;
 pub use iobuf::Iobuf;
-pub use impls::{ROIobuf, RWIobuf, IORingbuf};
+pub use impls::{ROIobuf, RWIobuf};
+pub use ringbuf::IORingbuf;
 
 // https://github.com/rust-lang/rust/issues/18491#issuecomment-61293267
 #[cfg(not(test))]
@@ -62,3 +63,4 @@ mod std { pub use core::fmt; }
 mod raw;
 mod iobuf;
 mod impls;
+mod ringbuf;
