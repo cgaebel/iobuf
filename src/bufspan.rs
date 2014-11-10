@@ -7,8 +7,8 @@ use core::option::{mod, Some, None, Option};
 use iobuf::Iobuf;
 
 /// A span over potentially many Iobufs. This is useful as a "string" type where
-/// the contents of the string can potentially come from multiple IObufs, and
-/// you want to avoid copying.
+/// the contents of the string can come from multiple IObufs, and you want to
+/// avoid copying the buffer contents unnecessarily.
 ///
 /// As an optimization, pushing an Iobuf that points to data immediately after
 /// the range represented by the last Iobuf pushed will result in just expanding
@@ -71,9 +71,8 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   #[inline]
   pub fn is_empty(&self) -> bool {
     match *self {
-      Empty       => true,
-      One (ref b) => b.is_empty(),
-      Many(ref v) => v.iter().all(|b| b.is_empty()),
+      Empty => true,
+      _     => false,
     }
   }
 
@@ -83,6 +82,8 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// Returns `None` if the fast path was taken and nothing more needs to be
   /// done. Returns `Some` if we need to do a slow push.
   fn try_to_extend(&mut self, b: Buf) -> Option<Buf> {
+    if b.is_empty() { return None; }
+
     match *self {
       Empty => {},
       One(ref mut b0) => {
