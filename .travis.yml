@@ -1,14 +1,13 @@
+language: rust
 env:
-  global:
-    - secure: G/YmDR+gM93TnEaTxnhx8kbc+rfkdjVVWbIAzt1KQbaisZo84uPmCpb48gzkv18FsTFkgdjosV3e0SbIjvlGP2QRMfBFyL2VysJK3z1oFo4E0rQt5WO1fZNQS4zOd1mRzpFVTATuroiAvFA973FPZc8hFCPSUjHiGYw0Tc0GII8
-before_install:
-  - sudo add-apt-repository --yes ppa:hansjorg/rust
-  - sudo add-apt-repository --yes ppa:cmrx64/cargo
-  - sudo apt-get update -qq
-install:
-  - sudo apt-get install -qq rust-nightly cargo
+global:
+- secure: nR+DJRUQ9v03nNZMpMu1tGKLKBAqdQsTIAr8ffdl+DUEh3b2jvQ+vLLNFLPjsloqhoOXo7cWO7qVpiE4ZOq2lNDURQjdiZGFjh/Y5+xKy2BqFdV7qQ1JoBzsMyx28tQTYz0mtBsACiCYKKb+ddNX5hpwrsjp8cS7htZktA5kbiU=
 script:
-  - cargo build
-  - cargo test
+  - cargo build --verbose
+  - cargo test --verbose
+  - cargo doc --verbose
 after_script:
-  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
+  - ln -s target/doc doc
+  - curl -v http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN > ./upload-docs
+  - cat ./upload-docs
+  - sh ./upload-docs
