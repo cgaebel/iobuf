@@ -82,14 +82,15 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// Returns `None` if the fast path was taken and nothing more needs to be
   /// done. Returns `Some` if we need to do a slow push.
   fn try_to_extend(&mut self, b: Buf) -> Option<Buf> {
-    if b.is_empty() { return None; }
+    let len = b.len();
+    if len == 0 { return None; }
 
     match *self {
       Empty => {},
       One(ref mut b0) => {
         unsafe {
           if b0.is_extended_by(&b) {
-            b0.unsafe_extend(b.len());
+            b0.unsafe_extend(len);
             return None;
           } else {
             return Some(b); // Upgrade the `One` into a `Many` in the slow path.
@@ -101,7 +102,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
         let last = v.last_mut().unwrap();
         unsafe {
           if last.is_extended_by(&b) {
-            last.unsafe_extend(b.len());
+            last.unsafe_extend(len);
             return None;
           } else {
             return Some(b);
