@@ -41,12 +41,11 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// Creates a new `BufSpan` from an Iobuf.
   ///
   /// ```
-  /// use iobuf::{BufSpan, Iobuf, ROIobuf};
-  /// use std::iter::AdditiveIterator;
+  /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let s = BufSpan::from_buf(ROIobuf::from_slice(b"hello"));
   /// assert_eq!(s.iter().count(), 1);
-  /// assert_eq!(s.iter().map(|b| b.len()).sum(), 5);
+  /// assert_eq!(s.count_bytes(), 5);
   /// ```
   #[inline]
   pub fn from_buf(b: Buf) -> BufSpan<Buf> {
