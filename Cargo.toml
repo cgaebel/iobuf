@@ -1,5 +1,5 @@
 [package]
 
 name = "iobuf"
-version = "2.1.2"
+version = "2.2.0"
 authors = ["Clark Gaebel <cgaebel@mozilla.com>"]
