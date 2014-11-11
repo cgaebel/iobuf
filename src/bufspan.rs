@@ -38,7 +38,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
     Empty
   }
 
-  /// Creates a new `BufSpan` from a slice of bytes.
+  /// Creates a new `BufSpan` from an Iobuf.
   ///
   /// ```
   /// use iobuf::{BufSpan, Iobuf, ROIobuf};
