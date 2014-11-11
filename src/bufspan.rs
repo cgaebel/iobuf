@@ -3,7 +3,7 @@ use collections::vec::{mod, Vec};
 use core::clone::Clone;
 use core::fmt;
 use core::mem;
-use core::iter::{mod, AdditiveIterator, Iterator};
+use core::iter::{mod, Extend, AdditiveIterator, Iterator};
 use core::option::{mod, Some, None, Option};
 use core::result::{Ok, Err};
 
@@ -53,6 +53,14 @@ impl<Buf: Iobuf> fmt::Show for BufSpan<Buf> {
     }
 
     Ok(())
+  }
+}
+
+impl<Buf: Iobuf> Extend<Buf> for BufSpan<Buf> {
+  fn extend<T: Iterator<Buf>>(&mut self, mut iterator: T) {
+    for x in iterator {
+      self.push(x);
+    }
   }
 }
 
@@ -283,6 +291,12 @@ impl<Buf: Iobuf> BufSpan<Buf> {
       One (ref b) => b.len(),
       Many(ref v) => v.iter().map(|b| b.len()).sum(),
     }
+  }
+
+  /// Extends this span to include the range denoted by another span.
+  #[inline]
+  pub fn append(&mut self, other: BufSpan<Buf>) {
+    self.extend(other.into_iter())
   }
 }
 
