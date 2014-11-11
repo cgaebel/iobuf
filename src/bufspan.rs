@@ -22,8 +22,11 @@ use iobuf::Iobuf;
 /// A `BufSpan` is internally represented as either an `Iobuf` or a `Vec<Iobuf>`,
 /// depending on how many different buffers were used.
 pub enum BufSpan<Buf> {
+  /// A span over 0 bytes.
   Empty,
+  /// A single span over one range.
   One (Buf),
+  /// A span over several backing Iobufs.
   Many(Vec<Buf>),
 }
 
@@ -309,7 +312,9 @@ pub type ByteIter<'a, Buf> =
 
 /// An iterator over references to buffers inside a `BufSpan`.
 pub enum SpanIter<'a, Buf: 'a> {
+  /// An optional item to iterate over.
   Opt(option::Item<&'a Buf>),
+  /// A lot of items to iterate over.
   Lot(slice::Items<'a, Buf>),
 }
 
@@ -335,7 +340,9 @@ impl<'a, Buf: Iobuf> Iterator<&'a Buf> for SpanIter<'a, Buf> {
 
 /// A moving iterator over buffers inside a `BufSpan`.
 pub enum SpanMoveIter<Buf> {
+  /// An optional item to iterate over.
   MoveOpt(option::Item<Buf>),
+  /// A lot of items to iterate over.
   MoveLot(vec::MoveItems<Buf>),
 }
 

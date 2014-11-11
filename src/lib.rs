@@ -38,6 +38,9 @@
 
 #![feature(phase)]
 #![feature(unsafe_destructor)]
+
+#![deny(missing_docs)]
+
 #![no_std]
 
                                    extern crate alloc;
