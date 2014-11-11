@@ -1,8 +1,11 @@
 use collections::slice::{mod, AsSlice, SlicePrelude};
 use collections::vec::{mod, Vec};
+use core::clone::Clone;
+use core::fmt;
 use core::mem;
 use core::iter::{mod, AdditiveIterator, Iterator};
 use core::option::{mod, Some, None, Option};
+use core::result::{Ok, Err};
 
 use iobuf::Iobuf;
 
@@ -22,6 +25,35 @@ pub enum BufSpan<Buf> {
   Empty,
   One (Buf),
   Many(Vec<Buf>),
+}
+
+impl<Buf: Iobuf> Clone for BufSpan<Buf> {
+  #[inline]
+  fn clone(&self) -> BufSpan<Buf> {
+    match *self {
+      Empty       => Empty,
+      One(ref b)  => One ((*b).clone()),
+      Many(ref v) => Many((*v).clone()),
+    }
+  }
+}
+
+impl<Buf: Iobuf> fmt::Show for BufSpan<Buf> {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let mut first_time = true;
+
+    for b in self.iter() {
+      if !first_time {
+        try!(write!(f, "\n"));
+      }
+
+      try!(b.fmt(f));
+
+      first_time = false;
+    }
+
+    Ok(())
+  }
 }
 
 impl<Buf: Iobuf> BufSpan<Buf> {
@@ -119,6 +151,32 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// Appends a buffer to a `BufSpan`. If the buffer is an extension of the
   /// previously pushed buffer, the range will be extended. Otherwise, the new
   /// non-extension buffer will be added to the end of a vector.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, Iobuf, ROIobuf};
+  ///
+  /// let mut s = BufSpan::new();
+  ///
+  /// s.push(ROIobuf::from_str("he"));
+  /// s.push(ROIobuf::from_str("llo"));
+  ///
+  /// assert_eq!(s.count_bytes() as uint, "hello".len());
+  /// assert_eq!(s.iter().count(), 2);
+  ///
+  /// let mut b0 = ROIobuf::from_str(" world");
+  /// let mut b1 = b0.clone();
+  ///
+  /// b0.resize(2).unwrap();
+  /// b1.advance(2).unwrap();
+  ///
+  /// s.push(b0);
+  /// s.push(b1);
+  ///
+  /// // b0 and b1 are immediately after each other, and from the same buffer,
+  /// // so get merged into one Iobuf.
+  /// assert_eq!(s.count_bytes() as uint, "hello world".len());
+  /// assert_eq!(s.iter().count(), 3);
+  /// ```
   pub fn push(&mut self, b: Buf) {
     match self.try_to_extend(b) {
       None    => {},
