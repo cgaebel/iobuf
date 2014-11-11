@@ -576,7 +576,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       self.buf.offset(self.hi as int) == other.buf.offset(other.lo as int)
          // check_range, but with `cap()` instead of `len()`.
-      && self.hi as u64 + other.len() as u64 <= self.cap() as u64
+      && self.hi as u64 + other.len() as u64 <= self.hi_max as u64
     }
   }
 
