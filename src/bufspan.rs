@@ -5,6 +5,7 @@ use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
 use core::fmt;
 use core::mem;
 use core::iter::{mod, order, Extend, AdditiveIterator, Iterator};
+use core::iter::{DoubleEndedIterator, ExactSize, RandomAccessIterator};
 use core::option::{mod, Some, None, Option};
 use core::result::{Ok, Err};
 
@@ -343,6 +344,16 @@ pub enum SpanIter<'a, Buf: 'a> {
   Lot(slice::Items<'a, Buf>),
 }
 
+impl<'a, Buf: Iobuf> Clone for SpanIter<'a, Buf> {
+  #[inline(always)]
+  fn clone(&self) -> SpanIter<'a, Buf> {
+    match *self {
+      Opt(ref iter) => Opt((*iter).clone()),
+      Lot(ref iter) => Lot((*iter).clone()),
+    }
+  }
+}
+
 impl<'a, Buf: Iobuf> Iterator<&'a Buf> for SpanIter<'a, Buf> {
   #[inline(always)]
   fn next(&mut self) -> Option<&'a Buf> {
@@ -359,6 +370,43 @@ impl<'a, Buf: Iobuf> Iterator<&'a Buf> for SpanIter<'a, Buf> {
     match *self {
       Opt(ref iter) => iter.size_hint(),
       Lot(ref iter) => iter.size_hint(),
+    }
+  }
+}
+
+impl<'a, Buf: Iobuf> DoubleEndedIterator<&'a Buf> for SpanIter<'a, Buf> {
+  #[inline(always)]
+  fn next_back(&mut self) -> Option<&'a Buf> {
+    // I'm couting on this match getting lifted out of the loop with
+    // loop-invariant code motion.
+    match *self {
+      Opt(ref mut iter) => iter.next_back(),
+      Lot(ref mut iter) => iter.next_back(),
+    }
+  }
+}
+
+impl<'a, Buf: Iobuf> ExactSize<&'a Buf> for SpanIter<'a, Buf> {}
+
+impl<'a, Buf: Iobuf> RandomAccessIterator<&'a Buf> for SpanIter<'a, Buf> {
+  #[inline(always)]
+  fn indexable(&self) -> uint {
+    // I'm couting on this match getting lifted out of the loop with
+    // loop-invariant code motion.
+    match *self {
+      Opt(   _    ) => { let (exact, _) = self.size_hint(); exact },
+      Lot(ref iter) => iter.indexable(),
+    }
+  }
+
+  #[inline(always)]
+  fn idx(&mut self, index: uint) -> Option<&'a Buf> {
+    // I'm couting on this match getting lifted out of the loop with
+    // loop-invariant code motion.
+    match (*self, index) {
+      (Lot(ref mut iter), index) => iter.idx(index),
+      (Opt(ref mut iter), 0    ) => iter.next(),
+      (Opt(     _      ), index) => panic!("Option index out of range: {}", index),
     }
   }
 }
@@ -390,3 +438,17 @@ impl<Buf: Iobuf> Iterator<Buf> for SpanMoveIter<Buf> {
     }
   }
 }
+
+impl<Buf: Iobuf> DoubleEndedIterator<Buf> for SpanMoveIter<Buf> {
+  #[inline(always)]
+  fn next_back(&mut self) -> Option<Buf> {
+    // I'm couting on this match getting lifted out of the loop with
+    // loop-invariant code motion.
+    match *self {
+      MoveOpt(ref mut iter) => iter.next_back(),
+      MoveLot(ref mut iter) => iter.next_back(),
+    }
+  }
+}
+
+impl<Buf: Iobuf> ExactSize<Buf> for SpanMoveIter<Buf> {}
