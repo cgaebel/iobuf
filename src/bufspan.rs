@@ -93,7 +93,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn from_buf(b: Buf) -> BufSpan<Buf> {
-    One(b)
+    if b.is_empty() { Empty } else { One(b) }
   }
 
   /// Returns `true` iff the span is over an empty range.
