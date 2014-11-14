@@ -10,7 +10,7 @@ use core::kinds::marker::{ContravariantLifetime, NoCopy, NoSend, NoSync};
 use core::iter;
 use core::iter::Iterator;
 use core::mem;
-use core::num::{Zero, FromPrimitive, ToPrimitive};
+use core::num::{FromPrimitive, ToPrimitive};
 use core::ops::{Drop, Shl, Shr, BitOr, BitAnd};
 use core::option::{Option, Some, None};
 use core::ptr;
@@ -28,7 +28,6 @@ use core::uint;
 /// have no portable representation. Are they 32 or 64 bits? No one knows.
 pub trait Prim
   : Copy
-  + Zero
   + Shl<uint, Self>
   + Shr<uint, Self>
   + BitOr<Self, Self>
@@ -759,7 +758,7 @@ impl<'a> RawIobuf<'a> {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(pos, bytes);
 
-    let mut x: T = Zero::zero();
+    let mut x: T = FromPrimitive::from_u8(0).unwrap();
 
     for i in iter::range(0, bytes) {
       x = self.get_at::<T>(pos+i) | (x << 8);
@@ -772,7 +771,7 @@ impl<'a> RawIobuf<'a> {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(pos, bytes);
 
-    let mut x: T = Zero::zero();
+    let mut x: T = FromPrimitive::from_u8(0).unwrap();
 
     for i in iter::range(0, bytes) {
       x = (x >> 8) | (self.get_at::<T>(pos+i) << ((bytes - 1) * 8) as uint);
@@ -798,7 +797,7 @@ impl<'a> RawIobuf<'a> {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(pos, bytes);
 
-    let msk: T = FromPrimitive::from_u8(0xFFu8).unwrap();
+    let msk: T = FromPrimitive::from_u8(0xFF).unwrap();
 
     for i in iter::range(0, bytes) {
       self.set_at(pos+i, (t >> ((bytes-i-1)*8) as uint) & msk);
@@ -809,7 +808,7 @@ impl<'a> RawIobuf<'a> {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(pos, bytes);
 
-    let msk: T = FromPrimitive::from_u8(0xFFu8).unwrap();
+    let msk: T = FromPrimitive::from_u8(0xFF).unwrap();
 
     for i in iter::range(0, bytes) {
       self.set_at(pos+i, (t >> (i*8) as uint) & msk);
