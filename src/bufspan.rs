@@ -299,7 +299,11 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// Extends this span to include the range denoted by another span.
   #[inline]
   pub fn append(&mut self, other: BufSpan<Buf>) {
-    self.extend(other.into_iter())
+    if self.is_empty() {
+      *self = other;
+    } else {
+      self.extend(other.into_iter())
+    }
   }
 }
 
