@@ -1,10 +1,10 @@
 use collections::slice::{mod, AsSlice, SlicePrelude};
 use collections::vec::{mod, Vec};
 use core::clone::Clone;
-use core::cmp::{Eq, PartialEq};
+use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
 use core::fmt;
 use core::mem;
-use core::iter::{mod, Extend, AdditiveIterator, Iterator};
+use core::iter::{mod, order, Extend, AdditiveIterator, Iterator};
 use core::option::{mod, Some, None, Option};
 use core::result::{Ok, Err};
 
@@ -315,6 +315,18 @@ impl<Buf: Iobuf> PartialEq for BufSpan<Buf> {
 }
 
 impl<Buf: Iobuf> Eq for BufSpan<Buf> {}
+
+impl<Buf: Iobuf> PartialOrd for BufSpan<Buf> {
+    fn partial_cmp(&self, other: &BufSpan<Buf>) -> Option<Ordering> {
+        order::partial_cmp(self.iter_bytes(), other.iter_bytes())
+    }
+}
+
+impl<Buf: Iobuf> Ord for BufSpan<Buf> {
+    fn cmp(&self, other: &BufSpan<Buf>) -> Ordering {
+        order::cmp(self.iter_bytes(), other.iter_bytes())
+    }
+}
 
 /// An iterator over the bytes in a `BufSpan`.
 pub type ByteIter<'a, Buf> =
