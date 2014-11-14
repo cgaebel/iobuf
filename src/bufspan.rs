@@ -1,6 +1,7 @@
 use collections::slice::{mod, AsSlice, SlicePrelude};
 use collections::vec::{mod, Vec};
 use core::clone::Clone;
+use core::cmp::{Eq, PartialEq};
 use core::fmt;
 use core::mem;
 use core::iter::{mod, Extend, AdditiveIterator, Iterator};
@@ -306,6 +307,14 @@ impl<Buf: Iobuf> BufSpan<Buf> {
     }
   }
 }
+
+impl<Buf: Iobuf> PartialEq for BufSpan<Buf> {
+    fn eq(&self, other: &BufSpan<Buf>) -> bool {
+        self.byte_equal(other)
+    }
+}
+
+impl<Buf: Iobuf> Eq for BufSpan<Buf> {}
 
 /// An iterator over the bytes in a `BufSpan`.
 pub type ByteIter<'a, Buf> =
