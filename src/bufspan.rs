@@ -4,7 +4,7 @@ use core::clone::Clone;
 use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
 use core::fmt;
 use core::mem;
-use core::iter::{mod, order, Extend, AdditiveIterator, Iterator};
+use core::iter::{mod, order, Extend, AdditiveIterator, Iterator, FromIterator};
 use core::iter::{DoubleEndedIterator, ExactSize, RandomAccessIterator};
 use core::option::{mod, Some, None, Option};
 use core::result::{Ok, Err};
@@ -61,7 +61,17 @@ impl<Buf: Iobuf> fmt::Show for BufSpan<Buf> {
   }
 }
 
+impl<Buf: Iobuf> FromIterator<Buf> for BufSpan<Buf> {
+  #[inline]
+  fn from_iter<T: Iterator<Buf>>(iterator: T) -> BufSpan<Buf> {
+    let mut ret = BufSpan::new();
+    ret.extend(iterator);
+    ret
+  }
+}
+
 impl<Buf: Iobuf> Extend<Buf> for BufSpan<Buf> {
+  #[inline]
   fn extend<T: Iterator<Buf>>(&mut self, mut iterator: T) {
     for x in iterator {
       self.push(x);
