@@ -264,15 +264,15 @@ impl<'a> RWIobuf<'a> {
   ///   let mut b = RWIobuf::from_slice(&mut s);
   ///
   ///   assert_eq!(b.advance(1), Ok(()));
-  ///   unsafe { b.as_window_slice_mut()[1] = 30; }
+  ///   unsafe { b.as_mut_window_slice()[1] = 30; }
   /// }
   ///
   /// let expected = [ 1,2,30 ];
   /// assert_eq!(s.as_slice(), expected.as_slice());
   /// ```
   #[inline(always)]
-  pub unsafe fn as_window_slice_mut<'b>(&'b self) -> &'b mut [u8] {
-    self.raw.as_window_slice_mut()
+  pub unsafe fn as_mut_window_slice<'b>(&'b self) -> &'b mut [u8] {
+    self.raw.as_mut_window_slice()
   }
 
   /// Reads the data in the window as a mutable slice. Note that since `&mut`
@@ -292,14 +292,14 @@ impl<'a> RWIobuf<'a> {
   ///   let mut b = RWIobuf::from_slice(&mut s);
   ///
   ///   assert_eq!(b.advance(1), Ok(()));
-  ///   unsafe { b.as_limit_slice_mut()[1] = 20; }
+  ///   unsafe { b.as_mut_limit_slice()[1] = 20; }
   /// }
   ///
   /// assert_eq!(s.as_slice(), [1,20,3].as_slice());
   /// ```
   #[inline(always)]
-  pub unsafe fn as_limit_slice_mut<'b>(&'b self) -> &'b mut [u8] {
-    self.raw.as_limit_slice_mut()
+  pub unsafe fn as_mut_limit_slice<'b>(&'b self) -> &'b mut [u8] {
+    self.raw.as_mut_limit_slice()
   }
 
   /// Gets a read-only copy of this Iobuf. This is a very cheap operation, as

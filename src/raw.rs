@@ -323,7 +323,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
-  pub unsafe fn as_limit_slice_mut<'b>(&'b self) -> &'b mut [u8] {
+  pub unsafe fn as_mut_limit_slice<'b>(&'b self) -> &'b mut [u8] {
     mem::transmute(self.as_raw_limit_slice())
   }
 
@@ -341,7 +341,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
-  pub unsafe fn as_window_slice_mut<'b>(&'b self) -> &'b mut [u8] {
+  pub unsafe fn as_mut_window_slice<'b>(&'b self) -> &'b mut [u8] {
     mem::transmute(self.as_raw_window_slice())
   }
 
