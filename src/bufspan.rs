@@ -297,6 +297,16 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// Counts the number of bytes this `BufSpan` is over. This is
   /// `O(self.iter().len())`.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, ROIobuf};
+  ///
+  /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
+  /// a.push(ROIobuf::from_str(" "));
+  /// a.push(ROIobuf::from_str("world"));
+  ///
+  /// assert_eq!(a.count_bytes(), 11); // iterates over the pushed buffers.
+  /// ```
   #[inline]
   pub fn count_bytes(&self) -> u32 {
     // `self.iter().map(|b| b.len()).sum()` would be shorter, but I like to
@@ -309,6 +319,19 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   }
 
   /// Extends this span to include the range denoted by another span.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, ROIobuf};
+  ///
+  /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
+  /// a.push(ROIobuf::from_str(" "));
+  /// let mut b = BufSpan::from_buf(ROIobuf::from_str("world"));
+  /// b.push(ROIobuf::from_str("!!!"));
+  ///
+  /// a.append(b);
+  ///
+  /// assert!(a.byte_equal_slice(b"hello world!!!"));
+  /// ```
   #[inline]
   pub fn append(&mut self, other: BufSpan<Buf>) {
     if self.is_empty() {
@@ -316,6 +339,54 @@ impl<Buf: Iobuf> BufSpan<Buf> {
     } else {
       self.extend(other.into_iter())
     }
+  }
+
+  /// Returns `true` if the span begins with the given bytes.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, ROIobuf};
+  ///
+  /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
+  /// a.push(ROIobuf::from_str(" "));
+  /// a.push(ROIobuf::from_str("world!"));
+  ///
+  /// assert!(a.starts_with(b""));
+  /// assert!(a.starts_with(b"hel"));
+  /// assert!(a.starts_with(b"hello "));
+  /// assert!(a.starts_with(b"hello wor"));
+  /// assert!(a.starts_with(b"hello world!"));
+  ///
+  /// assert!(!a.starts_with(b"goodbye"));
+  /// ```
+  #[inline]
+  pub fn starts_with(&self, other: &[u8]) -> bool {
+    if (self.count_bytes() as uint) < other.len() { return false }
+
+    self.iter_bytes().zip(other.iter()).all(|(a, b)| a == *b)
+  }
+
+  /// Returns `true` if the span ends with the given bytes.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, ROIobuf};
+  ///
+  /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
+  /// a.push(ROIobuf::from_str(" "));
+  /// a.push(ROIobuf::from_str("world!"));
+  ///
+  /// assert!(a.ends_with(b""));
+  /// assert!(a.ends_with(b"!"));
+  /// assert!(a.ends_with(b"rld!"));
+  /// assert!(a.ends_with(b"lo world!"));
+  /// assert!(a.ends_with(b"hello world!"));
+  ///
+  /// assert!(!a.ends_with(b"goodbye"));
+  /// ```
+  #[inline]
+  pub fn ends_with(&self, other: &[u8]) -> bool {
+    if (self.count_bytes() as uint) < other.len() { return false }
+
+    self.iter_bytes().rev().zip(other.iter().rev()).all(|(a, b)| a == *b)
   }
 }
 
