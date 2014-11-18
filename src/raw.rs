@@ -1,8 +1,5 @@
 use alloc::heap;
 
-use collections::slice::SlicePrelude;
-use collections::string::String;
-use collections::vec::Vec;
 use core::clone::Clone;
 use core::fmt::{Formatter,FormatError};
 use core::kinds::Copy;
@@ -15,9 +12,9 @@ use core::ops::{Drop, Shl, Shr, BitOr, BitAnd};
 use core::option::{Option, Some, None};
 use core::ptr;
 use core::ptr::RawPtr;
-use core::raw;
+use core::raw::{mod, Repr};
 use core::result::{Result,Ok,Err};
-use core::slice::AsSlice;
+use core::slice::SlicePrelude;
 use core::str::StrPrelude;
 use core::u32;
 use core::uint;
@@ -254,21 +251,11 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
-  pub fn from_string(s: String) -> RawIobuf<'static> {
-    RawIobuf::from_vec(s.into_bytes())
+  pub fn from_str_copy(s: &str) -> RawIobuf<'static> {
+    RawIobuf::from_slice_copy(s.as_bytes())
   }
 
-  #[inline(always)]
-  pub fn from_vec(v: Vec<u8>) -> RawIobuf<'static> {
-    unsafe {
-      let b = RawIobuf::new(v.len());
-      let s: raw::Slice<u8> = mem::transmute(v.as_slice());
-      ptr::copy_nonoverlapping_memory(b.buf, s.data, s.len);
-      b
-    }
-  }
-
-  #[inline(always)]
+  #[inline]
   pub fn from_slice<'a>(s: &'a [u8]) -> RawIobuf<'a> {
     unsafe {
       let s_slice: raw::Slice<u8> = mem::transmute(s);
@@ -290,6 +277,16 @@ impl<'a> RawIobuf<'a> {
         nosend: NoSend,
         nosync: NoSync,
       }
+    }
+  }
+
+  #[inline]
+  pub fn from_slice_copy(s: &[u8]) -> RawIobuf<'static> {
+    unsafe {
+      let b = RawIobuf::new(s.len());
+      let s = s.repr();
+      ptr::copy_nonoverlapping_memory(b.buf, s.data, s.len);
+      b
     }
   }
 
@@ -955,6 +952,7 @@ fn peek_le() {
 fn poke_be() {
   use iobuf::Iobuf;
   use impls::RWIobuf;
+  use core::slice::AsSlice;
 
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_be(0, 0x01020304u32), Ok(()));
@@ -966,6 +964,7 @@ fn poke_be() {
 fn poke_le() {
   use iobuf::Iobuf;
   use impls::RWIobuf;
+  use core::slice::AsSlice;
 
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_le(0, 0x01020304u32), Ok(()));

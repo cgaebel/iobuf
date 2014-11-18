@@ -50,6 +50,13 @@
 #[cfg(test)]                       extern crate native;
 #[cfg(test)]                       extern crate test;
 
+// NOTE: libcollections is only needed for `BufSpan`. If you don't need that
+// functionality, feel free to hack this library to remove that file, and
+// therefore the dependency.
+//
+// Also, when you do that, file an issue letting me know you had to do that.
+// I'll use that as a cue to break out `BufSpan` into its own library.
+
 pub use raw::Prim;
 pub use iobuf::Iobuf;
 pub use impls::{ROIobuf, RWIobuf};

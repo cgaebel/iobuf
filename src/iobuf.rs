@@ -396,10 +396,10 @@ pub trait Iobuf: Clone + Show {
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
   ///
-  /// let mut a = ROIobuf::from_string("hello".to_string());
+  /// let mut a = ROIobuf::from_str_copy("hello");
   /// let mut b = a.clone();
   /// let mut c = a.clone();
-  /// let mut d = ROIobuf::from_string("hello".to_string());
+  /// let mut d = ROIobuf::from_str_copy("hello");
   ///
   /// assert_eq!(a.sub_window_to(2), Ok(()));
   ///

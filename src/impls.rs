@@ -1,10 +1,8 @@
-use collections::slice::SlicePrelude;
-use collections::string::String;
-use collections::vec::Vec;
 use core::clone::Clone;
 use core::fmt::{Formatter,FormatError,Show};
 use core::mem;
 use core::result::Result;
+use core::slice::SlicePrelude;
 use core::str::StrPrelude;
 
 use raw::{Prim, RawIobuf};
@@ -58,8 +56,7 @@ impl<'a> Clone for RWIobuf<'a> {
 
 impl<'a> ROIobuf<'a> {
   /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
-  /// an empty backing buffer. Unfortunately, that backing buffer is refcounted,
-  /// so this still needs an allocation.
+  /// an empty backing buffer.
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
@@ -69,13 +66,15 @@ impl<'a> ROIobuf<'a> {
   /// assert_eq!(b.cap(), 0);
   /// assert_eq!(b.len(), 0);
   /// ```
-  #[inline]
+  #[inline(always)]
   pub fn empty() -> ROIobuf<'static> {
     ROIobuf { raw: RawIobuf::empty() }
   }
 
   /// Constructs an Iobuf with the same contents as a string. The limits and
   /// window will be initially set to cover the whole string.
+  ///
+  /// No copying or allocating will be done by this function.
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
@@ -87,31 +86,32 @@ impl<'a> ROIobuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), b"hello"); }
   /// unsafe { assert_eq!(b.as_limit_slice(), b"hello"); }
   /// ```
-  #[inline]
+  #[inline(always)]
   pub fn from_str<'a>(s: &'a str) -> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_str(s) }
   }
 
-  /// Directly converts a string into a read-only Iobuf. The Iobuf will take
-  /// ownership of the string, therefore there will be no copying.
+  /// Copies a `str` into a read-only Iobuf. The contents of the `str` will be
+  /// copied, so prefer to use the other constructors whenever possible.
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
   ///
-  /// let mut b = ROIobuf::from_string("hello".into_string());
+  /// let mut b = ROIobuf::from_str_copy("hello");
   ///
   /// assert_eq!(b.cap(), 5);
   /// assert_eq!(b.len(), 5);
   /// unsafe { assert_eq!(b.as_window_slice(), b"hello"); }
   /// unsafe { assert_eq!(b.as_limit_slice(), b"hello"); }
   /// ```
-  #[inline]
-  pub fn from_string(s: String) -> ROIobuf<'static> {
-    ROIobuf { raw: RawIobuf::from_string(s) }
+  #[inline(always)]
+  pub fn from_str_copy(s: &str) -> ROIobuf<'static> {
+    ROIobuf { raw: RawIobuf::from_str_copy(s) }
   }
 
-  /// Directly converts a byte vector into a read-only Iobuf. The Iobuf will
-  /// take ownership of the vector, therefore there will be no copying.
+  /// Copies the contents of a slice into a read-only Iobuf. The contents of the
+  /// slice will be copied, so prefer to use the other constructors whenever
+  /// possible.
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
@@ -119,17 +119,17 @@ impl<'a> ROIobuf<'a> {
   /// let mut v = vec!(1u8, 2, 3, 4, 5, 6);
   /// v.as_mut_slice()[1] = 20;
   ///
-  /// let mut b = ROIobuf::from_vec(v);
+  /// let mut b = ROIobuf::from_slice_copy(v.as_slice());
   ///
   /// let expected = [ 1,20,3,4,5,6 ];
   /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
   /// ```
-  #[inline]
-  pub fn from_vec(v: Vec<u8>) -> ROIobuf<'static> {
-    ROIobuf { raw: RawIobuf::from_vec(v) }
+  #[inline(always)]
+  pub fn from_slice_copy(s: &[u8]) -> ROIobuf<'static> {
+    ROIobuf { raw: RawIobuf::from_slice_copy(s) }
   }
 
-  /// Construclts an Iobuf from a slice. The Iobuf will not copy the slice
+  /// Constructs an Iobuf from a slice. The Iobuf will not copy the slice
   /// contents, and therefore their lifetimes will be linked.
   ///
   /// ```
@@ -144,7 +144,7 @@ impl<'a> ROIobuf<'a> {
   /// assert_eq!(s[1], 2); // we can still use the slice!
   /// assert_eq!(b.peek_be(1), Ok(0x0304u16)); // ...and the Iobuf!
   /// ```
-  #[inline]
+  #[inline(always)]
   pub fn from_slice<'a>(s: &'a [u8]) -> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_slice(s) }
   }
@@ -152,8 +152,7 @@ impl<'a> ROIobuf<'a> {
 
 impl<'a> RWIobuf<'a> {
   /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
-  /// an empty backing buffer. Unfortunately, that backing buffer is refcounted,
-  /// so this still needs an allocation.
+  /// an empty backing buffer.
   ///
   /// ```
   /// use iobuf::{RWIobuf,Iobuf};
@@ -163,13 +162,15 @@ impl<'a> RWIobuf<'a> {
   /// assert_eq!(b.len(), 0);
   /// assert_eq!(b.cap(), 0);
   /// ```
-  #[inline]
+  #[inline(always)]
   pub fn empty() -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::empty() }
   }
 
   /// Constructs a new Iobuf with a buffer of size `len`, undefined contents,
   /// and the limits and window set to the full size of the buffer.
+  ///
+  /// The maximum length of an Iobuf is `INT_MAX`.
   ///
   /// ```
   /// use iobuf::{RWIobuf,Iobuf};
@@ -184,13 +185,13 @@ impl<'a> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::new(len) }
   }
 
-  /// Directly converts a string into a writeable Iobuf. The Iobuf will take
-  /// ownership of the string, therefore there will be no copying.
+  /// Copies a `str` into a writeable Iobuf. The contents of the `str` will be
+  /// copied, so prefer to use the non-copying constructors whenever possible.
   ///
   /// ```
   /// use iobuf::{RWIobuf,Iobuf};
   ///
-  /// let mut b = RWIobuf::from_string("hello".into_string());
+  /// let mut b = RWIobuf::from_str_copy("hello");
   ///
   /// b.poke_be(1, b'4').unwrap();
   ///
@@ -200,30 +201,11 @@ impl<'a> RWIobuf<'a> {
   /// unsafe { assert_eq!(b.as_limit_slice(), b"h4llo"); }
   /// ```
   #[inline(always)]
-  pub fn from_string(s: String) -> RWIobuf<'static> {
-    RWIobuf { raw: RawIobuf::from_string(s) }
+  pub fn from_str_copy(s: &str) -> RWIobuf<'static> {
+    RWIobuf { raw: RawIobuf::from_str_copy(s) }
   }
 
-  /// Directly converts a byte vector into a writeable Iobuf. The Iobuf will
-  /// take ownership of the vector, therefore there will be no copying.
-  ///
-  /// ```
-  /// use iobuf::{RWIobuf,Iobuf};
-  ///
-  /// let mut v = vec!(1u8, 2, 3, 4, 5, 6, 10);
-  /// v.as_mut_slice()[1] = 20;
-  ///
-  /// let mut b = RWIobuf::from_vec(v);
-  ///
-  /// let expected = [ 1,20,3,4,5,6,10 ];
-  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
-  /// ```
-  #[inline(always)]
-  pub fn from_vec(v: Vec<u8>) -> RWIobuf<'static> {
-    RWIobuf { raw: RawIobuf::from_vec(v) }
-  }
-
-  /// Construclts an Iobuf from a slice. The Iobuf will not copy the slice
+  /// Constructs an Iobuf from a slice. The Iobuf will not copy the slice
   /// contents, and therefore their lifetimes will be linked.
   ///
   /// ```
@@ -245,6 +227,26 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn from_slice<'a>(s: &'a mut [u8]) -> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::from_slice(s) }
+  }
+
+  /// Copies a byte vector into a new, writeable Iobuf. The contents of the
+  /// slice will be copied, so prefer to use the other constructors whenever
+  /// possible.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut v = vec!(1u8, 2, 3, 4, 5, 6, 10);
+  /// v.as_mut_slice()[1] = 20;
+  ///
+  /// let mut b = RWIobuf::from_slice_copy(v.as_slice());
+  ///
+  /// let expected = [ 1,20,3,4,5,6,10 ];
+  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
+  /// ```
+  #[inline(always)]
+  pub fn from_slice_copy(s: &[u8]) -> RWIobuf<'static> {
+    RWIobuf { raw: RawIobuf::from_slice_copy(s) }
   }
 
   /// Reads the data in the window as a mutable slice. Note that since `&mut`

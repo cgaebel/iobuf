@@ -260,7 +260,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// use iobuf::{BufSpan, ROIobuf, RWIobuf};
   ///
   /// let a = BufSpan::from_buf(ROIobuf::from_str("hello"));
-  /// let b = BufSpan::from_buf(RWIobuf::from_string("hello".into_string()));
+  /// let b = BufSpan::from_buf(RWIobuf::from_str_copy("hello"));
   ///
   /// assert!(a.byte_equal(&b));
   ///
