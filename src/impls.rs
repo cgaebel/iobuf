@@ -362,16 +362,16 @@ impl<'a> RWIobuf<'a> {
   ///     unsafe {
   ///       if b.len() < 2 {
   ///         b.compact();
-  ///         return Ok(NeedMore(sum));
+  ///         return Ok(ParseState::NeedMore(sum));
   ///       }
   ///       sum += b.unsafe_consume_be();
   ///     }
   ///   }
   ///
-  ///   Ok(Done(sum))
+  ///   Ok(ParseState::Done(sum))
   /// }
   ///
-  /// assert_eq!(parse(&mut b), Ok(NeedMore(0x1122)));
+  /// assert_eq!(parse(&mut b), Ok(ParseState::NeedMore(0x1122)));
   /// assert_eq!(b.len(), 3);
   /// assert_eq!(b.cap(), 4);
   /// assert_eq!(b.peek_be(0), Ok(0x11u8));

@@ -46,6 +46,8 @@
                                    extern crate alloc;
                                    extern crate collections;
              #[phase(plugin,link)] extern crate core;
+
+// For tests only:
 #[cfg(test)] #[phase(plugin,link)] extern crate std;
 #[cfg(test)]                       extern crate native;
 #[cfg(test)]                       extern crate test;

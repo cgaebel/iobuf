@@ -5,11 +5,15 @@ use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
 use core::fmt;
 use core::mem;
 use core::iter::{mod, order, Extend, AdditiveIterator, Iterator, FromIterator};
-use core::iter::{DoubleEndedIterator, ExactSize, RandomAccessIterator};
+use core::iter::{DoubleEndedIterator, ExactSize};
 use core::option::{mod, Some, None, Option};
 use core::result::{Ok, Err};
 
 use iobuf::Iobuf;
+
+use BufSpan::{Empty, One, Many};
+use SpanIter::{Opt, Lot};
+use SpanMoveIter::{MoveOpt, MoveLot};
 
 /// A span over potentially many Iobufs. This is useful as a "string" type where
 /// the contents of the string can come from multiple IObufs, and you want to
@@ -90,7 +94,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn new() -> BufSpan<Buf> {
-    Empty
+    BufSpan::Empty
   }
 
   /// Creates a new `BufSpan` from an Iobuf.
@@ -125,8 +129,8 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   #[inline]
   pub fn is_empty(&self) -> bool {
     match *self {
-      Empty => true,
-      _     => false,
+      BufSpan::Empty => true,
+      _              => false,
     }
   }
 
@@ -309,6 +313,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn count_bytes(&self) -> u32 {
+
     // `self.iter().map(|b| b.len()).sum()` would be shorter, but I like to
     // specialize for the much more common case of empty or singular `BufSpan`s.
     match *self {
@@ -468,29 +473,6 @@ impl<'a, Buf: Iobuf> DoubleEndedIterator<&'a Buf> for SpanIter<'a, Buf> {
 }
 
 impl<'a, Buf: Iobuf> ExactSize<&'a Buf> for SpanIter<'a, Buf> {}
-
-impl<'a, Buf: Iobuf> RandomAccessIterator<&'a Buf> for SpanIter<'a, Buf> {
-  #[inline(always)]
-  fn indexable(&self) -> uint {
-    // I'm couting on this match getting lifted out of the loop with
-    // loop-invariant code motion.
-    match *self {
-      Opt(   _    ) => { let (exact, _) = self.size_hint(); exact },
-      Lot(ref iter) => iter.indexable(),
-    }
-  }
-
-  #[inline(always)]
-  fn idx(&mut self, index: uint) -> Option<&'a Buf> {
-    // I'm couting on this match getting lifted out of the loop with
-    // loop-invariant code motion.
-    match (*self, index) {
-      (Lot(ref mut iter), index) => iter.idx(index),
-      (Opt(ref mut iter), 0    ) => iter.next(),
-      (Opt(     _      ), index) => panic!("Option index out of range: {}", index),
-    }
-  }
-}
 
 /// A moving iterator over buffers inside a `BufSpan`.
 pub enum SpanMoveIter<Buf> {
