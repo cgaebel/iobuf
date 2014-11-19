@@ -120,7 +120,9 @@ unsafe fn deallocate_raw(buf: *mut u8, bytes_allocated: uint) {
 impl<'a> Drop for RawIobuf<'a> {
   #[inline]
   fn drop(&mut self) {
-    if self.buf.is_null() { return }
+    // In the case of double-drops, the owned bit will be cleared (rustc will
+    // memzero us on drop). Therefore, no deallocation or refcount dec-ing will
+    // be needed, and we save having to check if buf is null.
 
     unsafe {
       match self.dec_ref_count() {
