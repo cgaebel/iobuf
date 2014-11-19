@@ -538,8 +538,8 @@ impl<'a> RWIobuf<'a> {
   ///   b.unsafe_advance(1);
   ///   b.narrow();
   ///
-  ///   b.unsafe_poke(0, data);
-  ///   b.unsafe_poke(3, data);
+  ///   b.unsafe_poke(0, &data);
+  ///   b.unsafe_poke(3, &data);
   ///   b.unsafe_advance(7);
   /// }
   ///

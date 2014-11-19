@@ -4,6 +4,7 @@ use core::clone::Clone;
 use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
 use core::fmt;
 use core::mem;
+use core::num::ToPrimitive;
 use core::iter::{mod, order, Extend, AdditiveIterator, Iterator, FromIterator};
 use core::iter::{DoubleEndedIterator, ExactSize};
 use core::option::{mod, Some, None, Option};
@@ -278,7 +279,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn byte_equal<Buf2: Iobuf>(&self, other: &BufSpan<Buf2>) -> bool {
-    self.count_bytes() == other.count_bytes()
+    self.count_bytes_cmp(other.count_bytes() as uint) == Ordering::Equal
     && self.iter_bytes().zip(other.iter_bytes()).all(|(a, b)| a == b)
   }
 
@@ -295,7 +296,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn byte_equal_slice(&self, other: &[u8]) -> bool {
-    self.count_bytes() as uint == other.len()
+    self.count_bytes_cmp(other.len()) == Ordering::Equal
     && self.iter_bytes().zip(other.iter()).all(|(a, &b)| a == b)
   }
 
@@ -320,6 +321,45 @@ impl<Buf: Iobuf> BufSpan<Buf> {
       Empty       => 0,
       One (ref b) => b.len(),
       Many(ref v) => v.iter().map(|b| b.len()).sum(),
+    }
+  }
+
+  /// Compares the number of bytes in this span with another number, returning
+  /// how they compare. This is more efficient than calling `count_bytes` and
+  /// comparing that result, since we might be able to avoid iterating over all
+  /// the buffers.
+  ///
+  /// ```
+  /// use iobuf::{BufSpan, ROIobuf};
+  ///
+  /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
+  /// a.push(ROIobuf::from_str(" "));
+  /// a.push(ROIobuf::from_str("world"));
+  ///
+  /// assert_eq!(a.count_bytes_cmp(0), Ordering::Greater);
+  /// assert_eq!(a.count_bytes_cmp(11), Ordering::Equal);
+  /// assert_eq!(a.count_bytes_cmp(9001), Ordering::Less);
+  /// ```
+  #[inline]
+  pub fn count_bytes_cmp(&self, other: uint) -> Ordering {
+    let mut other =
+      match other.to_u32() {
+        None        => return Ordering::Less,
+        Some(other) => other,
+      };
+
+    match *self {
+      Empty       => 0.cmp(&other),
+      One (ref b) => b.len().cmp(&other),
+      Many(ref v) => {
+        for b in v.iter() {
+          let len = b.len();
+          if len > other { return Ordering::Greater }
+          other -= len;
+        }
+        if other == 0 { Ordering::Equal }
+        else          { Ordering::Less  }
+      }
     }
   }
 
@@ -365,8 +405,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn starts_with(&self, other: &[u8]) -> bool {
-    if (self.count_bytes() as uint) < other.len() { return false }
-
+    if self.count_bytes_cmp(other.len()) == Ordering::Less { return false }
     self.iter_bytes().zip(other.iter()).all(|(a, b)| a == *b)
   }
 
@@ -389,8 +428,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn ends_with(&self, other: &[u8]) -> bool {
-    if (self.count_bytes() as uint) < other.len() { return false }
-
+    if self.count_bytes_cmp(other.len()) == Ordering::Less { return false }
     self.iter_bytes().rev().zip(other.iter().rev()).all(|(a, b)| a == *b)
   }
 }
