@@ -107,26 +107,27 @@ impl<'a> Clone for RawIobuf<'a> {
 /// The bitmask to get the "is the buffer owned" bit.
 static OWNED_MASK: u32 = 1u32 << (u32::BITS - 1);
 
+#[cold]
+unsafe fn deallocate_raw(buf: *mut u8, bytes_allocated: uint) {
+  heap::deallocate(
+    buf.offset(
+      -2 * (uint::BYTES as int)),
+    bytes_allocated,
+    mem::align_of::<uint>())
+}
+
 #[unsafe_destructor]
 impl<'a> Drop for RawIobuf<'a> {
+  #[inline]
   fn drop(&mut self) {
+    if self.buf.is_null() { return }
+
     unsafe {
       match self.dec_ref_count() {
         None => {},
-        Some(bytes_allocated) =>
-          heap::deallocate(
-            self.buf.offset(
-              -2 * (uint::BYTES as int)),
-            bytes_allocated,
-            mem::align_of::<uint>()),
+        Some(bytes_allocated) => deallocate_raw(self.buf, bytes_allocated),
       }
     }
-
-    self.buf    = ptr::null_mut();
-    self.lo_min_and_owned_bit = 0;
-    self.lo     = 0;
-    self.hi     = 0;
-    self.hi_max = 0;
   }
 }
 
