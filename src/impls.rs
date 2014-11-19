@@ -20,6 +20,7 @@ pub struct ROIobuf<'a> {
 }
 
 impl<'a> Clone for ROIobuf<'a> {
+  #[inline(always)]
   fn clone(&self) -> ROIobuf<'a> {
     ROIobuf {
       raw: self.raw.clone()
@@ -47,6 +48,7 @@ pub struct RWIobuf<'a> {
 }
 
 impl<'a> Clone for RWIobuf<'a> {
+  #[inline(always)]
   fn clone(&self) -> RWIobuf<'a> {
     RWIobuf {
       raw: self.raw.clone()
@@ -759,6 +761,9 @@ impl<'a> Iobuf for ROIobuf<'a> {
   fn is_extended_by<Buf: Iobuf>(&self, other: &Buf) -> bool { unsafe { self.raw.is_extended_by(other.get_raw()) } }
 
   #[inline(always)]
+  fn extend_with<Buf: Iobuf>(&mut self, other: &Buf) -> Result<(), ()> { unsafe { self.raw.extend_with(other.get_raw()) } }
+
+  #[inline(always)]
   fn resize(&mut self, len: u32) -> Result<(), ()> { self.raw.resize(len) }
 
   #[inline(always)]
@@ -895,6 +900,9 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   fn is_extended_by<Buf: Iobuf>(&self, other: &Buf) -> bool { unsafe { self.raw.is_extended_by(other.get_raw()) } }
+
+  #[inline(always)]
+  fn extend_with<Buf: Iobuf>(&mut self, other: &Buf) -> Result<(), ()> { unsafe { self.raw.extend_with(other.get_raw()) } }
 
   #[inline(always)]
   fn resize(&mut self, len: u32) -> Result<(), ()> { self.raw.resize(len) }

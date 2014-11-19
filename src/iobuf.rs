@@ -417,6 +417,40 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn is_extended_by<Buf: Iobuf>(&self, other: &Buf) -> bool;
 
+  /// Attempts to extend an Iobuf with the contents of another Iobuf. If this
+  /// Iobuf's window is not the region directly before the other Iobuf's window,
+  /// no extension will be performed and `Err(())` will be returned. If the
+  /// operation was successful, `Ok(())` will be returned.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut a = ROIobuf::from_str_copy("hello");
+  /// let mut b = a.clone();
+  /// let mut c = a.clone();
+  /// let mut d = ROIobuf::from_str_copy("hello");
+  ///
+  /// assert_eq!(a.sub_window_to(2), Ok(()));
+  ///
+  /// // Different allocations => not an extension.
+  /// assert_eq!(d.sub_window_from(2), Ok(()));
+  /// assert_eq!(a.extend_with(&d), Err(()));
+  ///
+  /// // b actually IS an extension of a.
+  /// assert_eq!(b.sub_window_from(2), Ok(()));
+  /// assert_eq!(a.extend_with(&b), Ok(()));
+  /// unsafe {
+  ///   assert_eq!(a.as_window_slice(), b"hello");
+  /// }
+  ///
+  /// assert_eq!(a.sub_window_to(2), Ok(()));
+  ///
+  /// // a == "he", b == "lo", it's missing the "l", therefore not an extension.
+  /// assert_eq!(c.sub_window_from(3), Ok(()));
+  /// assert_eq!(b.extend_with(&a), Err(()));
+  /// ```
+  fn extend_with<Buf: Iobuf>(&mut self, other: &Buf) -> Result<(), ()>;
+
   /// Sets the length of the window, provided it does not exceed the limits.
   ///
   /// ```
