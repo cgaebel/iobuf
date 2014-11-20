@@ -1,5 +1,8 @@
 [package]
 
 name = "iobuf"
-version = "3.0.0"
+version = "3.0.1"
 authors = ["Clark Gaebel <cgaebel@mozilla.com>"]
+license = "MIT"
+
+description = "A contiguous region of bytes, useful for I/O operations."

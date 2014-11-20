@@ -1,7 +1,7 @@
 use alloc::heap;
 
 use core::clone::Clone;
-use core::fmt::{Formatter,FormatError};
+use core::fmt::{mod,Formatter};
 use core::kinds::Copy;
 use core::kinds::marker::{ContravariantLifetime, NoCopy, NoSend, NoSync};
 use core::iter;
@@ -880,7 +880,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   fn show_hex(&self, f: &mut Formatter, half_line: &[u8])
-      -> Result<(), FormatError> {
+      -> fmt::Result {
     for &x in half_line.iter() {
       try!(write!(f, "{:02x} ", x));
     }
@@ -888,7 +888,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   fn show_ascii(&self, f: &mut Formatter, half_line: &[u8])
-      -> Result<(), FormatError> {
+      -> fmt::Result {
     for &x in half_line.iter() {
       let c = if x >= 32 && x < 126 { x as char } else { '.' };
       try!(write!(f, "{}", c));
@@ -897,7 +897,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   fn show_line(&self, f: &mut Formatter, line_number: uint, chunk: &[u8])
-      -> Result<(), FormatError> {
+      -> fmt::Result {
 
     if      self.len() <= 1 <<  8 { try!(write!(f, "0x{:02x}",  line_number * 8)) }
     else if self.len() <= 1 << 16 { try!(write!(f, "0x{:04x}",  line_number * 8)) }
@@ -931,7 +931,7 @@ impl<'a> RawIobuf<'a> {
     write!(f, "\n")
   }
 
-  pub fn show(&self, f: &mut Formatter, ty: &str) -> Result<(), FormatError> {
+  pub fn show(&self, f: &mut Formatter, ty: &str) -> fmt::Result {
     try!(write!(f, "{} IObuf, limits=[{},{}), bounds=[{},{})\n",
                 ty, self.lo_min(), self.hi_max, self.lo, self.hi));
 

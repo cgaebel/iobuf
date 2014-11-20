@@ -1,5 +1,5 @@
 use core::clone::Clone;
-use core::fmt::{Formatter,FormatError,Show};
+use core::fmt::{mod,Formatter,Show};
 use core::mem;
 use core::result::Result;
 use core::slice::SlicePrelude;
@@ -967,13 +967,13 @@ impl<'a> Iobuf for RWIobuf<'a> {
 }
 
 impl<'a> Show for ROIobuf<'a> {
-  fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "read-only")
   }
 }
 
 impl<'a> Show for RWIobuf<'a> {
-  fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "read-write")
   }
 }
