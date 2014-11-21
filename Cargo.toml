@@ -1,8 +1,10 @@
 [package]
 
 name = "iobuf"
-version = "3.0.1"
+version = "3.0.2"
 authors = ["Clark Gaebel <cgaebel@mozilla.com>"]
 license = "MIT"
+homepage = "https://github.com/cgaebel/iobuf"
+repository = "https://github.com/cgaebel/iobuf"
 
 description = "A contiguous region of bytes, useful for I/O operations."
