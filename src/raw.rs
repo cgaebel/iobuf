@@ -791,8 +791,13 @@ impl<'a> RawIobuf<'a> {
 
     let mut x: T = FromPrimitive::from_u8(0).unwrap();
 
-    for i in iter::range(0, bytes) {
-      x = self.get_at::<T>(pos+i) | (x << 8);
+    // Left shift by 8 is undefined for u8.
+    if bytes == 1 {
+      x = self.get_at::<T>(pos);
+    } else {
+      for i in iter::range(0, bytes) {
+        x = self.get_at::<T>(pos+i) | (x << 8);
+      }
     }
 
     x
@@ -1007,4 +1012,14 @@ fn poke_le() {
   assert_eq!(b.poke_le(0, 0x01020304u32), Ok(()));
   let expected = [ 4,3,2,1 ];
   unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
+}
+
+
+#[test]
+fn peek_be_u8() {
+  use iobuf::Iobuf;
+  use impls::ROIobuf;
+
+  let b = ROIobuf::from_str("abc");
+  assert_eq!(b.peek_be(0), Ok(b'a'));
 }
