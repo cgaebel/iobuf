@@ -605,6 +605,24 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
+  pub fn split_at(&self, pos: u32) -> Result<(RawIobuf<'a>, RawIobuf<'a>), ()> {
+    unsafe {
+      try!(self.check_range_u32(pos, 0));
+      Ok(self.unsafe_split_at(pos))
+    }
+  }
+
+  #[inline]
+  pub unsafe fn unsafe_split_at(&self, pos: u32) -> (RawIobuf<'a>, RawIobuf<'a>) {
+    self.debug_check_range_u32(pos, 0);
+    let mut a = (*self).clone();
+    let mut b = (*self).clone();
+    a.unsafe_resize(pos);
+    b.unsafe_advance(pos);
+    (a, b)
+  }
+
+  #[inline]
   pub fn rewind(&mut self) {
     self.lo = self.lo_min();
   }

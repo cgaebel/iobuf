@@ -130,8 +130,8 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   #[inline]
   pub fn is_empty(&self) -> bool {
     match *self {
-      BufSpan::Empty => true,
-      _              => false,
+      Empty => true,
+      _     => false,
     }
   }
 
@@ -207,7 +207,6 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// The slow path during a push. This is only taken if a `BufSpan` must span
   /// multiple backing buffers.
-  #[cold]
   fn slow_push(&mut self, b: Buf) {
     let this = mem::replace(self, Empty);
     *self =

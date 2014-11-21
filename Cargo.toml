@@ -1,7 +1,7 @@
 [package]
 
 name = "iobuf"
-version = "3.0.2"
+version = "3.0.3"
 authors = ["Clark Gaebel <cgaebel@mozilla.com>"]
 license = "MIT"
 homepage = "https://github.com/cgaebel/iobuf"

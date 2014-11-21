@@ -483,7 +483,55 @@ pub trait Iobuf: Clone + Show {
   /// ```
   unsafe fn unsafe_resize(&mut self, len: u32);
 
+  /// Splits an Iobuf around an index.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("helloworld");
+  ///
+  /// match b.split_at(5) {
+  ///   Err(())    => panic!("This won't happen."),
+  ///   Ok((c, d)) => unsafe {
+  ///     assert_eq!(c.as_window_slice(), b"hello");
+  ///     assert_eq!(d.as_window_slice(), b"world");
+  ///   }
+  /// }
+  ///
+  /// match b.split_at(0) {
+  ///   Err(())    => panic!("This won't happen, either."),
+  ///   Ok((c, d)) => unsafe {
+  ///     assert_eq!(c.as_window_slice(), b"");
+  ///     assert_eq!(d.as_window_slice(), b"helloworld");
+  ///   }
+  /// }
+  ///
+  /// match b.split_at(10000) {
+  ///   Ok(_)   => panic!("This won't happen!"),
+  ///   Err(()) => unsafe { assert_eq!(b.as_window_slice(), b"helloworld"); },
+  /// }
+  /// ```
+  fn split_at(&self, pos: u32) -> Result<(Self, Self), ()>;
+
+  /// Like `split_at`, but does not perform bounds checking.
+  unsafe fn unsafe_split_at(&self, pos: u32) -> (Self, Self);
+
   /// Sets the lower bound of the window to the lower limit.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("hello");
+  ///
+  /// assert_eq!(b.advance(2), Ok(()));
+  /// assert_eq!(b.resize(2), Ok(()));
+  ///
+  /// unsafe { assert_eq!(b.as_window_slice(), b"ll"); }
+  ///
+  /// b.rewind();
+  ///
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hell"); }
+  /// ```
   fn rewind(&mut self);
 
   /// Sets the window to the limits.
@@ -495,11 +543,11 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.resize(3), Ok(()));
-  /// assert_eq!(unsafe { b.as_window_slice() }, b"hel");
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hel"); }
   /// assert_eq!(b.advance(2), Ok(()));
-  /// assert_eq!(unsafe { b.as_window_slice() }, b"l");
+  /// unsafe { assert_eq!(b.as_window_slice(), b"l"); }
   /// b.reset();
-  /// assert_eq!(unsafe { b.as_window_slice() }, b"hello");
+  /// unsafe { assert_eq!(b.as_window_slice(), b"hello"); }
   /// ```
   fn reset(&mut self);
 
