@@ -21,7 +21,7 @@
 //! To keep the struct small (24 bytes!), the maximum size of an Iobuf is 2 GB.
 //! Please let me know if you need more than this. I have never before seen a
 //! use case for Iobufs larger than 2 GB, and it gives us a 40% smaller struct
-//! compared to support INT64_MAX bytes. The improved size allows much better
+//! compared to supporting INT64_MAX bytes. The improved size allows much better
 //! register/cache usage and faster moves, both of which are critical for
 //! performance.
 //!
