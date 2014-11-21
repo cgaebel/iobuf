@@ -8,8 +8,8 @@ A contiguous region of bytes, useful for I/O operations.
 An Iobuf consists of:
 
   - a buffer
-  - limits (a subrange of the buffer)
-  - window (a subrange of the limits)
+  - limits   (a subrange of the buffer)
+  - a window (a subrange of the limits)
 
 All iobuf operations are restricted to operate within the limits. Initially,
 the window of an Iobuf is identical to the limits. If you have an `&mut` to
