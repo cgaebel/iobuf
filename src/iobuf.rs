@@ -5,9 +5,8 @@ use core::result::Result;
 use raw::{Prim, RawIobuf};
 use impls::RWIobuf;
 
-/// Have your functions take a generic IObuf whenever they don't modify the
-/// window or bounds. This way, the functions can be used with both `ROIobuf`s
-/// and `RWIobuf`s.
+/// Have your functions take a generic IObuf when they don't modify the buffer
+/// contents. This allows them to be used with both `ROIobuf`s and `RWIobuf`s.
 ///
 /// `peek` accesses a value at a position relative to the start of the
 /// window without advancing, and is meant to be used with `try!`. Its dual,
