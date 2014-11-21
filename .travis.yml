@@ -1,13 +1,13 @@
 language: rust
+os:
+  - linux
 env:
-global:
-  - secure: kzYpxjxxJzd8Mm8QE6UtYUgLgu5u7nSbcDYE8Tk+wfjdP/kB9ONRdD5eeSzxok8paGUMLnf5d/bJbdIjBwU4DsCbYPRe9tsKvJ7Hp7kvE/yoRQang+342fD0LGDLnRvkAfsmw0XQRVfwLRYqllDCPqqM0Wzgpr6dg/1hFAHWUWg=
+    global:
+      - secure: kzYpxjxxJzd8Mm8QE6UtYUgLgu5u7nSbcDYE8Tk+wfjdP/kB9ONRdD5eeSzxok8paGUMLnf5d/bJbdIjBwU4DsCbYPRe9tsKvJ7Hp7kvE/yoRQang+342fD0LGDLnRvkAfsmw0XQRVfwLRYqllDCPqqM0Wzgpr6dg/1hFAHWUWg=
 script:
   - cargo build --verbose
   - cargo test --verbose
   - cargo doc --verbose
 after_script:
-  - ln -s target/doc doc
-  - curl -v http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN > ./upload-docs
-  - cat ./upload-docs
-  - sh ./upload-docs
+  - cp -R target/doc doc
+  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
