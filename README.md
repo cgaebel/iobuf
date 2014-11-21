@@ -1,9 +1,9 @@
-[![Build Status](https://travis-ci.org/cgaebel/iobuf.svg?branch=master)](https://travis-ci.org/cgaebel/iobuf)
-
 Iobuf
 =====
 
 A contiguous region of bytes, useful for I/O operations.
+
+[![Build Status](https://travis-ci.org/cgaebel/iobuf.svg?branch=master)](https://travis-ci.org/cgaebel/iobuf)
 
 An Iobuf consists of:
 
@@ -25,3 +25,8 @@ construct multiple views into the same data.
 
 This a pretty much a direct port of Jane Street Core's
 [Iobuf](https://github.com/janestreet/core/blob/master/lib/iobuf.mli) module.
+
+Documentation
+--------------
+
+See the very thorough [API Docs](http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/).

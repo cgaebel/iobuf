@@ -35,6 +35,7 @@
 //! that they are redundant. This can cause terrifying security issues.
 
 #![license = "MIT"]
+#![doc(html_root_url = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/")]
 
 #![feature(phase)]
 #![feature(unsafe_destructor)]
