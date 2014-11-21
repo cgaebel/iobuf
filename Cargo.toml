@@ -3,8 +3,49 @@
 name = "iobuf"
 version = "3.0.5"
 authors = ["Clark Gaebel <cgaebel@mozilla.com>"]
-license = "MIT"
+
+documentation = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/"
 homepage = "https://github.com/cgaebel/iobuf"
 repository = "https://github.com/cgaebel/iobuf"
 
+readme = "README.md"
+
+keywords = [ "iobuf", "parsing", "buffer", "zero-copy", "io" ]
+
+license = "MIT"
+
 description = "A contiguous region of bytes, useful for I/O operations."
+
+[profile.dev]
+opt-level = 1  # Controls the --opt-level the compiler builds with
+debug = true   # Controls whether the compiler passes -g or `--cfg ndebug`
+rpath = false  # Controls whether the compiler passes `-C rpath`
+lto = false    # Controls `-C lto` for binaries and staticlibs
+
+# The release profile, used for `cargo build --release`
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+
+# The testing profile, used for `cargo test`
+[profile.test]
+opt-level = 0
+debug = true
+rpath = false
+lto = false
+
+# The benchmarking profile, used for `cargo bench`
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+
+# The documentation profile, used for `cargo doc`
+[profile.doc]
+opt-level = 0
+debug = true
+rpath = false
+lto = false
