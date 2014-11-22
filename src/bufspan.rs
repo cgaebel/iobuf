@@ -140,12 +140,23 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   ///
   /// Returns `None` if the fast path was taken and nothing more needs to be
   /// done. Returns `Some` if we need to do a slow push.
-  #[inline(always)]
+  #[inline]
   fn try_to_extend(&mut self, b: Buf) -> Option<Buf> {
     if b.len() == 0 { return None; }
+    if self.is_empty() {
+      // EFFICIENCY HACK: We know we're empty, so we can drop without running
+      // drop glue. rustc isn't smart enough to figure this out. This will
+      // stop all drop calls in this function, leaving any dropping that might
+      // have to happen to `slow_push`.
+      unsafe {
+        let empty = mem::replace(self, One(b));
+        mem::forget(empty);
+        return None;
+      }
+    }
 
     match *self {
-      Empty => {},
+      Empty => unreachable!(),
       One(ref mut b0) => {
         match b0.extend_with(&b) {
           Ok (()) => return None,
@@ -161,11 +172,6 @@ impl<Buf: Iobuf> BufSpan<Buf> {
         }
       }
     }
-
-    // Handle this case in the fast path, instead of leaving it for slow_push
-    // to clean up.
-    *self = One(b);
-    None
   }
 
   /// Appends a buffer to a `BufSpan`. If the buffer is an extension of the
@@ -207,6 +213,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// The slow path during a push. This is only taken if a `BufSpan` must span
   /// multiple backing buffers.
+  #[cold]
   fn slow_push(&mut self, b: Buf) {
     let this = mem::replace(self, Empty);
     *self =

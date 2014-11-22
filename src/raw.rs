@@ -105,7 +105,7 @@ impl<'a> Clone for RawIobuf<'a> {
 }
 
 /// The bitmask to get the "is the buffer owned" bit.
-static OWNED_MASK: u32 = 1u32 << (u32::BITS - 1);
+const OWNED_MASK: u32 = 1u32 << (u32::BITS - 1);
 
 #[cold]
 unsafe fn deallocate_raw(buf: *mut u8, bytes_allocated: uint) {
