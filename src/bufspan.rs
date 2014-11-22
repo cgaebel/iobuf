@@ -163,9 +163,10 @@ impl<Buf: Iobuf> BufSpan<Buf> {
           Err(()) => return Some(b),
         }
       }
-      Many(ref mut v) => {
+      Many(ref mut v) => unsafe {
         // I wish this wouldn't unwind, and just abort... :(
-        let last = v.last_mut().unwrap();
+        let last_pos = v.len() - 1;
+        let last = v.unsafe_mut(last_pos);
         match last.extend_with(&b) {
           Ok (()) => return None,
           Err(()) => return Some(b),
@@ -216,17 +217,20 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   #[cold]
   fn slow_push(&mut self, b: Buf) {
     let this = mem::replace(self, Empty);
-    *self =
-      match this {
-        Empty   => One(b),
-        One(b0) => {
-          let mut v = Vec::with_capacity(2);
-          v.push(b0);
-          v.push(b);
-          Many(v)
-        },
-        Many(mut bs) => { bs.push(b); Many(bs) }
-      };
+    // We know that we're empty, therefore no drop glue needs to be run.
+    unsafe {
+      mem::forget(mem::replace(self,
+        match this {
+          Empty   => One(b),
+          One(b0) => {
+            let mut v = Vec::with_capacity(2);
+            v.push(b0);
+            v.push(b);
+            Many(v)
+          },
+          Many(mut bs) => { bs.push(b); Many(bs) }
+        }));
+    }
   }
 
   /// Returns an iterator over references to the buffers inside the `BufSpan`.
