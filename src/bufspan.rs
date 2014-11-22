@@ -5,6 +5,7 @@ use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
 use core::fmt;
 use core::mem;
 use core::num::ToPrimitive;
+use core::intrinsics::move_val_init;
 use core::iter::{mod, order, Extend, AdditiveIterator, Iterator, FromIterator};
 use core::iter::{DoubleEndedIterator, ExactSize};
 use core::option::{mod, Some, None, Option};
@@ -149,8 +150,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
       // stop all drop calls in this function, leaving any dropping that might
       // have to happen to `slow_push`.
       unsafe {
-        let empty = mem::replace(self, One(b));
-        mem::forget(empty);
+        move_val_init(self, One(b));
         return None;
       }
     }
@@ -163,15 +163,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
           Err(()) => return Some(b),
         }
       }
-      Many(ref mut v) => unsafe {
-        // I wish this wouldn't unwind, and just abort... :(
-        let last_pos = v.len() - 1;
-        let last = v.unsafe_mut(last_pos);
-        match last.extend_with(&b) {
-          Ok (()) => return None,
-          Err(()) => return Some(b),
-        }
-      }
+      Many(_) => return Some(b),
     }
   }
 
@@ -216,20 +208,33 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// multiple backing buffers.
   #[cold]
   fn slow_push(&mut self, b: Buf) {
+    match *self {
+      Empty  => unreachable!(),
+      One(_) => {},
+      Many(ref mut v) => unsafe {
+        let last_pos = v.len() - 1;
+        match v.unsafe_mut(last_pos).extend_with(&b) {
+          Ok (()) => {},
+          Err(()) => v.push(b),
+        }
+        return;
+      }
+    }
+
+    // Need to upgrade from a `One` into a `Many`. This requires replacement.
     let this = mem::replace(self, Empty);
     // We know that we're empty, therefore no drop glue needs to be run.
     unsafe {
-      mem::forget(mem::replace(self,
+      move_val_init(self,
         match this {
-          Empty   => One(b),
           One(b0) => {
             let mut v = Vec::with_capacity(2);
             v.push(b0);
             v.push(b);
             Many(v)
           },
-          Many(mut bs) => { bs.push(b); Many(bs) }
-        }));
+          _ => unreachable!(),
+        })
     }
   }
 
