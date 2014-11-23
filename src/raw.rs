@@ -623,6 +623,23 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
+  pub fn split_start_at(&mut self, pos: u32) -> Result<RawIobuf<'a>, ()> {
+    unsafe {
+      try!(self.check_range_u32(pos, 0));
+      Ok(self.unsafe_split_start_at(pos))
+    }
+  }
+
+  #[inline]
+  pub unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> RawIobuf<'a> {
+    self.debug_check_range_u32(pos, 0);
+    let mut ret = (*self).clone();
+    ret.unsafe_resize(pos);
+    self.unsafe_advance(pos);
+    ret
+  }
+
+  #[inline]
   pub fn rewind(&mut self) {
     self.lo = self.lo_min();
   }

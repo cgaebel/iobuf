@@ -776,6 +776,12 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn unsafe_split_at(&self, pos: u32) -> (ROIobuf<'a>, ROIobuf<'a>) { let (a, b) = self.raw.unsafe_split_at(pos); (ROIobuf { raw: a }, ROIobuf { raw: b }) }
 
   #[inline(always)]
+  fn split_start_at(&mut self, pos: u32) -> Result<ROIobuf<'a>, ()> { self.raw.split_start_at(pos).map(|b| ROIobuf { raw: b }) }
+
+  #[inline(always)]
+  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> ROIobuf<'a> { ROIobuf { raw: self.raw.unsafe_split_start_at(pos) } }
+
+  #[inline(always)]
   fn rewind(&mut self) { self.raw.rewind() }
 
   #[inline(always)]
@@ -921,6 +927,12 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   unsafe fn unsafe_split_at(&self, pos: u32) -> (RWIobuf<'a>, RWIobuf<'a>) { let (a, b) = self.raw.unsafe_split_at(pos); (RWIobuf { raw: a }, RWIobuf { raw: b }) }
+
+  #[inline(always)]
+  fn split_start_at(&mut self, pos: u32) -> Result<RWIobuf<'a>, ()> { self.raw.split_start_at(pos).map(|b| RWIobuf { raw: b }) }
+
+  #[inline(always)]
+  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> RWIobuf<'a> { RWIobuf { raw: self.raw.unsafe_split_start_at(pos) } }
 
   #[inline(always)]
   fn rewind(&mut self) { self.raw.rewind() }

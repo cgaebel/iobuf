@@ -561,3 +561,181 @@ impl<Buf: Iobuf> DoubleEndedIterator<Buf> for SpanMoveIter<Buf> {
 }
 
 impl<Buf: Iobuf> ExactSize<Buf> for SpanMoveIter<Buf> {}
+
+#[cfg(test)]
+mod bench {
+  use core::prelude::Clone;
+  use test::{black_box, Bencher};
+  use super::super::iobuf::Iobuf;
+  use super::super::impls::{ROIobuf, RWIobuf};
+  use super::BufSpan;
+  use core::iter::range;
+
+  #[bench]
+  fn create_roiobuf(b: &mut Bencher) {
+    b.iter(|| {
+      let buf = ROIobuf::from_str_copy("hello, world!");
+      black_box(buf);
+    })
+  }
+
+  #[bench]
+  fn test_none_to_one(b: &mut Bencher) {
+    b.iter(|| {
+      let mut buf = BufSpan::new();
+      buf.push(ROIobuf::from_str_copy("hello, world!"));
+      black_box(buf);
+    })
+  }
+
+  #[bench]
+  fn test_none_to_one_with_copy(b: &mut Bencher) {
+    b.iter(|| {
+      let mut buf = BufSpan::new();
+      let to_push = ROIobuf::from_str_copy("hello, world!");
+      buf.push(to_push);
+      black_box(buf);
+    })
+  }
+
+  #[bench]
+  fn test_none_to_many(b: &mut Bencher) {
+    b.iter(|| {
+      let mut buf = BufSpan::new();
+      buf.push(ROIobuf::from_str_copy("hello "));
+      buf.push(ROIobuf::from_str_copy("world!"));
+      black_box(buf);
+    })
+  }
+
+  #[bench]
+  fn extend_1k_iobuf_0(b: &mut Bencher) {
+    b.iter(|| {
+      let source = RWIobuf::new(1024);
+      for i in range(0, 1000) {
+        unsafe { source.unsafe_poke_be(i, b'a'); }
+      }
+      let mut source = source.read_only();
+
+      let mut dst = BufSpan::new();
+
+      for _ in range(0u32, 1000) {
+        unsafe {
+          let (start, end) = source.unsafe_split_at(1);
+          dst.push(start);
+          source = end;
+        }
+      }
+
+      black_box(dst);
+    })
+  }
+
+  #[bench]
+  fn extend_1k_iobuf_1(b: &mut Bencher) {
+    b.iter(|| {
+      let source = RWIobuf::new(1024);
+      for i in range(0, 1000) {
+        unsafe { source.unsafe_poke_be(i, b'a'); }
+      }
+      let mut source = source.read_only();
+
+      let mut dst = BufSpan::new();
+
+      for _ in range(0u32, 1000) {
+        unsafe {
+          let start = source.unsafe_split_start_at(1);
+          dst.push(start);
+        }
+      }
+
+      black_box(dst);
+    })
+  }
+
+  #[bench]
+  fn extend_1k_iobuf_2(b: &mut Bencher) {
+    let source = RWIobuf::new(1024);
+    for i in range(0, 500) {
+      unsafe {
+        source.unsafe_poke_be(i, b'a');
+      }
+    }
+
+    for i in range(500, 1000) {
+      unsafe {
+        source.unsafe_poke_be(i, b'b');
+      }
+    }
+
+    b.iter(|| {
+      let mut source = source.read_only();
+
+      let mut dst_a = BufSpan::new();
+      let mut dst_b = BufSpan::new();
+      let mut other = BufSpan::new();
+
+      for _ in range(0u32, 1000) {
+        unsafe {
+          let first_letter = source.unsafe_split_start_at(1);
+
+          match first_letter.unsafe_peek_be(0) {
+            b'a' => dst_a.push(first_letter),
+            b'b' => dst_b.push(first_letter),
+              _  => other.push(first_letter),
+          }
+        }
+      }
+
+      black_box((dst_a, dst_b, other));
+    })
+  }
+
+  #[bench]
+  fn extend_1k_iobuf_3(b: &mut Bencher) {
+    let source = RWIobuf::new(1024);
+    for i in range(0, 500) {
+      unsafe {
+        source.unsafe_poke_be(i, b'a');
+      }
+    }
+
+    for i in range(500, 1000) {
+      unsafe {
+        source.unsafe_poke_be(i, b'b');
+      }
+    }
+
+    b.iter(|| {
+      let mut source = source.read_only();
+
+      let mut dst_a = BufSpan::new();
+      let mut dst_b = BufSpan::new();
+      let mut other = BufSpan::new();
+
+      for _ in range(0u32, 1000) {
+        unsafe {
+          let first_letter = source.unsafe_split_start_at(1);
+
+          let to_push = match first_letter.unsafe_peek_be(0) {
+            b'a' => &mut dst_a,
+            b'b' => &mut dst_b,
+              _  => &mut other,
+          };
+          to_push.push(first_letter);
+        }
+      }
+
+      black_box((dst_a, dst_b, other));
+    })
+  }
+
+  #[bench]
+  fn clone_and_drop(b: &mut Bencher) {
+    let patient_zero = RWIobuf::new(1024);
+    b.iter(|| {
+      let clone = patient_zero.clone();
+      black_box(clone);
+    })
+  }
+}

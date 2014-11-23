@@ -515,6 +515,40 @@ pub trait Iobuf: Clone + Show {
   /// Like `split_at`, but does not perform bounds checking.
   unsafe fn unsafe_split_at(&self, pos: u32) -> (Self, Self);
 
+  /// Splits out the start of an Iobuf at an index.
+  ///
+  /// ```
+  /// use iobuf::{ROIobuf,Iobuf};
+  ///
+  /// let mut b = ROIobuf::from_str("helloworld");
+  ///
+  /// match b.split_start_at(5) {
+  ///   Err(()) => panic!("This won't happen."),
+  ///   Ok(c)   => unsafe {
+  ///     assert_eq!(b.as_window_slice(), b"world");
+  ///     assert_eq!(c.as_window_slice(), b"hello");
+  ///   }
+  /// }
+  /// /*
+  ///
+  /// match b.split_start_at(0) {
+  ///   Err(()) => panic!("This won't happen, either."),
+  ///   Ok(c)   => unsafe {
+  ///     assert_eq!(b.as_window_slice(), b"world");
+  ///     assert_eq!(c.as_window_slice(), b"");
+  ///   }
+  /// }
+  ///
+  /// match b.split_start_at(10000) {
+  ///   Ok(_)   => panic!("This won't happen!"),
+  ///   Err(()) => unsafe { assert_eq!(b.as_window_slice(), b"world"); },
+  /// } */
+  /// ```
+  fn split_start_at(&mut self, pos: u32) -> Result<Self, ()>;
+
+  /// Like `split_start_at`, but does not perform bounds checking.
+  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> Self;
+
   /// Sets the lower bound of the window to the lower limit.
   ///
   /// ```
