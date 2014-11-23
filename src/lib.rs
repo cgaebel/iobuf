@@ -50,7 +50,6 @@
 
 // For tests only:
 #[cfg(test)] #[phase(plugin,link)] extern crate std;
-#[cfg(test)]                       extern crate native;
 #[cfg(test)]                       extern crate test;
 
 // NOTE: libcollections is only needed for `BufSpan`. If you don't need that
