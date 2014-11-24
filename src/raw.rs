@@ -112,7 +112,7 @@ impl<'a> Clone for RawIobuf<'a> {
   #[inline]
   fn clone_from(&mut self, source: &RawIobuf<'a>) {
     unsafe {
-      if self.ptr() == source.ptr() && self.is_owned() == source.is_owned() {
+      if self.ptr() != source.ptr() || self.is_owned() != source.is_owned() {
         clone_from_fix_refcounts(self, source);
       }
     }
