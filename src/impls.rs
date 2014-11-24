@@ -19,6 +19,11 @@ pub struct ROIobuf<'a> {
   raw: RawIobuf<'a>,
 }
 
+#[test]
+fn check_sane_roiobuf_size() {
+    assert_eq!(mem::size_of::<ROIobuf<'static>>(), mem::size_of::<*mut u8>() + 16);
+}
+
 impl<'a> Clone for ROIobuf<'a> {
   #[inline(always)]
   fn clone(&self) -> ROIobuf<'a> {
@@ -26,6 +31,9 @@ impl<'a> Clone for ROIobuf<'a> {
       raw: self.raw.clone()
     }
   }
+
+  #[inline(always)]
+  fn clone_from(&mut self, source: &ROIobuf<'a>) { self.raw.clone_from(&source.raw) }
 }
 
 /// An `Iobuf` which can read and write into a buffer.
@@ -47,6 +55,12 @@ pub struct RWIobuf<'a> {
   raw: RawIobuf<'a>,
 }
 
+
+#[test]
+fn check_sane_rwiobuf_size() {
+    assert_eq!(mem::size_of::<RWIobuf<'static>>(), mem::size_of::<*mut u8>() + 16);
+}
+
 impl<'a> Clone for RWIobuf<'a> {
   #[inline(always)]
   fn clone(&self) -> RWIobuf<'a> {
@@ -54,6 +68,9 @@ impl<'a> Clone for RWIobuf<'a> {
       raw: self.raw.clone()
     }
   }
+
+  #[inline(always)]
+  fn clone_from(&mut self, source: &RWIobuf<'a>) { self.raw.clone_from(&source.raw) }
 }
 
 impl<'a> ROIobuf<'a> {
@@ -841,6 +858,12 @@ impl<'a> Iobuf for ROIobuf<'a> {
 
   #[inline(always)]
   unsafe fn get_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
+
+  #[inline(always)]
+  fn ptr(&self) -> *mut u8 { self.raw.ptr() }
+
+  #[inline(always)]
+  fn is_owned(&self) -> bool { self.raw.is_owned() }
 }
 
 impl<'a> Iobuf for RWIobuf<'a> {
@@ -1000,6 +1023,12 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   unsafe fn get_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
+
+  #[inline(always)]
+  fn ptr(&self) -> *mut u8 { self.raw.ptr() }
+
+  #[inline(always)]
+  fn is_owned(&self) -> bool { self.raw.is_owned() }
 }
 
 impl<'a> Show for ROIobuf<'a> {

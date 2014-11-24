@@ -85,6 +85,12 @@ pub struct RawIobuf<'a> {
   nosync: NoSync,
 }
 
+// Make sure the compiler doesn't resize this to something silly.
+#[test]
+fn check_sane_raw_size() {
+    assert_eq!(mem::size_of::<RawIobuf>(), mem::size_of::<*mut u8>() + 16);
+}
+
 impl<'a> Clone for RawIobuf<'a> {
   #[inline]
   fn clone(&self) -> RawIobuf<'a> {
@@ -101,6 +107,30 @@ impl<'a> Clone for RawIobuf<'a> {
       nosend: NoSend,
       nosync: NoSync,
     }
+  }
+
+  #[inline]
+  fn clone_from(&mut self, source: &RawIobuf<'a>) {
+    unsafe {
+      if self.ptr() == source.ptr() && self.is_owned() == source.is_owned() {
+        clone_from_fix_refcounts(self, source);
+      }
+    }
+
+    self.buf    = source.buf;
+    self.lo_min_and_owned_bit = source.lo_min_and_owned_bit;
+    self.lo     = source.lo;
+    self.hi     = source.hi;
+    self.hi_max = source.hi_max;
+  }
+}
+
+// Keep this out of line to guide inlining.
+unsafe fn clone_from_fix_refcounts<'a>(this: &mut RawIobuf<'a>, source: &RawIobuf<'a>) {
+  source.inc_ref_count();
+  match this.dec_ref_count() {
+    Some(bytes_allocated) => deallocate_raw(this.buf, bytes_allocated),
+    None => {},
   }
 }
 
@@ -927,6 +957,11 @@ impl<'a> RawIobuf<'a> {
     let ret = self.unsafe_peek_be::<T>(0);
     self.lo += bytes;
     ret
+  }
+
+  #[inline]
+  pub fn ptr(&self) -> *mut u8 {
+    self.buf
   }
 
   fn show_hex(&self, f: &mut Formatter, half_line: &[u8])

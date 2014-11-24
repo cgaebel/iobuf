@@ -1004,4 +1004,12 @@ pub trait Iobuf: Clone + Show {
 
   /// For internal use only.
   unsafe fn get_raw<'a>(&self) -> &RawIobuf<'a>;
+
+  /// Gets a pointer to the start of the internal backing buffer. This is
+  /// extremely low level, and it is not recommended you use this interface.
+  fn ptr(&self) -> *mut u8;
+
+  /// Returns `true` if the Iobuf points to owned memory (i.e. has to do a
+  /// refcount modification on `clone` or `drop`) or borrowed memory.
+  fn is_owned(&self) -> bool;
 }
