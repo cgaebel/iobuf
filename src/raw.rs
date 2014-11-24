@@ -663,6 +663,16 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
+  pub fn lo_space(&self) -> u32 {
+    self.lo - self.lo_min()
+  }
+
+  #[inline]
+  pub fn hi_space(&self) -> u32 {
+    self.hi_max - self.hi
+  }
+
+  #[inline]
   pub fn compact(&mut self) {
     unsafe {
       let len = self.len();

@@ -646,6 +646,34 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn flip_hi(&mut self);
 
+  /// Returns the number of bytes between the lower limit and the lower bound.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(100);
+  ///
+  /// assert_eq!(b.advance(20), Ok(()));
+  /// assert_eq!(b.lo_space(), 20);
+  /// b.flip_lo();
+  /// assert_eq!(b.lo_space(), 0);
+  /// ```
+  fn lo_space(&self) -> u32;
+
+  /// Returns the number of bytes between the upper bound and the upper limit.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let mut b = RWIobuf::new(100);
+  ///
+  /// assert_eq!(b.resize(20), Ok(()));
+  /// assert_eq!(b.hi_space(), 80);
+  /// b.flip_hi();
+  /// assert_eq!(b.hi_space(), 0);
+  /// ```
+  fn hi_space(&self) -> u32;
+
   /// Reads the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. Either the entire buffer is filled, or an error is
   /// returned because bytes outside of the window were requested.

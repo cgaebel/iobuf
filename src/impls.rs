@@ -794,6 +794,12 @@ impl<'a> Iobuf for ROIobuf<'a> {
   fn flip_hi(&mut self) { self.raw.flip_hi() }
 
   #[inline(always)]
+  fn lo_space(&self) -> u32 { self.raw.lo_space() }
+
+  #[inline(always)]
+  fn hi_space(&self) -> u32 { self.raw.hi_space() }
+
+  #[inline(always)]
   fn peek(&self, pos: u32, dst: &mut [u8]) -> Result<(), ()> { self.raw.peek(pos, dst) }
   #[inline(always)]
   fn peek_be<T: Prim>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_be(pos) }
@@ -945,6 +951,12 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   fn flip_hi(&mut self) { self.raw.flip_hi() }
+
+  #[inline(always)]
+  fn lo_space(&self) -> u32 { self.raw.lo_space() }
+
+  #[inline(always)]
+  fn hi_space(&self) -> u32 { self.raw.hi_space() }
 
   #[inline(always)]
   fn peek(&self, pos: u32, dst: &mut [u8]) -> Result<(), ()> { self.raw.peek(pos, dst) }
