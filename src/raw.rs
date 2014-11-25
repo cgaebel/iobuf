@@ -150,16 +150,15 @@ unsafe fn deallocate_raw(buf: *mut u8, bytes_allocated: uint) {
 impl<'a> Drop for RawIobuf<'a> {
   #[inline]
   fn drop(&mut self) {
-    // In the case of double-drops, the owned bit will be cleared (rustc will
-    // memzero us on drop). Therefore, no deallocation or refcount dec-ing will
-    // be needed, and we save having to check if buf is null.
-
     unsafe {
       match self.dec_ref_count() {
         None => {},
         Some(bytes_allocated) => deallocate_raw(self.buf, bytes_allocated),
       }
     }
+
+    // Reset the owned bit, to prevent double-frees when drop reform lands.
+    self.lo_min_and_owned_bit = 0;
   }
 }
 
@@ -233,10 +232,10 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn ref_count(&self) -> Option<*mut uint> {
+  pub fn ref_count(&self) -> Option<&mut uint> {
     unsafe {
       if self.is_owned() {
-        Some(self.buf.offset(-(uint::BYTES as int)) as *mut uint)
+        Some(mem::transmute(self.buf.offset(-(uint::BYTES as int))))
       } else {
         None
       }
@@ -244,10 +243,10 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn amount_allocated(&self) -> Option<*mut uint> {
+  pub fn amount_allocated(&self) -> Option<&mut uint> {
     unsafe {
       if self.is_owned() {
-        Some(self.buf.offset(-2 * (uint::BYTES as int)) as *mut uint)
+        Some(mem::transmute(self.buf.offset(-2 * (uint::BYTES as int))))
       } else {
         None
       }
@@ -256,26 +255,21 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub fn inc_ref_count(&self) {
-    match self.ref_count() {
-      Some(dst) => unsafe { *dst += 1; },
-      None      => {},
-    }
+    self.ref_count().map(|dst| *dst += 1);
   }
 
   /// Returns `Some(bytes_allocated)` if the buffer needs to be freed.
   #[inline]
   pub fn dec_ref_count(&self) -> Option<uint> {
-    match self.ref_count() {
-      None => None,
-      Some(ref_count) => unsafe {
-        *ref_count -= 1;
-        if *ref_count == 0 {
-          self.amount_allocated().map(|p| *p)
-        } else {
-          None
-        }
+    self.ref_count().and_then(|ref_count| {
+      debug_assert!(*ref_count != 0);
+      *ref_count -= 1;
+      if *ref_count == 0 {
+        self.amount_allocated().map(|p| *p)
+      } else {
+        None
       }
-    }
+    })
   }
 
   #[inline]
@@ -959,9 +953,24 @@ impl<'a> RawIobuf<'a> {
     ret
   }
 
-  #[inline]
+  #[inline(always)]
   pub fn ptr(&self) -> *mut u8 {
     self.buf
+  }
+
+  #[inline(always)]
+  pub fn lo(&self) -> u32 {
+    self.lo
+  }
+
+  #[inline(always)]
+  pub fn hi(&self) -> u32 {
+    self.hi
+  }
+
+  #[inline(always)]
+  pub fn hi_max(&self) -> u32 {
+    self.hi_max
   }
 
   fn show_hex(&self, f: &mut Formatter, half_line: &[u8])

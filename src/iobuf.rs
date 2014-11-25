@@ -1012,4 +1012,20 @@ pub trait Iobuf: Clone + Show {
   /// Returns `true` if the Iobuf points to owned memory (i.e. has to do a
   /// refcount modification on `clone` or `drop`) or borrowed memory.
   fn is_owned(&self) -> bool;
+
+  /// Returns an index into the buffer returned by `ptr` that represents the
+  /// inclusive lower bound of the limits.
+  fn lo_min(&self) -> u32;
+
+  /// Returns an index into the buffer returned by `ptr` that represents the
+  /// inclusive lower bound of the window.
+  fn lo(&self) -> u32;
+
+  /// Returns an index into the buffer returned by `ptr` that represents the
+  /// exclusive upper bound of the window.
+  fn hi(&self) -> u32;
+
+  /// Returns an index into the buffer returned by `ptr` that represents the
+  /// exclusive upper bound of the limits.
+  fn hi_max(&self) -> u32;
 }

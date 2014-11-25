@@ -861,9 +861,16 @@ impl<'a> Iobuf for ROIobuf<'a> {
 
   #[inline(always)]
   fn ptr(&self) -> *mut u8 { self.raw.ptr() }
-
   #[inline(always)]
   fn is_owned(&self) -> bool { self.raw.is_owned() }
+  #[inline(always)]
+  fn lo_min(&self) -> u32 { self.raw.lo_min() }
+  #[inline(always)]
+  fn lo(&self) -> u32 { self.raw.lo() }
+  #[inline(always)]
+  fn hi(&self) -> u32 { self.raw.hi() }
+  #[inline(always)]
+  fn hi_max(&self) -> u32 { self.raw.hi_max() }
 }
 
 impl<'a> Iobuf for RWIobuf<'a> {
@@ -1024,11 +1031,19 @@ impl<'a> Iobuf for RWIobuf<'a> {
   #[inline(always)]
   unsafe fn get_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
 
-  #[inline(always)]
-  fn ptr(&self) -> *mut u8 { self.raw.ptr() }
 
   #[inline(always)]
+  fn ptr(&self) -> *mut u8 { self.raw.ptr() }
+  #[inline(always)]
   fn is_owned(&self) -> bool { self.raw.is_owned() }
+  #[inline(always)]
+  fn lo_min(&self) -> u32 { self.raw.lo_min() }
+  #[inline(always)]
+  fn lo(&self) -> u32 { self.raw.lo() }
+  #[inline(always)]
+  fn hi(&self) -> u32 { self.raw.hi() }
+  #[inline(always)]
+  fn hi_max(&self) -> u32 { self.raw.hi_max() }
 }
 
 impl<'a> Show for ROIobuf<'a> {
