@@ -320,14 +320,10 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn deep_clone(&self) -> RawIobuf<'static> {
     unsafe {
-      let my_data = self.as_raw_limit_slice();
-
-      let mut b = RawIobuf::new(my_data.len);
+      let mut b = RawIobuf::from_slice_copy(self.as_limit_slice());
 
       b.lo = self.lo;
       b.hi = self.hi;
-
-      ptr::copy_memory(b.buf, my_data.data, my_data.len);
 
       b
     }
@@ -616,9 +612,9 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub fn resize(&mut self, len: u32) -> Result<(), ()> {
-    let new_hi = self.lo + len;
-    if new_hi > self.hi_max { return Err(()) }
-    self.hi = new_hi;
+    let new_hi = self.lo as u64 + len as u64;
+    if new_hi > self.hi_max as u64 { return Err(()) }
+    self.hi = new_hi as u32;
     Ok(())
   }
 
@@ -1093,4 +1089,36 @@ fn peek_be_u8() {
 
   let b = ROIobuf::from_str("abc");
   assert_eq!(b.peek_be(0), Ok(b'a'));
+}
+
+#[test]
+fn over_resize() {
+  use iobuf::Iobuf;
+  use impls::RWIobuf;
+  let mut b = RWIobuf::new(1024);
+  assert_eq!(b.advance(512), Ok(()));
+  assert_eq!(b.resize(0x7FFF_FFFF), Err(()));
+}
+
+#[test]
+#[should_fail]
+fn create_huge_iobuf() {
+  use impls::RWIobuf;
+  RWIobuf::new(0x8000_0000);
+}
+
+#[test]
+fn check_large_range_pos() {
+  use impls::RWIobuf;
+  use iobuf::Iobuf;
+  let b = RWIobuf::new(100);
+  unsafe { assert_eq!(b.as_raw().check_range(0x8000_0000, 0), Err(())); }
+}
+
+#[test]
+fn check_large_range_len() {
+  use impls::RWIobuf;
+  use iobuf::Iobuf;
+  let b = RWIobuf::new(100);
+  unsafe { assert_eq!(b.as_raw().check_range(0, 0x8000_0000), Err(())); }
 }

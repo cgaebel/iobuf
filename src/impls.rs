@@ -775,10 +775,10 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn unsafe_extend(&mut self, len: u32) { self.raw.unsafe_extend(len) }
 
   #[inline(always)]
-  fn is_extended_by<Buf: Iobuf>(&self, other: &Buf) -> bool { unsafe { self.raw.is_extended_by(other.get_raw()) } }
+  fn is_extended_by<Buf: Iobuf>(&self, other: &Buf) -> bool { unsafe { self.raw.is_extended_by(other.as_raw()) } }
 
   #[inline(always)]
-  fn extend_with<Buf: Iobuf>(&mut self, other: &Buf) -> Result<(), ()> { unsafe { self.raw.extend_with(other.get_raw()) } }
+  fn extend_with<Buf: Iobuf>(&mut self, other: &Buf) -> Result<(), ()> { unsafe { self.raw.extend_with(other.as_raw()) } }
 
   #[inline(always)]
   fn resize(&mut self, len: u32) -> Result<(), ()> { self.raw.resize(len) }
@@ -857,7 +857,7 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
-  unsafe fn get_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
+  unsafe fn as_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
 
   #[inline(always)]
   fn ptr(&self) -> *mut u8 { self.raw.ptr() }
@@ -947,10 +947,10 @@ impl<'a> Iobuf for RWIobuf<'a> {
   unsafe fn unsafe_extend(&mut self, len: u32) { self.raw.unsafe_extend(len) }
 
   #[inline(always)]
-  fn is_extended_by<Buf: Iobuf>(&self, other: &Buf) -> bool { unsafe { self.raw.is_extended_by(other.get_raw()) } }
+  fn is_extended_by<Buf: Iobuf>(&self, other: &Buf) -> bool { unsafe { self.raw.is_extended_by(other.as_raw()) } }
 
   #[inline(always)]
-  fn extend_with<Buf: Iobuf>(&mut self, other: &Buf) -> Result<(), ()> { unsafe { self.raw.extend_with(other.get_raw()) } }
+  fn extend_with<Buf: Iobuf>(&mut self, other: &Buf) -> Result<(), ()> { unsafe { self.raw.extend_with(other.as_raw()) } }
 
   #[inline(always)]
   fn resize(&mut self, len: u32) -> Result<(), ()> { self.raw.resize(len) }
@@ -1029,7 +1029,7 @@ impl<'a> Iobuf for RWIobuf<'a> {
   unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
-  unsafe fn get_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
+  unsafe fn as_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
 
 
   #[inline(always)]
