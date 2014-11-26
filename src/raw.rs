@@ -1,19 +1,21 @@
 use alloc::heap;
+use alloc::arc::Arc;
+use alloc::boxed::Box;
+use alloc::rc::Rc;
 
+use core::atomic::{mod, AtomicUint};
 use core::clone::Clone;
-use core::fmt::{mod,Formatter};
+use core::fmt::{mod, Formatter};
 use core::kinds::Copy;
-use core::kinds::marker::{ContravariantLifetime, NoCopy, NoSend, NoSync};
-use core::iter;
-use core::iter::Iterator;
+use core::kinds::marker::{ContravariantLifetime, NoCopy};
+use core::iter::{mod, Iterator};
 use core::mem;
 use core::num::{FromPrimitive, ToPrimitive};
 use core::ops::{Drop, Shl, Shr, BitOr, BitAnd};
 use core::option::{Option, Some, None};
-use core::ptr;
-use core::ptr::RawPtr;
+use core::ptr::{mod, RawPtr};
 use core::raw::{mod, Repr};
-use core::result::{Result,Ok,Err};
+use core::result::{Result, Ok, Err};
 use core::slice::SlicePrelude;
 use core::str::StrPrelude;
 use core::u32;
@@ -42,11 +44,131 @@ impl Prim for u32 {}
 impl Prim for i64 {}
 impl Prim for u64 {}
 
+#[cfg(target_word_size = "64")]
+const TARGET_WORD_SIZE: uint = 64;
+
+#[cfg(target_word_size = "32")]
+const TARGET_WORD_SIZE: uint = 32;
+
 /// The biggest Iobuf supported, to allow us to have a small RawIobuf struct.
 /// By limiting the buffer sizes, we can bring the struct down from 40 bytes to
 /// 24 bytes -- a 40% reduction. This frees up precious cache and registers for
 /// the actual processing.
-const MAX_BUFFER_LEN: uint = 0x7FFF_FFFF;
+const MAX_BUFFER_LEN: uint = 0x7FFF_FFFF - 3*TARGET_WORD_SIZE;
+
+
+/// The bitmask to get the "is the buffer owned" bit.
+const OWNED_MASK:  u32  = 1u32 << (u32::BITS  - 1);
+
+/// The bitmask to get the "is the buffer atomically refcounted" bit.
+const ATOMIC_MASK: uint = 1u   << (uint::BITS - 1);
+
+/// Used to provide custom memory to Iobufs, instead of just using the heap.
+pub trait Allocator: 'static {
+  /// Allocates `len` bytes of memory, with an alignment of `align`.
+  fn allocate(&self, len: uint, align: uint) -> *mut u8;
+
+  /// Deallocates memory allocated by `allocate`.
+  fn deallocate(&self, ptr: *mut u8, len: uint, align: uint);
+}
+
+struct AllocationHeader {
+  allocator: *mut (),
+  atomic_bit_and_allocation_length: uint,
+  refcount: uint,
+}
+
+impl AllocationHeader {
+  #[inline]
+  fn allocate(&self, len: uint) -> *mut u8 {
+    unsafe {
+      if self.allocator.is_null() {
+        heap::allocate(len, mem::size_of::<uint>())
+      } else if self.is_atomic() {
+        let allocator: &Arc<Box<Allocator>> = mem::transmute(&self.allocator);
+        allocator.allocate(len, mem::size_of::<uint>())
+      } else {
+        let allocator: &Rc<Box<Allocator>> = mem::transmute(&self.allocator);
+        allocator.allocate(len, mem::size_of::<uint>())
+      }
+    }
+  }
+
+  #[inline]
+  fn is_atomic(&self) -> bool {
+    (self.atomic_bit_and_allocation_length & ATOMIC_MASK) != 0
+  }
+
+  #[inline]
+  fn allocation_length(&self) -> uint {
+    self.atomic_bit_and_allocation_length & !ATOMIC_MASK
+  }
+
+  #[inline]
+  fn inc_ref_count(&mut self) {
+    unsafe {
+      if self.is_atomic() {
+        let refcount: &AtomicUint = mem::transmute(&self.refcount);
+        refcount.fetch_add(1, atomic::Relaxed);
+      } else {
+        self.refcount += 1;
+      }
+    }
+  }
+
+  #[inline]
+  #[must_use]
+  fn dec_ref_count(&mut self) -> Option<Deallocator> {
+    unsafe {
+      if self.is_atomic() {
+        let refcount: &AtomicUint = mem::transmute(&self.refcount);
+        if refcount.fetch_sub(1, atomic::Release) != 1 {
+          None
+        } else {
+          atomic::fence(atomic::Acquire);
+          if self.allocator.is_null() {
+            Some(Deallocator::Heap(self.allocation_length()))
+          } else {
+            Some(Deallocator::A(mem::transmute(self.allocator), self.allocation_length()))
+          }
+        }
+      } else {
+        self.refcount -= 1;
+        if self.refcount == 0 {
+          if self.allocator.is_null() {
+            Some(Deallocator::Heap(self.allocation_length()))
+          } else {
+            Some(Deallocator::B(mem::transmute(self.allocator), self.allocation_length()))
+          }
+        } else {
+          None
+        }
+      }
+    }
+  }
+}
+
+/// Each leaf of this enum is tagged with the allocation length listed in the
+/// header.
+enum Deallocator {
+  Heap(uint),
+  A(Arc<Box<Allocator>>, uint),
+  B( Rc<Box<Allocator>>, uint),
+}
+
+impl Deallocator {
+  #[inline]
+  fn deallocate(self, ptr: *mut u8) {
+    unsafe {
+      let ptr = ptr.offset(-(mem::size_of::<AllocationHeader>() as int));
+      match self {
+        Deallocator::Heap(len) => heap::deallocate(ptr, len, mem::align_of::<uint>()),
+        Deallocator::A(arc, len) => arc.deallocate(ptr, len, mem::align_of::<uint>()),
+        Deallocator::B( rc, len) =>  rc.deallocate(ptr, len, mem::align_of::<uint>()),
+      }
+    }
+  }
+}
 
 // By factoring out the calls to `panic!`, we prevent rustc from emitting a ton
 // of formatting code in our tight, little functions, and also help guide
@@ -67,8 +189,16 @@ fn buffer_too_big(actual_size: uint) -> ! {
 /// It is very cheap to clone, as the backing buffer is shared and refcounted.
 #[unsafe_no_drop_flag]
 pub struct RawIobuf<'a> {
-  // The -1nd size_of<uint>() bytes of `buf` is the refcount.
-  // The -2st size_of<uint>() bytes of `buf` is the length of the allocation.
+  // The -1nd size_of<uint>() bytes of `buf` is the refcount. This is a uint
+  //   if the "atomic bit" is not set, and AtomicUint if it is set.
+  // The -2st size_of<uint>() bytes of `buf` is:
+  //   - top bit is for the "atomic bit"
+  //   - the rest of the bits are for the length of the allocation.
+  // The -3rd size_of<uint>() bytes of `buf` is one of:
+  //   - NULL (just use heap::deallocate)
+  //   - An Rc<Allocator> if the atomic bit is not set.
+  //   - An Arc<Allocator> if the atomic bit is set.
+  //   function.
   // Starting at `buf` is the raw data itself.
   buf:    *mut u8,
   // If the highest bit of this is set, `buf` is owned and the data before the
@@ -81,8 +211,6 @@ pub struct RawIobuf<'a> {
   hi_max: u32,
   lifetm: ContravariantLifetime<'a>,
   nocopy: NoCopy,
-  nosend: NoSend,
-  nosync: NoSync,
 }
 
 // Make sure the compiler doesn't resize this to something silly.
@@ -94,7 +222,7 @@ fn check_sane_raw_size() {
 impl<'a> Clone for RawIobuf<'a> {
   #[inline]
   fn clone(&self) -> RawIobuf<'a> {
-    self.inc_ref_count();
+    self.header().map(|h| h.inc_ref_count());
 
     RawIobuf {
       buf:    self.buf,
@@ -104,15 +232,14 @@ impl<'a> Clone for RawIobuf<'a> {
       hi_max: self.hi_max,
       lifetm: self.lifetm,
       nocopy: NoCopy,
-      nosend: NoSend,
-      nosync: NoSync,
     }
   }
 
   #[inline]
   fn clone_from(&mut self, source: &RawIobuf<'a>) {
     unsafe {
-      if self.ptr() != source.ptr() || self.is_owned() != source.is_owned() {
+      if self.ptr()      != source.ptr()
+      || self.is_owned() != source.is_owned() {
         clone_from_fix_refcounts(self, source);
       }
     }
@@ -127,35 +254,22 @@ impl<'a> Clone for RawIobuf<'a> {
 
 // Keep this out of line to guide inlining.
 unsafe fn clone_from_fix_refcounts<'a>(this: &mut RawIobuf<'a>, source: &RawIobuf<'a>) {
-  source.inc_ref_count();
-  match this.dec_ref_count() {
-    Some(bytes_allocated) => deallocate_raw(this.buf, bytes_allocated),
-    None => {},
-  }
-}
+  source.header().map(|h| h.inc_ref_count());
 
-/// The bitmask to get the "is the buffer owned" bit.
-const OWNED_MASK: u32 = 1u32 << (u32::BITS - 1);
-
-#[cold]
-unsafe fn deallocate_raw(buf: *mut u8, bytes_allocated: uint) {
-  heap::deallocate(
-    buf.offset(
-      -2 * (uint::BYTES as int)),
-    bytes_allocated,
-    mem::align_of::<uint>())
+  let buf = this.buf;
+  this.header()
+      .and_then(|h| h.dec_ref_count())
+      .map(|dealloc| dealloc.deallocate(buf));
 }
 
 #[unsafe_destructor]
 impl<'a> Drop for RawIobuf<'a> {
   #[inline]
   fn drop(&mut self) {
-    unsafe {
-      match self.dec_ref_count() {
-        None => {},
-        Some(bytes_allocated) => deallocate_raw(self.buf, bytes_allocated),
-      }
-    }
+    let buf = self.buf;
+    self.header()
+        .and_then(|hdr| hdr.dec_ref_count())
+        .map(|dealloc| dealloc.deallocate(buf));
 
     // Reset the owned bit, to prevent double-frees when drop reform lands.
     self.lo_min_and_owned_bit = 0;
@@ -163,23 +277,35 @@ impl<'a> Drop for RawIobuf<'a> {
 }
 
 impl<'a> RawIobuf<'a> {
-  pub fn new(len: uint) -> RawIobuf<'static> {
+  pub fn new_impl(
+      len:       uint,
+      atomic:    bool,
+      allocator: *mut ()) -> RawIobuf<'static> {
     unsafe {
       if len > MAX_BUFFER_LEN {
-          buffer_too_big(len);
+        buffer_too_big(len);
       }
 
-      let data_len = 2*uint::BYTES + len;
+      let data_len = mem::size_of::<AllocationHeader>() + len;
 
-      let buf: *mut u8 = heap::allocate(data_len, mem::align_of::<uint>());
+      let atomic_bit_and_allocation_length =
+        if atomic {
+          data_len | ATOMIC_MASK
+        } else {
+          data_len
+        };
 
-      let allocated_len: *mut uint = buf as *mut uint;
-      let ref_count: *mut uint = buf.offset(uint::BYTES as int) as *mut uint;
+      let allocation_header =
+        AllocationHeader {
+          allocator: allocator,
+          atomic_bit_and_allocation_length: atomic_bit_and_allocation_length,
+          refcount: 1,
+        };
 
-      *allocated_len = data_len;
-      *ref_count     = 1;
+      let buf = allocation_header.allocate(data_len);
+      ptr::write(buf as *mut AllocationHeader, allocation_header);
 
-      let buf: *mut u8 = buf.offset(2 * (uint::BYTES as int));
+      let buf: *mut u8 = buf.offset(mem::size_of::<AllocationHeader>() as int);
 
       RawIobuf {
         buf:    buf,
@@ -189,9 +315,31 @@ impl<'a> RawIobuf<'a> {
         hi_max: len as u32,
         lifetm: ContravariantLifetime,
         nocopy: NoCopy,
-        nosend: NoSend,
-        nosync: NoSync,
       }
+    }
+  }
+
+  #[inline]
+  pub fn new(len: uint) -> RawIobuf<'static> {
+    RawIobuf::new_impl(len, false, ptr::null_mut())
+  }
+
+  #[inline]
+  pub fn new_with_allocator(len: uint, allocator: Rc<Box<Allocator>>) -> RawIobuf<'static> {
+    unsafe {
+      RawIobuf::new_impl(len, false, mem::transmute(allocator))
+    }
+  }
+
+  #[inline]
+  pub fn new_atomic(len: uint) -> RawIobuf<'static> {
+    RawIobuf::new_impl(len, true, ptr::null_mut())
+  }
+
+  #[inline]
+  pub fn new_atomic_with_allocator(len: uint, allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
+    unsafe {
+      RawIobuf::new_impl(len, true, mem::transmute(allocator))
     }
   }
 
@@ -205,8 +353,6 @@ impl<'a> RawIobuf<'a> {
       hi_max: 0,
       lifetm: ContravariantLifetime,
       nocopy: NoCopy,
-      nosend: NoSend,
-      nosync: NoSync,
     }
   }
 
@@ -231,45 +377,22 @@ impl<'a> RawIobuf<'a> {
     self.lo_min_and_owned_bit & OWNED_MASK != 0
   }
 
+  /// Returns `None` if we're not refcounted, `Some(true)` is we are (atomically),
+  /// and `Some(false)` if we are (non-atomically).
   #[inline]
-  pub fn ref_count(&self) -> Option<&mut uint> {
+  pub fn is_atomic(&self) -> Option<bool> {
+    self.header().map(|h| h.is_atomic())
+  }
+
+  #[inline]
+  pub fn header(&self) -> Option<&mut AllocationHeader> {
     unsafe {
       if self.is_owned() {
-        Some(mem::transmute(self.buf.offset(-(uint::BYTES as int))))
+        Some(mem::transmute(self.buf.offset(-3*(uint::BYTES as int))))
       } else {
         None
       }
     }
-  }
-
-  #[inline]
-  pub fn amount_allocated(&self) -> Option<&mut uint> {
-    unsafe {
-      if self.is_owned() {
-        Some(mem::transmute(self.buf.offset(-2 * (uint::BYTES as int))))
-      } else {
-        None
-      }
-    }
-  }
-
-  #[inline]
-  pub fn inc_ref_count(&self) {
-    self.ref_count().map(|dst| *dst += 1);
-  }
-
-  /// Returns `Some(bytes_allocated)` if the buffer needs to be freed.
-  #[inline]
-  pub fn dec_ref_count(&self) -> Option<uint> {
-    self.ref_count().and_then(|ref_count| {
-      debug_assert!(*ref_count != 0);
-      *ref_count -= 1;
-      if *ref_count == 0 {
-        self.amount_allocated().map(|p| *p)
-      } else {
-        None
-      }
-    })
   }
 
   #[inline]
@@ -301,8 +424,6 @@ impl<'a> RawIobuf<'a> {
         hi_max: len as u32,
         lifetm: ContravariantLifetime,
         nocopy: NoCopy,
-        nosend: NoSend,
-        nosync: NoSync,
       }
     }
   }
