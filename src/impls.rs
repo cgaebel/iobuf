@@ -1,12 +1,15 @@
+use alloc::arc::Arc;
+use alloc::boxed::Box;
+
 use core::clone::Clone;
 use core::fmt::{mod, Formatter, Show};
 use core::kinds::marker::{NoSend, NoSync};
 use core::mem;
-use core::result::Result;
+use core::result::{Result, Ok, Err};
 use core::slice::SlicePrelude;
 use core::str::StrPrelude;
 
-use raw::{Prim, RawIobuf};
+use raw::{Prim, Allocator, RawIobuf};
 use iobuf::Iobuf;
 
 /// An `Iobuf` that cannot write into the buffer, but all read-only operations
@@ -81,6 +84,23 @@ impl<'a> Clone for RWIobuf<'a> {
   fn clone_from(&mut self, source: &RWIobuf<'a>) { self.raw.clone_from(&source.raw) }
 }
 
+/// An `ROIobuf` which is safe to `Send` across tasks and `Share` with other tasks.
+/// This atomically refcounts the buffer, which has a greater cost on `.clone()`,
+/// but provides more flexibility to multithreaded consumers.
+///
+/// To create an `AROIobuf`, create a normal `Iobuf` and call `.atomic_read_only()`.
+pub struct AROIobuf {
+  raw: RawIobuf<'static>,
+}
+
+impl<'a> Clone for AROIobuf {
+  #[inline(always)]
+  fn clone(&self) -> AROIobuf { AROIobuf { raw: self.raw.clone() } }
+
+  #[inline(always)]
+  fn clone_from(&mut self, source: &AROIobuf) { self.raw.clone_from(&source.raw) }
+}
+
 impl<'a> ROIobuf<'a> {
   /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
   /// an empty backing buffer.
@@ -136,6 +156,13 @@ impl<'a> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_str_copy(s), nosync: NoSync, nosend: NoSend }
   }
 
+  /// Copies a `str` into a read-only Iobuf, whose memory comes from the given
+  /// allocator.
+  #[inline(always)]
+  pub fn from_str_copy_with_allocator(s: &str, allocator: Arc<Box<Allocator>>) -> ROIobuf<'static> {
+    ROIobuf { raw: RawIobuf::from_str_copy_with_allocator(s, allocator), nosync: NoSync, nosend: NoSend }
+  }
+
   /// Copies the contents of a slice into a read-only Iobuf. The contents of the
   /// slice will be copied, so prefer to use the other constructors whenever
   /// possible.
@@ -154,6 +181,13 @@ impl<'a> ROIobuf<'a> {
   #[inline(always)]
   pub fn from_slice_copy(s: &[u8]) -> ROIobuf<'static> {
     ROIobuf { raw: RawIobuf::from_slice_copy(s), nosync: NoSync, nosend: NoSend }
+  }
+
+  /// Copies a byte vector into a new read-only Iobuf, whose memory comes from
+  /// the given allocator.
+  #[inline(always)]
+  pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> ROIobuf<'static> {
+    ROIobuf { raw: RawIobuf::from_slice_copy_with_allocator(s, allocator), nosync: NoSync, nosend: NoSend }
   }
 
   /// Constructs an Iobuf from a slice. The Iobuf will not copy the slice
@@ -197,7 +231,7 @@ impl<'a> RWIobuf<'a> {
   /// Constructs a new Iobuf with a buffer of size `len`, undefined contents,
   /// and the limits and window set to the full size of the buffer.
   ///
-  /// The maximum length of an Iobuf is `INT_MAX`.
+  /// The maximum length of an Iobuf is `I32_MAX`.
   ///
   /// ```
   /// use iobuf::{RWIobuf,Iobuf};
@@ -210,6 +244,16 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn new(len: uint) -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::new(len), nosync: NoSync, nosend: NoSend }
+  }
+
+  /// Constructs a new Iobuf with a buffer of size `len`, undefined contents,
+  /// and the limits and window set to the full range of the buffer. The memory
+  /// will be allocated out of the given allocator, instead of the global heap.
+  ///
+  /// The maximum length of an Iobuf is `I32_MAX`.
+  #[inline(always)]
+  pub fn new_with_allocator(len: uint, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
+    RWIobuf { raw: RawIobuf::new_with_allocator(len, allocator), nosync: NoSync, nosend: NoSend }
   }
 
   /// Copies a `str` into a writeable Iobuf. The contents of the `str` will be
@@ -230,6 +274,13 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn from_str_copy(s: &str) -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::from_str_copy(s), nosync: NoSync, nosend: NoSend }
+  }
+
+  /// Copies a `str` into a writeable Iobuf, whose memory comes from the given
+  /// allocator.
+  #[inline(always)]
+  pub fn from_str_copy_with_allocator(s: &str, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
+    RWIobuf { raw: RawIobuf::from_str_copy_with_allocator(s, allocator), nosync: NoSync, nosend: NoSend }
   }
 
   /// Constructs an Iobuf from a slice. The Iobuf will not copy the slice
@@ -274,6 +325,13 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn from_slice_copy(s: &[u8]) -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::from_slice_copy(s), nosync: NoSync, nosend: NoSend }
+  }
+
+  /// Copies a byte vector into a new writeable Iobuf, whose memory comes from
+  /// the given allocator.
+  #[inline(always)]
+  pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
+    RWIobuf { raw: RawIobuf::from_slice_copy_with_allocator(s, allocator), nosync: NoSync, nosend: NoSend }
   }
 
   /// Reads the data in the window as a mutable slice. Note that since `&mut`
@@ -714,6 +772,19 @@ impl<'a> Iobuf for ROIobuf<'a> {
   fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone(), nosync: NoSync, nosend: NoSend } }
 
   #[inline(always)]
+  fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
+    RWIobuf { raw: self.raw.deep_clone_with_allocator(allocator), nosync: NoSync, nosend: NoSend }
+  }
+
+  #[inline(always)]
+  fn atomic_read_only(self) -> Result<AROIobuf, ROIobuf<'a>> {
+    match self.raw.atomic_read_only() {
+      Ok (buf) => Ok(AROIobuf { raw: buf }),
+      Err(buf) => Err(ROIobuf { raw: buf, nosend: NoSend, nosync: NoSync })
+    }
+  }
+
+  #[inline(always)]
   fn len(&self) -> u32 { self.raw.len() }
 
   #[inline(always)]
@@ -894,9 +965,21 @@ impl<'a> Iobuf for ROIobuf<'a> {
   fn hi_max(&self) -> u32 { self.raw.hi_max() }
 }
 
-impl<'a> Iobuf for RWIobuf<'a> {
+impl Iobuf for AROIobuf {
   #[inline(always)]
-  fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone(), nosync: NoSync, nosend: NoSend } }
+  fn deep_clone(&self) -> RWIobuf<'static> {
+    RWIobuf { raw: self.raw.deep_clone(), nosync: NoSync, nosend: NoSend }
+  }
+
+  #[inline(always)]
+  fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
+    RWIobuf { raw: self.raw.deep_clone_with_allocator(allocator), nosync: NoSync, nosend: NoSend }
+  }
+
+  #[inline(always)]
+  fn atomic_read_only(self) -> Result<AROIobuf, AROIobuf> {
+    Ok(self)
+  }
 
   #[inline(always)]
   fn len(&self) -> u32 { self.raw.len() }
@@ -979,6 +1062,203 @@ impl<'a> Iobuf for RWIobuf<'a> {
   #[inline(always)]
   unsafe fn unsafe_resize(&mut self, len: u32) { self.raw.unsafe_resize(len) }
 
+  #[inline(always)]
+  fn split_at(&self, pos: u32) -> Result<(AROIobuf, AROIobuf), ()> {
+    self.raw.split_at(pos).map(
+      |(a, b)| (AROIobuf { raw: a },
+                AROIobuf { raw: b }))
+  }
+
+  #[inline(always)]
+  unsafe fn unsafe_split_at(&self, pos: u32) -> (AROIobuf, AROIobuf) {
+    let (a, b) = self.raw.unsafe_split_at(pos);
+    (AROIobuf { raw: a },
+     AROIobuf { raw: b })
+  }
+
+  #[inline(always)]
+  fn split_start_at(&mut self, pos: u32) -> Result<AROIobuf, ()> {
+    self.raw.split_start_at(pos).map(
+      |b| AROIobuf { raw: b })
+  }
+
+  #[inline(always)]
+  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> AROIobuf {
+    AROIobuf { raw: self.raw.unsafe_split_start_at(pos) }
+  }
+
+  #[inline(always)]
+  fn rewind(&mut self) { self.raw.rewind() }
+
+  #[inline(always)]
+  fn reset(&mut self) { self.raw.reset() }
+
+  #[inline(always)]
+  fn flip_lo(&mut self) { self.raw.flip_lo() }
+
+  #[inline(always)]
+  fn flip_hi(&mut self) { self.raw.flip_hi() }
+
+  #[inline(always)]
+  fn lo_space(&self) -> u32 { self.raw.lo_space() }
+
+  #[inline(always)]
+  fn hi_space(&self) -> u32 { self.raw.hi_space() }
+
+  #[inline(always)]
+  fn peek(&self, pos: u32, dst: &mut [u8]) -> Result<(), ()> { self.raw.peek(pos, dst) }
+  #[inline(always)]
+  fn peek_be<T: Prim>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_be(pos) }
+  #[inline(always)]
+  fn peek_le<T: Prim>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_le(pos) }
+
+  #[inline(always)]
+  fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()> { self.raw.consume(dst) }
+  #[inline(always)]
+  fn consume_be<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_be::<T>() }
+  #[inline(always)]
+  fn consume_le<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_le::<T>() }
+
+  #[inline(always)]
+  fn check_range(&self, pos: u32, len: u32) -> Result<(), ()> { self.raw.check_range_u32(pos, len) }
+
+  #[inline(always)]
+  fn check_range_uint(&self, pos: u32, len: uint) -> Result<(), ()> { self.raw.check_range_uint(pos, len) }
+
+  #[inline(always)]
+  fn check_range_fail(&self, pos: u32, len: u32) { self.raw.check_range_u32_fail(pos, len) }
+
+  #[inline(always)]
+  fn check_range_uint_fail(&self, pos: u32, len: uint) { self.raw.check_range_uint_fail(pos, len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_peek(&self, pos: u32, dst: &mut [u8]) { self.raw.unsafe_peek(pos, dst) }
+  #[inline(always)]
+  unsafe fn unsafe_peek_be<T: Prim>(&self, pos: u32) -> T { self.raw.unsafe_peek_be(pos) }
+  #[inline(always)]
+  unsafe fn unsafe_peek_le<T: Prim>(&self, pos: u32) -> T { self.raw.unsafe_peek_le(pos) }
+
+  #[inline(always)]
+  unsafe fn unsafe_consume(&mut self, dst: &mut [u8]) { self.raw.unsafe_consume(dst) }
+  #[inline(always)]
+  unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_be::<T>() }
+  #[inline(always)]
+  unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
+
+  #[inline(always)]
+  unsafe fn as_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
+
+  #[inline(always)]
+  fn ptr(&self) -> *mut u8 { self.raw.ptr() }
+  #[inline(always)]
+  fn is_owned(&self) -> bool { self.raw.is_owned() }
+  #[inline(always)]
+  fn lo_min(&self) -> u32 { self.raw.lo_min() }
+  #[inline(always)]
+  fn lo(&self) -> u32 { self.raw.lo() }
+  #[inline(always)]
+  fn hi(&self) -> u32 { self.raw.hi() }
+  #[inline(always)]
+  fn hi_max(&self) -> u32 { self.raw.hi_max() }
+}
+
+impl<'a> Iobuf for RWIobuf<'a> {
+  #[inline(always)]
+  fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone(), nosync: NoSync, nosend: NoSend } }
+
+  #[inline(always)]
+  fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
+    RWIobuf { raw: self.raw.deep_clone_with_allocator(allocator), nosync: NoSync, nosend: NoSend }
+  }
+
+  #[inline(always)]
+  fn atomic_read_only(self) -> Result<AROIobuf, RWIobuf<'a>> {
+    match self.raw.atomic_read_only() {
+      Ok (buf) => Ok(AROIobuf { raw: buf }),
+      Err(buf) => Err(RWIobuf { raw: buf, nosend: NoSend, nosync: NoSync })
+    }
+  }
+
+  #[inline(always)]
+  fn len(&self) -> u32 { self.raw.len() }
+
+  #[inline(always)]
+  fn cap(&self) -> u32 { self.raw.cap() }
+
+  #[inline(always)]
+  fn is_empty(&self) -> bool { self.raw.is_empty() }
+
+  #[inline(always)]
+  unsafe fn as_window_slice<'b>(&'b self) -> &'b [u8] { self.raw.as_window_slice() }
+
+  #[inline(always)]
+  unsafe fn as_limit_slice<'b>(&'b self) -> &'b [u8] { self.raw.as_limit_slice() }
+
+  #[inline(always)]
+  fn sub_window(&mut self, pos: u32, len: u32) -> Result<(), ()> { self.raw.sub_window(pos, len) }
+
+  #[inline(always)]
+  fn sub_window_from(&mut self, pos: u32) -> Result<(), ()> { self.raw.sub_window_from(pos) }
+
+  #[inline(always)]
+  fn sub_window_to(&mut self, len: u32) -> Result<(), ()> { self.raw.sub_window_to(len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window(&mut self, pos: u32, len: u32) { self.raw.unsafe_sub_window(pos, len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window_from(&mut self, pos: u32) { self.raw.unsafe_sub_window_from(pos) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_window_to(&mut self, len: u32) { self.raw.unsafe_sub_window_to(len) }
+
+  #[inline(always)]
+  fn sub(&mut self, pos: u32, len: u32) -> Result<(), ()> { self.raw.sub(pos, len) }
+
+  #[inline(always)]
+  fn sub_from(&mut self, pos: u32) -> Result<(), ()> { self.raw.sub_from(pos) }
+
+  #[inline(always)]
+  fn sub_to(&mut self, len: u32) -> Result<(), ()> { self.raw.sub_to(len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub(&mut self, pos: u32, len: u32) { self.raw.unsafe_sub(pos, len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_from(&mut self, pos: u32) { self.raw.unsafe_sub_from(pos) }
+
+  #[inline(always)]
+  unsafe fn unsafe_sub_to(&mut self, len: u32) { self.raw.unsafe_sub_to(len) }
+
+  #[inline(always)]
+  fn set_limits_and_window(&mut self, limits: (u32, u32), window: (u32, u32)) -> Result<(), ()> { self.raw.set_limits_and_window(limits, window) }
+
+  #[inline(always)]
+  fn narrow(&mut self) { self.raw.narrow() }
+
+  #[inline(always)]
+  fn advance(&mut self, len: u32) -> Result<(), ()> { self.raw.advance(len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_advance(&mut self, len: u32) { self.raw.unsafe_advance(len) }
+
+  #[inline(always)]
+  fn extend(&mut self, len: u32) -> Result<(), ()> { self.raw.extend(len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_extend(&mut self, len: u32) { self.raw.unsafe_extend(len) }
+
+  #[inline(always)]
+  fn is_extended_by<Buf: Iobuf>(&self, other: &Buf) -> bool { unsafe { self.raw.is_extended_by(other.as_raw()) } }
+
+  #[inline(always)]
+  fn extend_with<Buf: Iobuf>(&mut self, other: &Buf) -> Result<(), ()> { unsafe { self.raw.extend_with(other.as_raw()) } }
+
+  #[inline(always)]
+  fn resize(&mut self, len: u32) -> Result<(), ()> { self.raw.resize(len) }
+
+  #[inline(always)]
+  unsafe fn unsafe_resize(&mut self, len: u32) { self.raw.unsafe_resize(len) }
 
   #[inline(always)]
   fn split_at(&self, pos: u32) -> Result<(RWIobuf<'a>, RWIobuf<'a>), ()> {
@@ -1066,7 +1346,6 @@ impl<'a> Iobuf for RWIobuf<'a> {
   #[inline(always)]
   unsafe fn as_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
 
-
   #[inline(always)]
   fn ptr(&self) -> *mut u8 { self.raw.ptr() }
   #[inline(always)]
@@ -1090,5 +1369,11 @@ impl<'a> Show for ROIobuf<'a> {
 impl<'a> Show for RWIobuf<'a> {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "read-write")
+  }
+}
+
+impl Show for AROIobuf {
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    self.raw.show(f, "atomic read-only")
   }
 }

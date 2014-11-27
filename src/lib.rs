@@ -61,7 +61,7 @@
 
 pub use raw::{Prim, Allocator};
 pub use iobuf::Iobuf;
-pub use impls::{ROIobuf, RWIobuf};
+pub use impls::{RWIobuf, ROIobuf, AROIobuf};
 pub use ringbuf::IORingbuf;
 pub use bufspan::{BufSpan, ByteIter, SpanIter, SpanMoveIter};
 

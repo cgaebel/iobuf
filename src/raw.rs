@@ -1,7 +1,6 @@
 use alloc::heap;
 use alloc::arc::Arc;
 use alloc::boxed::Box;
-use alloc::rc::Rc;
 
 use core::atomic::{mod, AtomicUint};
 use core::clone::Clone;
@@ -84,24 +83,32 @@ impl AllocationHeader {
     unsafe {
       if self.allocator.is_null() {
         heap::allocate(len, mem::size_of::<uint>())
-      } else if self.is_atomic() {
-        let allocator: &Arc<Box<Allocator>> = mem::transmute(&self.allocator);
-        allocator.allocate(len, mem::size_of::<uint>())
       } else {
-        let allocator: &Rc<Box<Allocator>> = mem::transmute(&self.allocator);
+        let allocator: &Arc<Box<Allocator>> = mem::transmute(&self.allocator);
         allocator.allocate(len, mem::size_of::<uint>())
       }
     }
   }
 
-  #[inline]
   fn is_atomic(&self) -> bool {
-    (self.atomic_bit_and_allocation_length & ATOMIC_MASK) != 0
+    self.atomic_bit_and_allocation_length & ATOMIC_MASK != 0
   }
 
   #[inline]
   fn allocation_length(&self) -> uint {
     self.atomic_bit_and_allocation_length & !ATOMIC_MASK
+  }
+
+  #[inline]
+  fn refcount(&self) -> uint {
+    unsafe {
+      if self.is_atomic() {
+        let refcount: &AtomicUint = mem::transmute(&self.refcount);
+        refcount.load(atomic::Relaxed)
+      } else {
+        self.refcount
+      }
+    }
   }
 
   #[inline]
@@ -120,29 +127,28 @@ impl AllocationHeader {
   #[must_use]
   fn dec_ref_count(&mut self) -> Option<Deallocator> {
     unsafe {
-      if self.is_atomic() {
-        let refcount: &AtomicUint = mem::transmute(&self.refcount);
-        if refcount.fetch_sub(1, atomic::Release) != 1 {
-          None
-        } else {
-          atomic::fence(atomic::Acquire);
-          if self.allocator.is_null() {
-            Some(Deallocator::Heap(self.allocation_length()))
+      let needs_free =
+        if self.is_atomic() {
+          let refcount: &AtomicUint = mem::transmute(&self.refcount);
+          if refcount.fetch_sub(1, atomic::Release) == 1 {
+            atomic::fence(atomic::Acquire);
+            true
           } else {
-            Some(Deallocator::A(mem::transmute(self.allocator), self.allocation_length()))
+            false
           }
+        } else {
+          self.refcount -= 1;
+          self.refcount == 0
+        };
+
+      if needs_free {
+        if self.allocator.is_null() {
+          Some(Deallocator::Heap(self.allocation_length()))
+        } else {
+          Some(Deallocator::Custom(mem::transmute(self.allocator), self.allocation_length()))
         }
       } else {
-        self.refcount -= 1;
-        if self.refcount == 0 {
-          if self.allocator.is_null() {
-            Some(Deallocator::Heap(self.allocation_length()))
-          } else {
-            Some(Deallocator::B(mem::transmute(self.allocator), self.allocation_length()))
-          }
-        } else {
-          None
-        }
+        None
       }
     }
   }
@@ -152,8 +158,7 @@ impl AllocationHeader {
 /// header.
 enum Deallocator {
   Heap(uint),
-  A(Arc<Box<Allocator>>, uint),
-  B( Rc<Box<Allocator>>, uint),
+  Custom(Arc<Box<Allocator>>, uint),
 }
 
 impl Deallocator {
@@ -162,9 +167,10 @@ impl Deallocator {
     unsafe {
       let ptr = ptr.offset(-(mem::size_of::<AllocationHeader>() as int));
       match self {
-        Deallocator::Heap(len) => heap::deallocate(ptr, len, mem::align_of::<uint>()),
-        Deallocator::A(arc, len) => arc.deallocate(ptr, len, mem::align_of::<uint>()),
-        Deallocator::B( rc, len) =>  rc.deallocate(ptr, len, mem::align_of::<uint>()),
+        Deallocator::Heap(len) =>
+          heap::deallocate(ptr, len, mem::align_of::<uint>()),
+        Deallocator::Custom(arc, len) =>
+          arc.deallocate(ptr, len, mem::align_of::<uint>()),
       }
     }
   }
@@ -279,7 +285,6 @@ impl<'a> Drop for RawIobuf<'a> {
 impl<'a> RawIobuf<'a> {
   pub fn new_impl(
       len:       uint,
-      atomic:    bool,
       allocator: *mut ()) -> RawIobuf<'static> {
     unsafe {
       if len > MAX_BUFFER_LEN {
@@ -288,17 +293,10 @@ impl<'a> RawIobuf<'a> {
 
       let data_len = mem::size_of::<AllocationHeader>() + len;
 
-      let atomic_bit_and_allocation_length =
-        if atomic {
-          data_len | ATOMIC_MASK
-        } else {
-          data_len
-        };
-
       let allocation_header =
         AllocationHeader {
           allocator: allocator,
-          atomic_bit_and_allocation_length: atomic_bit_and_allocation_length,
+          atomic_bit_and_allocation_length: data_len,
           refcount: 1,
         };
 
@@ -321,25 +319,13 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub fn new(len: uint) -> RawIobuf<'static> {
-    RawIobuf::new_impl(len, false, ptr::null_mut())
+    RawIobuf::new_impl(len, ptr::null_mut())
   }
 
   #[inline]
-  pub fn new_with_allocator(len: uint, allocator: Rc<Box<Allocator>>) -> RawIobuf<'static> {
+  pub fn new_with_allocator(len: uint, allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
     unsafe {
-      RawIobuf::new_impl(len, false, mem::transmute(allocator))
-    }
-  }
-
-  #[inline]
-  pub fn new_atomic(len: uint) -> RawIobuf<'static> {
-    RawIobuf::new_impl(len, true, ptr::null_mut())
-  }
-
-  #[inline]
-  pub fn new_atomic_with_allocator(len: uint, allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
-    unsafe {
-      RawIobuf::new_impl(len, true, mem::transmute(allocator))
+      RawIobuf::new_impl(len, mem::transmute(allocator))
     }
   }
 
@@ -377,13 +363,6 @@ impl<'a> RawIobuf<'a> {
     self.lo_min_and_owned_bit & OWNED_MASK != 0
   }
 
-  /// Returns `None` if we're not refcounted, `Some(true)` is we are (atomically),
-  /// and `Some(false)` if we are (non-atomically).
-  #[inline]
-  pub fn is_atomic(&self) -> Option<bool> {
-    self.header().map(|h| h.is_atomic())
-  }
-
   #[inline]
   pub fn header(&self) -> Option<&mut AllocationHeader> {
     unsafe {
@@ -403,6 +382,11 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn from_str_copy(s: &str) -> RawIobuf<'static> {
     RawIobuf::from_slice_copy(s.as_bytes())
+  }
+
+  #[inline]
+  pub fn from_str_copy_with_allocator(s: &str, allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
+    RawIobuf::from_slice_copy_with_allocator(s.as_bytes(), allocator)
   }
 
   #[inline]
@@ -439,6 +423,16 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
+  pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
+    unsafe {
+      let b = RawIobuf::new_with_allocator(s.len(), allocator);
+      let s = s.repr();
+      ptr::copy_nonoverlapping_memory(b.buf, s.data, s.len);
+      b
+    }
+  }
+
+  #[inline]
   pub fn deep_clone(&self) -> RawIobuf<'static> {
     unsafe {
       let mut b = RawIobuf::from_slice_copy(self.as_limit_slice());
@@ -447,6 +441,37 @@ impl<'a> RawIobuf<'a> {
       b.hi = self.hi;
 
       b
+    }
+  }
+
+  #[inline]
+  pub fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
+    unsafe {
+      let mut b = RawIobuf::from_slice_copy_with_allocator(self.as_limit_slice(), allocator);
+
+      b.lo = self.lo;
+      b.hi = self.hi;
+
+      b
+    }
+  }
+
+  #[inline]
+  pub fn atomic_read_only(self) -> Result<RawIobuf<'static>, RawIobuf<'a>> {
+    let is_unique_or_atomic = {
+      match self.header() {
+        None         => false,
+        Some(header) =>
+          header.is_atomic() || header.refcount() == 1
+      }
+    };
+
+    unsafe {
+      if is_unique_or_atomic {
+        Ok(mem::transmute(self)) // we know we're 'static. Go away rustc.
+      } else {
+        Err(self)
+      }
     }
   }
 

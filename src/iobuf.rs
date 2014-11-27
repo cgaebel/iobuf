@@ -1,9 +1,12 @@
+use alloc::arc::Arc;
+use alloc::boxed::Box;
+
 use core::clone::Clone;
 use core::fmt::Show;
 use core::result::Result;
 
-use raw::{Prim, RawIobuf};
-use impls::RWIobuf;
+use raw::{Prim, Allocator, RawIobuf};
+use impls::{AROIobuf, RWIobuf};
 
 /// Have your functions take a generic IObuf when they don't modify the buffer
 /// contents. This allows them to be used with both `ROIobuf`s and `RWIobuf`s.
@@ -39,6 +42,20 @@ pub trait Iobuf: Clone + Show {
   /// assert_eq!(c.peek_be::<u8>(0), Ok(1u8));
   /// ```
   fn deep_clone(&self) -> RWIobuf<'static>;
+
+  /// Copies the data byte-by-byte in the Iobuf into a new, writable Iobuf.
+  /// The new Iobuf will have storage allocated out of `allocator`, and will not
+  /// share the buffer with the original Iobuf.
+  fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static>;
+
+  /// Returns `Some` if the Iobuf is the last to reference the underlying data,
+  /// and upgrades it to an `AROIobuf` which can be sent over channels and
+  /// `Arc`ed with impunity. This is extremely useful in situations where Iobufs
+  /// are created and written in one thread, and consumed in another.
+  ///
+  /// Returns `None` if the buffer is not the last to reference the underlying
+  /// data.
+  fn atomic_read_only(self) -> Result<AROIobuf, Self>;
 
   /// Returns the size of the window.
   ///
@@ -1028,4 +1045,5 @@ pub trait Iobuf: Clone + Show {
   /// Returns an index into the buffer returned by `ptr` that represents the
   /// exclusive upper bound of the limits.
   fn hi_max(&self) -> u32;
+
 }
