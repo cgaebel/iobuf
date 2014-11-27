@@ -89,6 +89,81 @@ impl<'a> Clone for RWIobuf<'a> {
 /// but provides more flexibility to multithreaded consumers.
 ///
 /// To create an `AROIobuf`, create a normal `Iobuf` and call `.atomic_read_only()`.
+///
+/// Below is an example of fill an Iobuf in one thread with the numbers 0x00 to
+/// 0xFF, and consuming/validating these numbers in parallel in 4 other threads:
+///
+/// ```
+/// use iobuf::{RWIobuf, AROIobuf, Iobuf};
+/// use std::iter::range_inclusive;
+/// use std::sync::Future;
+///
+/// // Write the bytes 0x00 - 0xFF into an Iobuf.
+/// fn fill(buf: &mut RWIobuf<'static>) -> Result<(), ()> {
+///   for i in range_inclusive(0x00u8, 0xFF) {
+///     try!(buf.fill_be(i));
+///   }
+///
+///   Ok(())
+/// }
+///
+/// // Validates the contents of buf are `idx`, `idx+1`, `idx+2`, ...
+/// // until the buffer is exhausted.
+/// fn check(buf: &mut AROIobuf, mut idx: u32) -> Result<(), ()> {
+///   loop {
+///     let b: u8 =
+///       match buf.consume_be::<u8>() {
+///         Err(()) => return Ok(()),
+///         Ok(b) => b
+///       };
+///
+///     if b as u32 == idx {
+///       idx += 1;
+///     } else {
+///       return Err(())
+///     }
+///   }
+/// }
+///
+/// let mut source_b = RWIobuf::new(256);
+/// assert_eq!(fill(&mut source_b), Ok(()));
+///
+/// // Reset the Iobuf for reading.
+/// source_b.flip_lo();
+///
+/// // We can still clone this buffer. It will be non-atomically refcounted for
+/// // now.
+/// {
+///   let _ = source_b.clone();
+/// }
+///
+/// // Now prepare it for sending to our 4 subtasks.
+/// let shared_b: AROIobuf = source_b.atomic_read_only().unwrap();
+///
+/// let mut tasks = vec!();
+///
+/// for i in range(0u32, 4) {
+///   // This clone modifies the Arc's atomic refcount.
+///   let mut b = shared_b.clone();
+///   tasks.push(Future::spawn(proc() {
+///     // This clone modifies the AROIobuf's atomic refcount.
+///     let start = i*0x40;
+///     assert_eq!(b.advance(start), Ok(()));
+///     assert_eq!(b.resize(0x40), Ok(()));
+///     assert_eq!(check(&mut b, start), Ok(()));
+///     assert!(b.is_empty());
+///
+///     // This clone will atomically modify refcounts.
+///     {
+///       let _ = b.clone();
+///     }
+///   }));
+/// }
+///
+/// for mut t in tasks.into_iter() {
+///   t.get();
+/// }
+/// ```
 pub struct AROIobuf {
   raw: RawIobuf<'static>,
 }
