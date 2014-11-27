@@ -7,7 +7,7 @@ use core::clone::Clone;
 use core::fmt::{mod, Formatter};
 use core::kinds::Copy;
 use core::kinds::marker::{ContravariantLifetime, NoCopy};
-use core::iter::{mod, Iterator};
+use core::iter::{mod, IteratorExt};
 use core::mem;
 use core::num::{FromPrimitive, ToPrimitive};
 use core::ops::{Drop, Shl, Shr, BitOr, BitAnd};
@@ -54,7 +54,6 @@ const TARGET_WORD_SIZE: uint = 32;
 /// 24 bytes -- a 40% reduction. This frees up precious cache and registers for
 /// the actual processing.
 const MAX_BUFFER_LEN: uint = 0x7FFF_FFFF - 3*TARGET_WORD_SIZE;
-
 
 /// The bitmask to get the "is the buffer owned" bit.
 const OWNED_MASK:  u32  = 1u32 << (u32::BITS  - 1);

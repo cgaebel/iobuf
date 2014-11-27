@@ -6,8 +6,9 @@ use core::fmt;
 use core::mem;
 use core::num::ToPrimitive;
 use core::intrinsics::move_val_init;
-use core::iter::{mod, order, Extend, AdditiveIterator, Iterator, FromIterator};
-use core::iter::{DoubleEndedIterator, ExactSize};
+use core::iter::{mod, order, Extend, AdditiveIterator, Iterator, IteratorExt};
+use core::iter::{FromIterator, DoubleEndedIterator, DoubleEndedIteratorExt};
+use core::iter::ExactSizeIterator;
 use core::option::{mod, Some, None, Option};
 use core::result::{Ok, Err};
 
@@ -518,7 +519,7 @@ impl<'a, Buf: Iobuf> DoubleEndedIterator<&'a Buf> for SpanIter<'a, Buf> {
   }
 }
 
-impl<'a, Buf: Iobuf> ExactSize<&'a Buf> for SpanIter<'a, Buf> {}
+impl<'a, Buf: Iobuf> ExactSizeIterator<&'a Buf> for SpanIter<'a, Buf> {}
 
 /// A moving iterator over buffers inside a `BufSpan`.
 pub enum SpanMoveIter<Buf> {
@@ -560,7 +561,7 @@ impl<Buf: Iobuf> DoubleEndedIterator<Buf> for SpanMoveIter<Buf> {
   }
 }
 
-impl<Buf: Iobuf> ExactSize<Buf> for SpanMoveIter<Buf> {}
+impl<Buf: Iobuf> ExactSizeIterator<Buf> for SpanMoveIter<Buf> {}
 
 #[cfg(test)]
 mod bench {
