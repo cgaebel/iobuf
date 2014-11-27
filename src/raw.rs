@@ -93,6 +93,10 @@ impl AllocationHeader {
     self.atomic_bit_and_allocation_length & ATOMIC_MASK != 0
   }
 
+  fn set_atomic(&mut self) {
+    self.atomic_bit_and_allocation_length |= ATOMIC_MASK;
+  }
+
   #[inline]
   fn allocation_length(&self) -> uint {
     self.atomic_bit_and_allocation_length & !ATOMIC_MASK
@@ -460,8 +464,14 @@ impl<'a> RawIobuf<'a> {
     let is_unique_or_atomic = {
       match self.header() {
         None         => false,
-        Some(header) =>
-          header.is_atomic() || header.refcount() == 1
+        Some(header) => {
+          if header.is_atomic() || header.refcount() == 1 {
+            header.set_atomic();
+            true
+          } else {
+            false
+          }
+        }
       }
     };
 
