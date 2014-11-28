@@ -3,14 +3,13 @@ use alloc::arc::Arc;
 use alloc::boxed::Box;
 
 use core::atomic::{mod, AtomicUint};
-use core::clone::Clone;
 use core::fmt::{mod, Formatter};
 use core::kinds::Copy;
 use core::kinds::marker::{ContravariantLifetime, NoCopy};
 use core::iter::{mod, IteratorExt};
 use core::mem;
 use core::num::{FromPrimitive, ToPrimitive};
-use core::ops::{Drop, Shl, Shr, BitOr, BitAnd};
+use core::ops::{Shl, Shr, BitOr, BitAnd};
 use core::option::{Option, Some, None};
 use core::ptr::{mod, RawPtr};
 use core::raw::{mod, Repr};
@@ -58,9 +57,6 @@ const MAX_BUFFER_LEN: uint = 0x7FFF_FFFF - 3*TARGET_WORD_SIZE;
 /// The bitmask to get the "is the buffer owned" bit.
 const OWNED_MASK:  u32  = 1u32 << (u32::BITS  - 1);
 
-/// The bitmask to get the "is the buffer atomically refcounted" bit.
-const ATOMIC_MASK: uint = 1u   << (uint::BITS - 1);
-
 /// Used to provide custom memory to Iobufs, instead of just using the heap.
 pub trait Allocator: 'static {
   /// Allocates `len` bytes of memory, with an alignment of `align`.
@@ -72,7 +68,7 @@ pub trait Allocator: 'static {
 
 struct AllocationHeader {
   allocator: *mut (),
-  atomic_bit_and_allocation_length: uint,
+  allocation_length: uint,
   refcount: uint,
 }
 
@@ -89,70 +85,57 @@ impl AllocationHeader {
     }
   }
 
-  fn is_atomic(&self) -> bool {
-    self.atomic_bit_and_allocation_length & ATOMIC_MASK != 0
-  }
-
-  fn set_atomic(&mut self) {
-    self.atomic_bit_and_allocation_length |= ATOMIC_MASK;
+  #[inline]
+  fn nonatomic_refcount(&self) -> uint {
+    self.refcount
   }
 
   #[inline]
-  fn allocation_length(&self) -> uint {
-    self.atomic_bit_and_allocation_length & !ATOMIC_MASK
-  }
-
-  #[inline]
-  fn refcount(&self) -> uint {
+  fn inc_ref_count_atomic(&mut self) {
     unsafe {
-      if self.is_atomic() {
-        let refcount: &AtomicUint = mem::transmute(&self.refcount);
-        refcount.load(atomic::Relaxed)
-      } else {
-        self.refcount
-      }
+      let refcount: &AtomicUint = mem::transmute(&self.refcount);
+      refcount.fetch_add(1, atomic::Relaxed);
     }
   }
 
   #[inline]
-  fn inc_ref_count(&mut self) {
+  fn inc_ref_count_nonatomic(&mut self) {
+    self.refcount += 1;
+  }
+
+  #[inline]
+  fn deallocator(&self) -> Deallocator {
     unsafe {
-      if self.is_atomic() {
-        let refcount: &AtomicUint = mem::transmute(&self.refcount);
-        refcount.fetch_add(1, atomic::Relaxed);
+      if self.allocator.is_null() {
+        Deallocator::Heap(self.allocation_length)
       } else {
-        self.refcount += 1;
+        Deallocator::Custom(mem::transmute(self.allocator), self.allocation_length)
       }
     }
   }
 
   #[inline]
   #[must_use]
-  fn dec_ref_count(&mut self) -> Option<Deallocator> {
-    unsafe {
-      let needs_free =
-        if self.is_atomic() {
-          let refcount: &AtomicUint = mem::transmute(&self.refcount);
-          if refcount.fetch_sub(1, atomic::Release) == 1 {
-            atomic::fence(atomic::Acquire);
-            true
-          } else {
-            false
-          }
-        } else {
-          self.refcount -= 1;
-          self.refcount == 0
-        };
+  fn dec_ref_count_nonatomic(&mut self) -> Option<Deallocator> {
+    self.refcount -= 1;
+    if self.refcount == 0 {
+      Some(self.deallocator())
+    } else {
+      None
+    }
+  }
 
-      if needs_free {
-        if self.allocator.is_null() {
-          Some(Deallocator::Heap(self.allocation_length()))
-        } else {
-          Some(Deallocator::Custom(mem::transmute(self.allocator), self.allocation_length()))
-        }
-      } else {
-        None
-      }
+  #[inline]
+  #[must_use]
+  fn dec_ref_count_atomic(&mut self) -> Option<Deallocator> {
+    unsafe {
+     let refcount: &AtomicUint = mem::transmute(&self.refcount);
+     if refcount.fetch_sub(1, atomic::Release) == 1 {
+       atomic::fence(atomic::Acquire);
+       Some(self.deallocator())
+     } else {
+       None
+     }
     }
   }
 }
@@ -196,7 +179,6 @@ fn buffer_too_big(actual_size: uint) -> ! {
 
 /// A `RawIobuf` is the representation of both a `RWIobuf` and a `ROIobuf`.
 /// It is very cheap to clone, as the backing buffer is shared and refcounted.
-#[unsafe_no_drop_flag]
 pub struct RawIobuf<'a> {
   // The -1nd size_of<uint>() bytes of `buf` is the refcount. This is a uint
   //   if the "atomic bit" is not set, and AtomicUint if it is set.
@@ -228,61 +210,24 @@ fn check_sane_raw_size() {
     assert_eq!(mem::size_of::<RawIobuf>(), mem::size_of::<*mut u8>() + 16);
 }
 
-impl<'a> Clone for RawIobuf<'a> {
-  #[inline]
-  fn clone(&self) -> RawIobuf<'a> {
-    self.header().map(|h| h.inc_ref_count());
-
-    RawIobuf {
-      buf:    self.buf,
-      lo_min_and_owned_bit: self.lo_min_and_owned_bit,
-      lo:     self.lo,
-      hi:     self.hi,
-      hi_max: self.hi_max,
-      lifetm: self.lifetm,
-      nocopy: NoCopy,
-    }
-  }
-
-  #[inline]
-  fn clone_from(&mut self, source: &RawIobuf<'a>) {
-    unsafe {
-      if self.ptr()      != source.ptr()
-      || self.is_owned() != source.is_owned() {
-        clone_from_fix_refcounts(self, source);
-      }
-    }
-
-    self.buf    = source.buf;
-    self.lo_min_and_owned_bit = source.lo_min_and_owned_bit;
-    self.lo     = source.lo;
-    self.hi     = source.hi;
-    self.hi_max = source.hi_max;
-  }
-}
-
 // Keep this out of line to guide inlining.
-unsafe fn clone_from_fix_refcounts<'a>(this: &mut RawIobuf<'a>, source: &RawIobuf<'a>) {
-  source.header().map(|h| h.inc_ref_count());
+unsafe fn clone_from_fix_nonatomic_refcounts<'a>(this: &mut RawIobuf<'a>, source: &RawIobuf<'a>) {
+  source.header().map(|h| h.inc_ref_count_nonatomic());
 
   let buf = this.buf;
   this.header()
-      .and_then(|h| h.dec_ref_count())
+      .and_then(|h| h.dec_ref_count_nonatomic())
       .map(|dealloc| dealloc.deallocate(buf));
 }
 
-#[unsafe_destructor]
-impl<'a> Drop for RawIobuf<'a> {
-  #[inline]
-  fn drop(&mut self) {
-    let buf = self.buf;
-    self.header()
-        .and_then(|hdr| hdr.dec_ref_count())
-        .map(|dealloc| dealloc.deallocate(buf));
+// Keep this out of line to guide inlining.
+unsafe fn clone_from_fix_atomic_refcounts<'a>(this: &mut RawIobuf<'a>, source: &RawIobuf<'a>) {
+  source.header().map(|h| h.inc_ref_count_atomic());
 
-    // Reset the owned bit, to prevent double-frees when drop reform lands.
-    self.lo_min_and_owned_bit = 0;
-  }
+  let buf = this.buf;
+  this.header()
+      .and_then(|h| h.dec_ref_count_atomic())
+      .map(|dealloc| dealloc.deallocate(buf));
 }
 
 impl<'a> RawIobuf<'a> {
@@ -299,7 +244,7 @@ impl<'a> RawIobuf<'a> {
       let allocation_header =
         AllocationHeader {
           allocator: allocator,
-          atomic_bit_and_allocation_length: data_len,
+          allocation_length: data_len,
           refcount: 1,
         };
 
@@ -343,6 +288,90 @@ impl<'a> RawIobuf<'a> {
       lifetm: ContravariantLifetime,
       nocopy: NoCopy,
     }
+  }
+
+  #[inline]
+  pub fn clone_atomic(&self) -> RawIobuf<'a> {
+    self.header().map(|h| h.inc_ref_count_atomic());
+
+    RawIobuf {
+      buf:    self.buf,
+      lo_min_and_owned_bit: self.lo_min_and_owned_bit,
+      lo:     self.lo,
+      hi:     self.hi,
+      hi_max: self.hi_max,
+      lifetm: self.lifetm,
+      nocopy: NoCopy,
+    }
+  }
+
+  #[inline]
+  pub fn clone_from_atomic(&mut self, source: &RawIobuf<'a>) {
+    unsafe {
+      if self.ptr()      != source.ptr()
+      || self.is_owned() != source.is_owned() {
+        clone_from_fix_atomic_refcounts(self, source);
+      }
+    }
+
+    self.buf    = source.buf;
+    self.lo_min_and_owned_bit = source.lo_min_and_owned_bit;
+    self.lo     = source.lo;
+    self.hi     = source.hi;
+    self.hi_max = source.hi_max;
+  }
+
+  #[inline]
+  pub fn clone_nonatomic(&self) -> RawIobuf<'a> {
+    self.header().map(|h| h.inc_ref_count_nonatomic());
+
+    RawIobuf {
+      buf:    self.buf,
+      lo_min_and_owned_bit: self.lo_min_and_owned_bit,
+      lo:     self.lo,
+      hi:     self.hi,
+      hi_max: self.hi_max,
+      lifetm: self.lifetm,
+      nocopy: NoCopy,
+    }
+  }
+
+  #[inline]
+  pub fn clone_from_nonatomic(&mut self, source: &RawIobuf<'a>) {
+    unsafe {
+      if self.ptr()      != source.ptr()
+      || self.is_owned() != source.is_owned() {
+        clone_from_fix_nonatomic_refcounts(self, source);
+      }
+    }
+
+    self.buf    = source.buf;
+    self.lo_min_and_owned_bit = source.lo_min_and_owned_bit;
+    self.lo     = source.lo;
+    self.hi     = source.hi;
+    self.hi_max = source.hi_max;
+  }
+
+  #[inline]
+  pub fn drop_atomic(&mut self) {
+    let buf = self.buf;
+    self.header()
+        .and_then(|hdr| hdr.dec_ref_count_atomic())
+        .map(|dealloc| dealloc.deallocate(buf));
+
+    // Reset the owned bit, to prevent double-frees when drop reform lands.
+    self.lo_min_and_owned_bit = 0;
+  }
+
+  #[inline]
+  pub fn drop_nonatomic(&mut self) {
+    let buf = self.buf;
+    self.header()
+        .and_then(|hdr| hdr.dec_ref_count_nonatomic())
+        .map(|dealloc| dealloc.deallocate(buf));
+
+    // Reset the owned bit, to prevent double-frees when drop reform lands.
+    self.lo_min_and_owned_bit = 0;
   }
 
   #[inline]
@@ -460,28 +489,15 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn atomic_read_only(self) -> Result<RawIobuf<'static>, RawIobuf<'a>> {
-    let is_unique_or_atomic = {
+  pub fn atomic_read_only(&self) -> Result<(), ()> {
+    let is_only = {
       match self.header() {
-        None         => false,
-        Some(header) => {
-          if header.is_atomic() || header.refcount() == 1 {
-            header.set_atomic();
-            true
-          } else {
-            false
-          }
-        }
+        Some(ref header) if header.nonatomic_refcount() == 1 => true,
+        _ => false,
       }
     };
 
-    unsafe {
-      if is_unique_or_atomic {
-        Ok(mem::transmute(self)) // we know we're 'static. Go away rustc.
-      } else {
-        Err(self)
-      }
-    }
+    if is_only { Ok(()) } else { Err(()) }
   }
 
   #[inline]
@@ -780,35 +796,70 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn split_at(&self, pos: u32) -> Result<(RawIobuf<'a>, RawIobuf<'a>), ()> {
+  pub fn split_at_nonatomic(&self, pos: u32) -> Result<(RawIobuf<'a>, RawIobuf<'a>), ()> {
     unsafe {
       try!(self.check_range_u32(pos, 0));
-      Ok(self.unsafe_split_at(pos))
+      Ok(self.unsafe_split_at_nonatomic(pos))
     }
   }
 
   #[inline]
-  pub unsafe fn unsafe_split_at(&self, pos: u32) -> (RawIobuf<'a>, RawIobuf<'a>) {
+  pub unsafe fn unsafe_split_at_nonatomic(&self, pos: u32) -> (RawIobuf<'a>, RawIobuf<'a>) {
     self.debug_check_range_u32(pos, 0);
-    let mut a = (*self).clone();
-    let mut b = (*self).clone();
+    let mut a = (*self).clone_nonatomic();
+    let mut b = (*self).clone_nonatomic();
     a.unsafe_resize(pos);
     b.unsafe_advance(pos);
     (a, b)
   }
 
   #[inline]
-  pub fn split_start_at(&mut self, pos: u32) -> Result<RawIobuf<'a>, ()> {
+  pub fn split_start_at_nonatomic(&mut self, pos: u32) -> Result<RawIobuf<'a>, ()> {
     unsafe {
       try!(self.check_range_u32(pos, 0));
-      Ok(self.unsafe_split_start_at(pos))
+      Ok(self.unsafe_split_start_at_nonatomic(pos))
     }
   }
 
   #[inline]
-  pub unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> RawIobuf<'a> {
+  pub unsafe fn unsafe_split_start_at_nonatomic(&mut self, pos: u32) -> RawIobuf<'a> {
     self.debug_check_range_u32(pos, 0);
-    let mut ret = (*self).clone();
+    let mut ret = (*self).clone_nonatomic();
+    ret.unsafe_resize(pos);
+    self.unsafe_advance(pos);
+    ret
+  }
+
+  #[inline]
+  pub fn split_at_atomic(&self, pos: u32) -> Result<(RawIobuf<'a>, RawIobuf<'a>), ()> {
+    unsafe {
+      try!(self.check_range_u32(pos, 0));
+      Ok(self.unsafe_split_at_atomic(pos))
+    }
+  }
+
+  #[inline]
+  pub unsafe fn unsafe_split_at_atomic(&self, pos: u32) -> (RawIobuf<'a>, RawIobuf<'a>) {
+    self.debug_check_range_u32(pos, 0);
+    let mut a = (*self).clone_atomic();
+    let mut b = (*self).clone_atomic();
+    a.unsafe_resize(pos);
+    b.unsafe_advance(pos);
+    (a, b)
+  }
+
+  #[inline]
+  pub fn split_start_at_atomic(&mut self, pos: u32) -> Result<RawIobuf<'a>, ()> {
+    unsafe {
+      try!(self.check_range_u32(pos, 0));
+      Ok(self.unsafe_split_start_at_atomic(pos))
+    }
+  }
+
+  #[inline]
+  pub unsafe fn unsafe_split_start_at_atomic(&mut self, pos: u32) -> RawIobuf<'a> {
+    self.debug_check_range_u32(pos, 0);
+    let mut ret = (*self).clone_atomic();
     ret.unsafe_resize(pos);
     self.unsafe_advance(pos);
     ret

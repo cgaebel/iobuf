@@ -5,6 +5,7 @@ use core::clone::Clone;
 use core::fmt::{mod, Formatter, Show};
 use core::kinds::marker::{NoSend, NoSync};
 use core::mem;
+use core::ops::Drop;
 use core::result::{Result, Ok, Err};
 use core::slice::SlicePrelude;
 use core::str::StrPrelude;
@@ -19,6 +20,7 @@ use iobuf::Iobuf;
 /// If your function only needs to do read-only operations on an Iobuf, consider
 /// taking a generic `Iobuf` trait instead. That way, it can be used with either
 /// a ROIobuf or a RWIobuf, generically.
+#[unsafe_no_drop_flag]
 pub struct ROIobuf<'a> {
   raw: RawIobuf<'a>,
   nosend: NoSend,
@@ -34,14 +36,20 @@ impl<'a> Clone for ROIobuf<'a> {
   #[inline(always)]
   fn clone(&self) -> ROIobuf<'a> {
     ROIobuf {
-      raw: self.raw.clone(),
+      raw: self.raw.clone_nonatomic(),
       nosend: NoSend,
       nosync: NoSync,
     }
   }
 
   #[inline(always)]
-  fn clone_from(&mut self, source: &ROIobuf<'a>) { self.raw.clone_from(&source.raw) }
+  fn clone_from(&mut self, source: &ROIobuf<'a>) { self.raw.clone_from_nonatomic(&source.raw) }
+}
+
+#[unsafe_destructor]
+impl<'a> Drop for ROIobuf<'a> {
+  #[inline(always)]
+  fn drop(&mut self) { self.raw.drop_nonatomic() }
 }
 
 /// An `Iobuf` which can read and write into a buffer.
@@ -59,6 +67,7 @@ impl<'a> Clone for ROIobuf<'a> {
 ///
 /// The `unsafe_` prefix means the function omits bounds checks. Misuse can
 /// easily cause security issues. Be careful!
+#[unsafe_no_drop_flag]
 pub struct RWIobuf<'a> {
   raw: RawIobuf<'a>,
   nosend: NoSend,
@@ -74,14 +83,20 @@ impl<'a> Clone for RWIobuf<'a> {
   #[inline(always)]
   fn clone(&self) -> RWIobuf<'a> {
     RWIobuf {
-      raw: self.raw.clone(),
+      raw: self.raw.clone_nonatomic(),
       nosend: NoSend,
       nosync: NoSync,
     }
   }
 
   #[inline(always)]
-  fn clone_from(&mut self, source: &RWIobuf<'a>) { self.raw.clone_from(&source.raw) }
+  fn clone_from(&mut self, source: &RWIobuf<'a>) { self.raw.clone_from_nonatomic(&source.raw) }
+}
+
+#[unsafe_destructor]
+impl<'a> Drop for RWIobuf<'a> {
+  #[inline(always)]
+  fn drop(&mut self) { self.raw.drop_nonatomic() }
 }
 
 /// "Atomic Read-Only Iobuf"
@@ -165,16 +180,22 @@ impl<'a> Clone for RWIobuf<'a> {
 ///   t.get();
 /// }
 /// ```
+#[unsafe_no_drop_flag]
 pub struct AROIobuf {
   raw: RawIobuf<'static>,
 }
 
 impl<'a> Clone for AROIobuf {
   #[inline(always)]
-  fn clone(&self) -> AROIobuf { AROIobuf { raw: self.raw.clone() } }
+  fn clone(&self) -> AROIobuf { AROIobuf { raw: self.raw.clone_atomic() } }
 
   #[inline(always)]
-  fn clone_from(&mut self, source: &AROIobuf) { self.raw.clone_from(&source.raw) }
+  fn clone_from(&mut self, source: &AROIobuf) { self.raw.clone_from_atomic(&source.raw) }
+}
+
+impl Drop for AROIobuf {
+  #[inline(always)]
+  fn drop(&mut self) { self.raw.drop_atomic() }
 }
 
 impl<'a> ROIobuf<'a> {
@@ -488,7 +509,7 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn read_only(&self) -> ROIobuf<'a> {
-    ROIobuf { raw: self.raw.clone(), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: self.raw.clone_nonatomic(), nosync: NoSync, nosend: NoSend }
   }
 
   /// Copies data from the window to the lower limit fo the iobuf and sets the
@@ -854,9 +875,11 @@ impl<'a> Iobuf for ROIobuf<'a> {
 
   #[inline(always)]
   fn atomic_read_only(self) -> Result<AROIobuf, ROIobuf<'a>> {
-    match self.raw.atomic_read_only() {
-      Ok (buf) => Ok(AROIobuf { raw: buf }),
-      Err(buf) => Err(ROIobuf { raw: buf, nosend: NoSend, nosync: NoSync })
+    unsafe {
+      match self.raw.atomic_read_only() {
+        Ok (()) => Ok(mem::transmute(self)),
+        Err(()) => Err(self),
+      }
     }
   }
 
@@ -943,27 +966,27 @@ impl<'a> Iobuf for ROIobuf<'a> {
 
   #[inline(always)]
   fn split_at(&self, pos: u32) -> Result<(ROIobuf<'a>, ROIobuf<'a>), ()> {
-    self.raw.split_at(pos).map(
+    self.raw.split_at_nonatomic(pos).map(
       |(a, b)| (ROIobuf { raw: a, nosync: NoSync, nosend: NoSend },
                 ROIobuf { raw: b, nosync: NoSync, nosend: NoSend }))
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_at(&self, pos: u32) -> (ROIobuf<'a>, ROIobuf<'a>) {
-    let (a, b) = self.raw.unsafe_split_at(pos);
+    let (a, b) = self.raw.unsafe_split_at_nonatomic(pos);
     (ROIobuf { raw: a, nosync: NoSync, nosend: NoSend },
      ROIobuf { raw: b, nosync: NoSync, nosend: NoSend })
   }
 
   #[inline(always)]
   fn split_start_at(&mut self, pos: u32) -> Result<ROIobuf<'a>, ()> {
-    self.raw.split_start_at(pos).map(
+    self.raw.split_start_at_nonatomic(pos).map(
       |b| ROIobuf { raw: b, nosync: NoSync, nosend: NoSend })
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> ROIobuf<'a> {
-    ROIobuf { raw: self.raw.unsafe_split_start_at(pos), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: self.raw.unsafe_split_start_at_nonatomic(pos), nosync: NoSync, nosend: NoSend }
   }
 
   #[inline(always)]
@@ -1140,27 +1163,27 @@ impl Iobuf for AROIobuf {
 
   #[inline(always)]
   fn split_at(&self, pos: u32) -> Result<(AROIobuf, AROIobuf), ()> {
-    self.raw.split_at(pos).map(
+    self.raw.split_at_atomic(pos).map(
       |(a, b)| (AROIobuf { raw: a },
                 AROIobuf { raw: b }))
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_at(&self, pos: u32) -> (AROIobuf, AROIobuf) {
-    let (a, b) = self.raw.unsafe_split_at(pos);
+    let (a, b) = self.raw.unsafe_split_at_atomic(pos);
     (AROIobuf { raw: a },
      AROIobuf { raw: b })
   }
 
   #[inline(always)]
   fn split_start_at(&mut self, pos: u32) -> Result<AROIobuf, ()> {
-    self.raw.split_start_at(pos).map(
+    self.raw.split_start_at_atomic(pos).map(
       |b| AROIobuf { raw: b })
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> AROIobuf {
-    AROIobuf { raw: self.raw.unsafe_split_start_at(pos) }
+    AROIobuf { raw: self.raw.unsafe_split_start_at_atomic(pos) }
   }
 
   #[inline(always)]
@@ -1249,9 +1272,11 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   fn atomic_read_only(self) -> Result<AROIobuf, RWIobuf<'a>> {
-    match self.raw.atomic_read_only() {
-      Ok (buf) => Ok(AROIobuf { raw: buf }),
-      Err(buf) => Err(RWIobuf { raw: buf, nosend: NoSend, nosync: NoSync })
+    unsafe {
+      match self.raw.atomic_read_only() {
+        Ok (()) => Ok(mem::transmute(self)),
+        Err(()) => Err(self),
+      }
     }
   }
 
@@ -1338,27 +1363,27 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   fn split_at(&self, pos: u32) -> Result<(RWIobuf<'a>, RWIobuf<'a>), ()> {
-    self.raw.split_at(pos).map(
+    self.raw.split_at_nonatomic(pos).map(
       |(a, b)| (RWIobuf { raw: a, nosync: NoSync, nosend: NoSend },
                 RWIobuf { raw: b, nosync: NoSync, nosend: NoSend }))
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_at(&self, pos: u32) -> (RWIobuf<'a>, RWIobuf<'a>) {
-    let (a, b) = self.raw.unsafe_split_at(pos);
+    let (a, b) = self.raw.unsafe_split_at_nonatomic(pos);
     (RWIobuf { raw: a, nosync: NoSync, nosend: NoSend },
      RWIobuf { raw: b, nosync: NoSync, nosend: NoSend })
   }
 
   #[inline(always)]
   fn split_start_at(&mut self, pos: u32) -> Result<RWIobuf<'a>, ()> {
-    self.raw.split_start_at(pos).map(
+    self.raw.split_start_at_nonatomic(pos).map(
       |b| RWIobuf { raw: b, nosync: NoSync, nosend: NoSend })
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> RWIobuf<'a> {
-    RWIobuf { raw: self.raw.unsafe_split_start_at(pos), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: self.raw.unsafe_split_start_at_nonatomic(pos), nosync: NoSync, nosend: NoSend }
   }
 
   #[inline(always)]
