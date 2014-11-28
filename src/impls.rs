@@ -84,6 +84,8 @@ impl<'a> Clone for RWIobuf<'a> {
   fn clone_from(&mut self, source: &RWIobuf<'a>) { self.raw.clone_from(&source.raw) }
 }
 
+/// "Atomic Read-Only Iobuf"
+///
 /// An `ROIobuf` which is safe to `Send` across tasks and `Share` with other tasks.
 /// This atomically refcounts the buffer, which has a greater cost on `.clone()`,
 /// but provides more flexibility to multithreaded consumers.
@@ -143,10 +145,9 @@ impl<'a> Clone for RWIobuf<'a> {
 /// let mut tasks = vec!();
 ///
 /// for i in range(0u32, 4) {
-///   // This clone modifies the Arc's atomic refcount.
+///   // This clone modifies the AROIobuf's atomic refcount.
 ///   let mut b = shared_b.clone();
 ///   tasks.push(Future::spawn(proc() {
-///     // This clone modifies the AROIobuf's atomic refcount.
 ///     let start = i*0x40;
 ///     assert_eq!(b.advance(start), Ok(()));
 ///     assert_eq!(b.resize(0x40), Ok(()));
