@@ -57,11 +57,11 @@ impl<Buf: Iobuf> fmt::Show for BufSpan<Buf> {
     for b in self.iter() {
       if !first_time {
         try!(write!(f, "\n"));
+      } else {
+        first_time = false;
       }
 
       try!(b.fmt(f));
-
-      first_time = false;
     }
 
     Ok(())
