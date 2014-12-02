@@ -34,7 +34,6 @@
 //! To repeat: Do not omit bounds checks unless you've checked _very_ carefully
 //! that they are redundant. This can cause terrifying security issues.
 
-#![license = "MIT"]
 #![doc(html_root_url = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/")]
 
 #![feature(phase)]
