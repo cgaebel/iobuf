@@ -8,6 +8,8 @@ use core::result::Result;
 use raw::{Prim, Allocator, RawIobuf};
 use impls::{AROIobuf, RWIobuf};
 
+/// Input/Output Buffer
+///
 /// Have your functions take a generic IObuf when they don't modify the buffer
 /// contents. This allows them to be used with both `ROIobuf`s and `RWIobuf`s.
 ///

@@ -13,6 +13,8 @@ use core::str::StrPrelude;
 use raw::{Prim, Allocator, RawIobuf};
 use iobuf::Iobuf;
 
+/// Read-Only Iobuf
+///
 /// An `Iobuf` that cannot write into the buffer, but all read-only operations
 /// are supported. It is possible to get a `RWIobuf` by performing a `deep_clone`
 /// of the Iobuf, but this is extremely inefficient.
@@ -54,6 +56,8 @@ impl<'a> Drop for ROIobuf<'a> {
   fn drop(&mut self) { unsafe { self.raw.drop_nonatomic() } }
 }
 
+/// Read-Write Iobuf
+///
 /// An `Iobuf` which can read and write into a buffer.
 ///
 /// Iobufs may be `cloned` cheaply. When cloned, the data itself is shared and
@@ -103,7 +107,7 @@ impl<'a> Drop for RWIobuf<'a> {
   fn drop(&mut self) { unsafe { self.raw.drop_nonatomic() } }
 }
 
-/// "Atomic Read-Only Iobuf"
+/// Atomic Read-Only Iobuf
 ///
 /// An `ROIobuf` which is safe to `Send` across tasks and `Share` with other tasks.
 /// This atomically refcounts the buffer, which has a greater cost on `.clone()`,
