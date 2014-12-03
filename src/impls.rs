@@ -208,7 +208,7 @@ impl Drop for AROIobuf {
 
 impl<'a> ROIobuf<'a> {
   /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
-  /// an empty backing buffer.
+  /// an empty backing buffer. This will not allocate.
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
@@ -318,7 +318,7 @@ impl<'a> ROIobuf<'a> {
 
 impl<'a> RWIobuf<'a> {
   /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
-  /// an empty backing buffer.
+  /// an empty backing buffer. This will not allocate.
   ///
   /// ```
   /// use iobuf::{RWIobuf,Iobuf};
@@ -336,7 +336,7 @@ impl<'a> RWIobuf<'a> {
   /// Constructs a new Iobuf with a buffer of size `len`, undefined contents,
   /// and the limits and window set to the full size of the buffer.
   ///
-  /// The maximum length of an Iobuf is `I32_MAX`.
+  /// The maximum length of an Iobuf is approximately 2 GB.
   ///
   /// ```
   /// use iobuf::{RWIobuf,Iobuf};
@@ -355,7 +355,7 @@ impl<'a> RWIobuf<'a> {
   /// and the limits and window set to the full range of the buffer. The memory
   /// will be allocated out of the given allocator, instead of the global heap.
   ///
-  /// The maximum length of an Iobuf is `I32_MAX`.
+  /// The maximum length of an Iobuf is approximately 2 GB.
   #[inline(always)]
   pub fn new_with_allocator(len: uint, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::new_with_allocator(len, allocator), nosync: NoSync, nosend: NoSend }
@@ -899,7 +899,7 @@ impl AROIobuf {
   }
 
   /// Stops atomically reference counting a unique buffer. This method returns
-  /// `Ok` if the `AROIobuf` is the last of its kind, and `Err if it's not.
+  /// `Ok` if the `AROIobuf` is the last of its kind, and `Err` if it's not.
   ///
   /// ```
   /// use iobuf::{AROIobuf, ROIobuf, RWIobuf, Iobuf};
