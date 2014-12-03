@@ -37,7 +37,6 @@ pub trait Iobuf: Clone + Show {
   /// let mut s = [ 1, 2 ];
   ///
   /// let mut b = RWIobuf::from_slice(&mut s);
-  ///
   /// let mut c = b.deep_clone();
   ///
   /// assert_eq!(b.poke_be(0, 0u8), Ok(()));
@@ -50,7 +49,7 @@ pub trait Iobuf: Clone + Show {
   /// share the buffer with the original Iobuf.
   fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static>;
 
-  /// Returns `Some` if the Iobuf is the last to reference the underlying data,
+  /// Returns `Ok` if the Iobuf is the last to reference the underlying data,
   /// and upgrades it to an `AROIobuf` which can be sent over channels and
   /// `Arc`ed with impunity. This is extremely useful in situations where Iobufs
   /// are created and written in one thread, and consumed in another.
@@ -58,8 +57,22 @@ pub trait Iobuf: Clone + Show {
   /// Only Iobufs which were originally allocated on the heap (for example, with
   /// a `_copy` constructor or `RWIobuf::new`) may be converted to an `AROIobuf`.
   ///
-  /// Returns `None` if the buffer is not the last to reference the underlying
-  /// data.
+  /// Returns `Err` if the buffer is not the last to reference the underlying
+  /// data. If this case is hit, the buffer passed by value is returned by value.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let b = RWIobuf::from_str_copy("hello, world");
+  /// assert!(b.atomic_read_only().is_ok());
+  ///
+  /// let b = RWIobuf::from_str_copy("hi");
+  /// let c = b.clone();
+  /// assert!(b.atomic_read_only().is_err());
+  /// let d = c.clone();
+  /// assert!(d.atomic_read_only().is_err());
+  /// assert!(c.atomic_read_only().is_ok());
+  /// ```
   fn atomic_read_only(self) -> Result<AROIobuf, Self>;
 
   /// Returns the size of the window.
@@ -68,20 +81,25 @@ pub trait Iobuf: Clone + Show {
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("Hello");
+  ///
+  /// assert_eq!(b.len(), 5);
   /// assert_eq!(b.advance(2), Ok(()));
   /// assert_eq!(b.len(), 3);
   /// ```
   fn len(&self) -> u32;
 
-  /// Returns the size of the limits subrange. The capacity of an iobuf can be
-  /// reduced via `narrow`.
+  /// Returns the size of the limits. The capacity of an iobuf can be reduced
+  /// via `narrow`.
   ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("Hello");
+  ///
+  /// assert_eq!(b.cap(), 5);
   /// assert_eq!(b.advance(2), Ok(()));
   /// assert_eq!(b.cap(), 5);
+  ///
   /// b.narrow();
   /// assert_eq!(b.cap(), 3);
   /// ```
@@ -145,6 +163,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Changes the Iobuf's bounds to the subrange specified by `pos` and `len`,
   /// which must lie within the current window.
+  ///
   /// ```
   /// use iobuf::{ROIobuf,Iobuf};
   ///
@@ -155,7 +174,6 @@ pub trait Iobuf: Clone + Show {
   /// // `sub` and friends.
   /// b.reset();
   /// unsafe { assert_eq!(b.as_window_slice(), b"hello") };
-  /// ```
   /// ```
   ///
   /// If your position and length do not lie in the current window, you will get
@@ -318,6 +336,7 @@ pub trait Iobuf: Clone + Show {
   /// let mut b = ROIobuf::from_str("hello");
   /// assert_eq!(b.advance(3), Ok(()));
   /// assert_eq!(b.advance(3), Err(()));
+  /// unsafe { assert_eq!(b.as_window_slice(), b"lo"); }
   /// ```
   fn advance(&mut self, len: u32) -> Result<(), ()>;
 
@@ -338,15 +357,15 @@ pub trait Iobuf: Clone + Show {
   ///
   /// fn parse<B: Iobuf>(b: &mut B) -> Result<u16, ()> {
   ///   let num_shorts: u8 = try!(b.consume_be());
-  ///   let num_bytes = num_shorts as u32 * mem::size_of::<u16>() as u32;
+  ///   let short_size = mem::size_of::<u16>() as u32;
+  ///   let num_bytes = num_shorts as u32 * short_size;
   ///
   ///   unsafe {
   ///     try!(b.check_range(0, num_bytes));
   ///
   ///     let mut sum = 0u16;
   ///
-  ///     for i in range(0, num_shorts as u32)
-  ///                .map(|x| x * mem::size_of::<u16>() as u32) {
+  ///     for i in range(0, num_shorts as u32).map(|x| x * short_size) {
   ///       sum += b.unsafe_peek_be(i);
   ///     }
   ///
@@ -372,7 +391,9 @@ pub trait Iobuf: Clone + Show {
   ///
   /// fn parse<B: Iobuf>(b: &mut B) -> Result<u16, ()> {
   ///   let num_shorts: u8 = try!(b.consume_be());
-  ///   let num_bytes = num_shorts as u32 * mem::size_of::<u16>() as u32;
+  ///   let short_size = mem::size_of::<u16>() as u32;
+  ///   let num_bytes = num_shorts as u32 * short_size;
+  ///
   ///   unsafe {
   ///     try!(b.check_range(0, num_bytes));
   ///
@@ -551,7 +572,6 @@ pub trait Iobuf: Clone + Show {
   ///     assert_eq!(c.as_window_slice(), b"hello");
   ///   }
   /// }
-  /// /*
   ///
   /// match b.split_start_at(0) {
   ///   Err(()) => panic!("This won't happen, either."),
@@ -564,7 +584,7 @@ pub trait Iobuf: Clone + Show {
   /// match b.split_start_at(10000) {
   ///   Ok(_)   => panic!("This won't happen!"),
   ///   Err(()) => unsafe { assert_eq!(b.as_window_slice(), b"world"); },
-  /// } */
+  /// }
   /// ```
   fn split_start_at(&mut self, pos: u32) -> Result<Self, ()>;
 
