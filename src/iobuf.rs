@@ -53,6 +53,9 @@ pub trait Iobuf: Clone + Show {
   /// `Arc`ed with impunity. This is extremely useful in situations where Iobufs
   /// are created and written in one thread, and consumed in another.
   ///
+  /// Only Iobufs which were originally allocated on the heap (for example, with
+  /// a `_copy` constructor or `RWIobuf::new`) may be converted to an `AROIobuf`.
+  ///
   /// Returns `None` if the buffer is not the last to reference the underlying
   /// data.
   fn atomic_read_only(self) -> Result<AROIobuf, Self>;

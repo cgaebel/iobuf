@@ -86,20 +86,21 @@ impl AllocationHeader {
   }
 
   #[inline]
-  fn nonatomic_refcount(&self) -> uint {
+  unsafe fn nonatomic_refcount(&self) -> uint {
     self.refcount
   }
 
-  #[inline]
-  fn inc_ref_count_atomic(&mut self) {
-    unsafe {
-      let refcount: &AtomicUint = mem::transmute(&self.refcount);
-      refcount.fetch_add(1, atomic::Relaxed);
-    }
+  unsafe fn atomic_refcount<'a>(&'a self) -> &'a AtomicUint {
+    mem::transmute(&self.refcount)
   }
 
   #[inline]
-  fn inc_ref_count_nonatomic(&mut self) {
+  unsafe fn inc_ref_count_atomic(&mut self) {
+    self.atomic_refcount().fetch_add(1, atomic::Relaxed);
+  }
+
+  #[inline]
+  unsafe fn inc_ref_count_nonatomic(&mut self) {
     self.refcount += 1;
   }
 
@@ -116,7 +117,7 @@ impl AllocationHeader {
 
   #[inline]
   #[must_use]
-  fn dec_ref_count_nonatomic(&mut self) -> Option<Deallocator> {
+  unsafe fn dec_ref_count_nonatomic(&mut self) -> Option<Deallocator> {
     self.refcount -= 1;
     if self.refcount == 0 {
       Some(self.deallocator())
@@ -127,15 +128,12 @@ impl AllocationHeader {
 
   #[inline]
   #[must_use]
-  fn dec_ref_count_atomic(&mut self) -> Option<Deallocator> {
-    unsafe {
-     let refcount: &AtomicUint = mem::transmute(&self.refcount);
-     if refcount.fetch_sub(1, atomic::Release) == 1 {
-       atomic::fence(atomic::Acquire);
-       Some(self.deallocator())
-     } else {
-       None
-     }
+  unsafe fn dec_ref_count_atomic(&mut self) -> Option<Deallocator> {
+    if self.atomic_refcount().fetch_sub(1, atomic::Release) == 1 {
+      atomic::fence(atomic::Acquire);
+      Some(self.deallocator())
+    } else {
+      None
     }
   }
 }
@@ -291,7 +289,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn clone_atomic(&self) -> RawIobuf<'a> {
+  pub unsafe fn clone_atomic(&self) -> RawIobuf<'a> {
     self.header().map(|h| h.inc_ref_count_atomic());
 
     RawIobuf {
@@ -306,12 +304,10 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn clone_from_atomic(&mut self, source: &RawIobuf<'a>) {
-    unsafe {
-      if self.ptr()      != source.ptr()
-      || self.is_owned() != source.is_owned() {
-        clone_from_fix_atomic_refcounts(self, source);
-      }
+  pub unsafe fn clone_from_atomic(&mut self, source: &RawIobuf<'a>) {
+    if self.ptr()      != source.ptr()
+    || self.is_owned() != source.is_owned() {
+      clone_from_fix_atomic_refcounts(self, source);
     }
 
     self.buf    = source.buf;
@@ -322,7 +318,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn clone_nonatomic(&self) -> RawIobuf<'a> {
+  pub unsafe fn clone_nonatomic(&self) -> RawIobuf<'a> {
     self.header().map(|h| h.inc_ref_count_nonatomic());
 
     RawIobuf {
@@ -337,12 +333,10 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn clone_from_nonatomic(&mut self, source: &RawIobuf<'a>) {
-    unsafe {
-      if self.ptr()      != source.ptr()
-      || self.is_owned() != source.is_owned() {
-        clone_from_fix_nonatomic_refcounts(self, source);
-      }
+  pub unsafe fn clone_from_nonatomic(&mut self, source: &RawIobuf<'a>) {
+    if self.ptr()      != source.ptr()
+    || self.is_owned() != source.is_owned() {
+      clone_from_fix_nonatomic_refcounts(self, source);
     }
 
     self.buf    = source.buf;
@@ -353,7 +347,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn drop_atomic(&mut self) {
+  pub unsafe fn drop_atomic(&mut self) {
     let buf = self.buf;
     self.header()
         .and_then(|hdr| hdr.dec_ref_count_atomic())
@@ -364,7 +358,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn drop_nonatomic(&mut self) {
+  pub unsafe fn drop_nonatomic(&mut self) {
     let buf = self.buf;
     self.header()
         .and_then(|hdr| hdr.dec_ref_count_nonatomic())
@@ -489,15 +483,19 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn atomic_read_only(&self) -> Result<(), ()> {
-    let is_only = {
-      match self.header() {
-        Some(ref header) if header.nonatomic_refcount() == 1 => true,
-        _ => false,
-      }
-    };
+  pub unsafe fn is_unique_nonatomic(&self) -> bool {
+    match self.header() {
+      Some(ref header) if header.nonatomic_refcount() == 1 => true,
+      _ => false,
+    }
+  }
 
-    if is_only { Ok(()) } else { Err(()) }
+  #[inline]
+  pub unsafe fn is_unique_atomic(&self) -> bool {
+    match self.header() {
+      Some(ref header) if header.atomic_refcount().load(atomic::SeqCst) == 1 => true,
+      _ => false,
+    }
   }
 
   #[inline]

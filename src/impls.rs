@@ -36,20 +36,22 @@ impl<'a> Clone for ROIobuf<'a> {
   #[inline(always)]
   fn clone(&self) -> ROIobuf<'a> {
     ROIobuf {
-      raw: self.raw.clone_nonatomic(),
+      raw: unsafe { self.raw.clone_nonatomic() },
       nosend: NoSend,
       nosync: NoSync,
     }
   }
 
   #[inline(always)]
-  fn clone_from(&mut self, source: &ROIobuf<'a>) { self.raw.clone_from_nonatomic(&source.raw) }
+  fn clone_from(&mut self, source: &ROIobuf<'a>) {
+    unsafe { self.raw.clone_from_nonatomic(&source.raw) }
+  }
 }
 
 #[unsafe_destructor]
 impl<'a> Drop for ROIobuf<'a> {
   #[inline(always)]
-  fn drop(&mut self) { self.raw.drop_nonatomic() }
+  fn drop(&mut self) { unsafe { self.raw.drop_nonatomic() } }
 }
 
 /// An `Iobuf` which can read and write into a buffer.
@@ -83,20 +85,22 @@ impl<'a> Clone for RWIobuf<'a> {
   #[inline(always)]
   fn clone(&self) -> RWIobuf<'a> {
     RWIobuf {
-      raw: self.raw.clone_nonatomic(),
+      raw: unsafe { self.raw.clone_nonatomic() },
       nosend: NoSend,
       nosync: NoSync,
     }
   }
 
   #[inline(always)]
-  fn clone_from(&mut self, source: &RWIobuf<'a>) { self.raw.clone_from_nonatomic(&source.raw) }
+  fn clone_from(&mut self, source: &RWIobuf<'a>) {
+    unsafe { self.raw.clone_from_nonatomic(&source.raw) }
+  }
 }
 
 #[unsafe_destructor]
 impl<'a> Drop for RWIobuf<'a> {
   #[inline(always)]
-  fn drop(&mut self) { self.raw.drop_nonatomic() }
+  fn drop(&mut self) { unsafe { self.raw.drop_nonatomic() } }
 }
 
 /// "Atomic Read-Only Iobuf"
@@ -187,15 +191,15 @@ pub struct AROIobuf {
 
 impl<'a> Clone for AROIobuf {
   #[inline(always)]
-  fn clone(&self) -> AROIobuf { AROIobuf { raw: self.raw.clone_atomic() } }
+  fn clone(&self) -> AROIobuf { AROIobuf { raw: unsafe { self.raw.clone_atomic() } } }
 
   #[inline(always)]
-  fn clone_from(&mut self, source: &AROIobuf) { self.raw.clone_from_atomic(&source.raw) }
+  fn clone_from(&mut self, source: &AROIobuf) { unsafe { self.raw.clone_from_atomic(&source.raw) } }
 }
 
 impl Drop for AROIobuf {
   #[inline(always)]
-  fn drop(&mut self) { self.raw.drop_atomic() }
+  fn drop(&mut self) { unsafe { self.raw.drop_atomic() } }
 }
 
 impl<'a> ROIobuf<'a> {
@@ -509,7 +513,7 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn read_only(&self) -> ROIobuf<'a> {
-    ROIobuf { raw: self.raw.clone_nonatomic(), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: unsafe { self.raw.clone_nonatomic() }, nosync: NoSync, nosend: NoSend }
   }
 
   /// Copies data from the window to the lower limit fo the iobuf and sets the
@@ -864,6 +868,58 @@ impl<'a> RWIobuf<'a> {
   pub unsafe fn unsafe_fill_le<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_le(t) }
 }
 
+impl AROIobuf {
+  /// Stops atomically reference counting a unique buffer. This method returns
+  /// `Ok` if the `AROIobuf` is the last of its kind, and `Err` if it's not.
+  ///
+  /// ```
+  /// use iobuf::{AROIobuf, ROIobuf, Iobuf};
+  ///
+  /// let buf: ROIobuf<'static> = ROIobuf::from_str_copy("hello, world!");
+  /// let a_buf: AROIobuf = buf.atomic_read_only().unwrap();
+  /// unsafe { assert_eq!(a_buf.as_window_slice(), b"hello, world!"); }
+  ///
+  /// let buf: ROIobuf<'static> = a_buf.read_only().unwrap();
+  /// // TA-DA!
+  /// unsafe { assert_eq!(buf.as_window_slice(), b"hello, world!"); }
+  /// ```
+  #[inline(always)]
+  pub fn read_only(self) -> Result<ROIobuf<'static>, AROIobuf> {
+    unsafe {
+      if self.raw.is_unique_atomic() {
+        Ok(mem::transmute(self))
+      } else {
+        Err(self)
+      }
+    }
+  }
+
+  /// Stops atomically reference counting a unique buffer. This method returns
+  /// `Ok` if the `AROIobuf` is the last of its kind, and `Err if it's not.
+  ///
+  /// ```
+  /// use iobuf::{AROIobuf, ROIobuf, RWIobuf, Iobuf};
+  ///
+  /// let buf: ROIobuf<'static> = ROIobuf::from_str_copy("hello, world!");
+  /// let a_buf: AROIobuf = buf.atomic_read_only().unwrap();
+  /// unsafe { assert_eq!(a_buf.as_window_slice(), b"hello, world!"); }
+  ///
+  /// let buf: RWIobuf<'static> = a_buf.read_write().unwrap();
+  /// // TA-DA!
+  /// unsafe { assert_eq!(buf.as_window_slice(), b"hello, world!"); }
+  /// ```
+  #[inline(always)]
+  pub fn read_write(self) -> Result<RWIobuf<'static>, AROIobuf> {
+    unsafe {
+      if self.raw.is_unique_atomic() {
+        Ok(mem::transmute(self))
+      } else {
+        Err(self)
+      }
+    }
+  }
+}
+
 impl<'a> Iobuf for ROIobuf<'a> {
   #[inline(always)]
   fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone(), nosync: NoSync, nosend: NoSend } }
@@ -876,9 +932,10 @@ impl<'a> Iobuf for ROIobuf<'a> {
   #[inline(always)]
   fn atomic_read_only(self) -> Result<AROIobuf, ROIobuf<'a>> {
     unsafe {
-      match self.raw.atomic_read_only() {
-        Ok (()) => Ok(mem::transmute(self)),
-        Err(()) => Err(self),
+      if self.raw.is_unique_nonatomic() {
+        Ok(mem::transmute(self))
+      } else {
+        Err(self)
       }
     }
   }
@@ -1273,9 +1330,10 @@ impl<'a> Iobuf for RWIobuf<'a> {
   #[inline(always)]
   fn atomic_read_only(self) -> Result<AROIobuf, RWIobuf<'a>> {
     unsafe {
-      match self.raw.atomic_read_only() {
-        Ok (()) => Ok(mem::transmute(self)),
-        Err(()) => Err(self),
+      if self.raw.is_unique_nonatomic() {
+        Ok(mem::transmute(self))
+      } else {
+        Err(self)
       }
     }
   }
