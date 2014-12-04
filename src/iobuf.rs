@@ -6,7 +6,7 @@ use core::fmt::Show;
 use core::result::Result;
 
 use raw::{Prim, Allocator, RawIobuf};
-use impls::{AROIobuf, RWIobuf};
+use impls::{AROIobuf, RWIobuf, UniqueIobuf};
 
 /// Input/Output Buffer
 ///
@@ -48,6 +48,33 @@ pub trait Iobuf: Clone + Show {
   /// The new Iobuf will have storage allocated out of `allocator`, and will not
   /// share the buffer with the original Iobuf.
   fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static>;
+
+  /// Returns `Ok` if the Iobuf is the last to reference the underlying data,
+  /// and converts it to a `UniqueIobuf` for sending to another task. This can
+  /// also be used to safely convert from a `ROIobuf` to a `RWIobuf`, and to
+  /// downgrade atomically refcounted Iobufs to non-atomically refcounted ones.
+  ///
+  /// Only Iobufs which were originally allocated on the heap (for example, with
+  /// a `_copy` constructor or `RWIobuf::new`) may be converted to a
+  /// `UniqueIobuf`.
+  ///
+  /// Returns `Err` if the buffer is not the last to reference the underlying
+  /// data. If this case is hit, the buffer passed by value is returned by value.
+  ///
+  /// ```
+  /// use iobuf::{RWIobuf,Iobuf};
+  ///
+  /// let b = RWIobuf::from_str_copy("hello, world");
+  /// assert!(b.unique().is_ok());
+  ///
+  /// let b = RWIobuf::from_str_copy("hi");
+  /// let c = b.clone();
+  /// assert!(b.unique().is_err());
+  /// let d = c.clone();
+  /// assert!(d.unique().is_err());
+  /// assert!(c.unique().is_ok());
+  /// ```
+  fn unique(self) -> Result<UniqueIobuf, Self>;
 
   /// Returns `Ok` if the Iobuf is the last to reference the underlying data,
   /// and upgrades it to an `AROIobuf` which can be sent over channels and

@@ -206,6 +206,41 @@ impl Drop for AROIobuf {
   fn drop(&mut self) { unsafe { self.raw.drop_atomic() } }
 }
 
+/// A unique, immutable Iobuf.
+///
+/// If the refcount on an Iobuf is `1`, it can be made unique with `.unique()`.
+/// This will allow sending across channels, and later conversion back to a
+/// normal refcounted (atomically or non) Iobuf with zero overhead.
+#[unsafe_no_drop_flag]
+pub struct UniqueIobuf {
+  raw: RawIobuf<'static>,
+}
+
+impl UniqueIobuf {
+  /// Safely converts a `UniqueIobuf` into a `ROIobuf`.
+  #[inline(always)]
+  pub fn read_only(self) -> ROIobuf<'static> {
+    unsafe { mem::transmute(self) }
+  }
+
+  /// Safely converts a `UniqueIobuf` into a `RWIobuf`.
+  #[inline(always)]
+  pub fn read_write(self) -> RWIobuf<'static> {
+    unsafe { mem::transmute(self) }
+  }
+
+  /// Safely converts a `UniqueIobuf` into a `AROIobuf`.
+  #[inline(always)]
+  pub fn atomic_read_only(self) -> AROIobuf {
+    unsafe { mem::transmute(self) }
+  }
+}
+
+impl Drop for UniqueIobuf {
+  #[inline(always)]
+  fn drop(&mut self) { unsafe { self.raw.drop_nonatomic() } }
+}
+
 impl<'a> ROIobuf<'a> {
   /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
   /// an empty backing buffer. This will not allocate.
@@ -934,6 +969,17 @@ impl<'a> Iobuf for ROIobuf<'a> {
   }
 
   #[inline(always)]
+  fn unique(self) -> Result<UniqueIobuf, ROIobuf<'a>> {
+    unsafe {
+      if self.raw.is_unique_nonatomic() {
+        Ok(mem::transmute(self))
+      } else {
+        Err(self)
+      }
+    }
+  }
+
+  #[inline(always)]
   fn atomic_read_only(self) -> Result<AROIobuf, ROIobuf<'a>> {
     unsafe {
       if self.raw.is_unique_nonatomic() {
@@ -1137,6 +1183,17 @@ impl Iobuf for AROIobuf {
   }
 
   #[inline(always)]
+  fn unique(self) -> Result<UniqueIobuf, AROIobuf> {
+    unsafe {
+      if self.raw.is_unique_atomic() {
+        Ok(mem::transmute(self))
+      } else {
+        Err(self)
+      }
+    }
+  }
+
+  #[inline(always)]
   fn atomic_read_only(self) -> Result<AROIobuf, AROIobuf> {
     Ok(self)
   }
@@ -1332,6 +1389,17 @@ impl<'a> Iobuf for RWIobuf<'a> {
   }
 
   #[inline(always)]
+  fn unique(self) -> Result<UniqueIobuf, RWIobuf<'a>> {
+    unsafe {
+      if self.raw.is_unique_atomic() {
+        Ok(mem::transmute(self))
+      } else {
+        Err(self)
+      }
+    }
+  }
+
+  #[inline(always)]
   fn atomic_read_only(self) -> Result<AROIobuf, RWIobuf<'a>> {
     unsafe {
       if self.raw.is_unique_nonatomic() {
@@ -1524,19 +1592,29 @@ impl<'a> Iobuf for RWIobuf<'a> {
 }
 
 impl<'a> Show for ROIobuf<'a> {
+  #[inline]
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "read-only")
   }
 }
 
 impl<'a> Show for RWIobuf<'a> {
+  #[inline]
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "read-write")
   }
 }
 
 impl Show for AROIobuf {
+  #[inline]
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "atomic read-only")
+  }
+}
+
+impl Show for UniqueIobuf {
+  #[inline]
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    self.raw.show(f, "unique")
   }
 }
