@@ -58,7 +58,7 @@ const MAX_BUFFER_LEN: uint = 0x7FFF_FFFF - 3*TARGET_WORD_SIZE;
 const OWNED_MASK:  u32  = 1u32 << (u32::BITS  - 1);
 
 /// Used to provide custom memory to Iobufs, instead of just using the heap.
-pub trait Allocator: 'static + Sync + Send {
+pub trait Allocator: Sync + Send {
   /// Allocates `len` bytes of memory, with an alignment of `align`.
   fn allocate(&self, len: uint, align: uint) -> *mut u8;
 
