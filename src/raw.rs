@@ -4,7 +4,7 @@ use alloc::boxed::Box;
 
 use core::atomic::{mod, AtomicUint};
 use core::fmt::{mod, Formatter};
-use core::kinds::Copy;
+use core::kinds::{Copy, Send};
 use core::kinds::marker::{ContravariantLifetime, NoCopy};
 use core::iter::{mod, IteratorExt};
 use core::mem;
@@ -58,7 +58,7 @@ const MAX_BUFFER_LEN: uint = 0x7FFF_FFFF - 3*TARGET_WORD_SIZE;
 const OWNED_MASK:  u32  = 1u32 << (u32::BITS  - 1);
 
 /// Used to provide custom memory to Iobufs, instead of just using the heap.
-pub trait Allocator: 'static {
+pub trait Allocator: 'static + Send {
   /// Allocates `len` bytes of memory, with an alignment of `align`.
   fn allocate(&self, len: uint, align: uint) -> *mut u8;
 
