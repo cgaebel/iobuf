@@ -1329,18 +1329,19 @@ fn check_large_range_len() {
 
 #[test]
 fn test_allocator() {
-    use impls::RWIobuf;
-    struct MyAllocator;
+  use impls::RWIobuf;
 
-    impl Allocator for MyAllocator {
-        fn allocate(&self, size: uint, align: uint) -> *mut u8 {
-            unsafe { ::alloc::heap::allocate(size, align) }
-        }
+  struct MyAllocator;
 
-        fn deallocate(&self, ptr: *mut u8, len: uint, align: uint) {
-            unsafe { ::alloc::heap::deallocate(ptr, len, align) }
-        }
+  impl Allocator for MyAllocator {
+    fn allocate(&self, size: uint, align: uint) -> *mut u8 {
+      unsafe { ::alloc::heap::allocate(size, align) }
     }
 
-    RWIobuf::new_with_allocator(1000, Arc::new(box MyAllocator as Box<Allocator>));
+    fn deallocate(&self, ptr: *mut u8, len: uint, align: uint) {
+      unsafe { ::alloc::heap::deallocate(ptr, len, align) }
+    }
+  }
+
+  RWIobuf::new_with_allocator(1000, Arc::new(box MyAllocator as Box<Allocator>));
 }
