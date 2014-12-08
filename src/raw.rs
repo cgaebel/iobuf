@@ -1326,3 +1326,21 @@ fn check_large_range_len() {
   let b = RWIobuf::new(100);
   unsafe { assert_eq!(b.as_raw().check_range(0, 0x8000_0000), Err(())); }
 }
+
+#[test]
+fn test_allocator() {
+    use impls::RWIobuf;
+    struct MyAllocator;
+
+    impl Allocator for MyAllocator {
+        fn allocate(&self, size: uint, align: uint) -> *mut u8 {
+            unsafe { ::alloc::heap::allocate(size, align) }
+        }
+
+        fn deallocate(&self, ptr: *mut u8, len: uint, align: uint) {
+            unsafe { ::alloc::heap::deallocate(ptr, len, align) }
+        }
+    }
+
+    RWIobuf::new_with_allocator(1000, Arc::new(box MyAllocator as Box<Allocator>));
+}
