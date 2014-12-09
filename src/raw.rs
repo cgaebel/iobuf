@@ -104,7 +104,6 @@ impl AllocationHeader {
     self.refcount += 1;
   }
 
-  #[inline]
   fn deallocator(&self) -> Deallocator {
     unsafe {
       if self.allocator.is_null() {
@@ -146,7 +145,6 @@ enum Deallocator {
 }
 
 impl Deallocator {
-  #[inline]
   fn deallocate(self, ptr: *mut u8) {
     unsafe {
       let ptr = ptr.offset(-(mem::size_of::<AllocationHeader>() as int));
