@@ -104,6 +104,7 @@ impl AllocationHeader {
     self.refcount += 1;
   }
 
+  #[inline]
   fn deallocator(&self) -> Deallocator {
     unsafe {
       if self.allocator.is_null() {
@@ -115,25 +116,29 @@ impl AllocationHeader {
   }
 
   #[inline]
-  #[must_use]
-  unsafe fn dec_ref_count_nonatomic(&mut self) -> Option<Deallocator> {
+  unsafe fn dec_ref_count_nonatomic(&mut self) -> Result<(), ()> {
     self.refcount -= 1;
     if self.refcount == 0 {
-      Some(self.deallocator())
+      Err(())
     } else {
-      None
+      Ok(())
     }
   }
 
   #[inline]
   #[must_use]
-  unsafe fn dec_ref_count_atomic(&mut self) -> Option<Deallocator> {
+  unsafe fn dec_ref_count_atomic(&mut self) -> Result<(), ()> {
     if self.atomic_refcount().fetch_sub(1, atomic::Release) == 1 {
       atomic::fence(atomic::Acquire);
-      Some(self.deallocator())
+      Err(())
     } else {
-      None
+      Ok(())
     }
+  }
+
+  // Keep this out of line to allow inlining of the drop glue.
+  unsafe fn deallocate(&self, buf: *mut u8) {
+    self.deallocator().deallocate(buf)
   }
 }
 
@@ -206,26 +211,6 @@ fn check_sane_raw_size() {
     assert_eq!(mem::size_of::<RawIobuf>(), mem::size_of::<*mut u8>() + 16);
 }
 
-// Keep this out of line to guide inlining.
-unsafe fn clone_from_fix_nonatomic_refcounts<'a>(this: &mut RawIobuf<'a>, source: &RawIobuf<'a>) {
-  source.header().map(|h| h.inc_ref_count_nonatomic());
-
-  let buf = this.buf;
-  this.header()
-      .and_then(|h| h.dec_ref_count_nonatomic())
-      .map(|dealloc| dealloc.deallocate(buf));
-}
-
-// Keep this out of line to guide inlining.
-unsafe fn clone_from_fix_atomic_refcounts<'a>(this: &mut RawIobuf<'a>, source: &RawIobuf<'a>) {
-  source.header().map(|h| h.inc_ref_count_atomic());
-
-  let buf = this.buf;
-  this.header()
-      .and_then(|h| h.dec_ref_count_atomic())
-      .map(|dealloc| dealloc.deallocate(buf));
-}
-
 impl<'a> RawIobuf<'a> {
   pub fn new_impl(
       len:       uint,
@@ -287,8 +272,52 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
+  unsafe fn nonatomic_inc_ref_count(&self) {
+    match self.header() {
+      None => {},
+      Some(h) => h.inc_ref_count_nonatomic(),
+    }
+  }
+
+  #[inline]
+  unsafe fn atomic_inc_ref_count(&self) {
+    match self.header() {
+      None => {},
+      Some(h) => h.inc_ref_count_atomic(),
+    }
+  }
+
+  #[inline]
+  unsafe fn nonatomic_dec_ref_count(&self) {
+    let buf = self.buf;
+
+    match self.header() {
+      None => {},
+      Some(h) => {
+        if h.dec_ref_count_nonatomic().is_err() {
+          h.deallocate(buf);
+        }
+      }
+    }
+  }
+
+  #[inline]
+  unsafe fn atomic_dec_ref_count(&self) {
+    let buf = self.buf;
+
+    match self.header() {
+      None => {},
+      Some(h) => {
+        if h.dec_ref_count_atomic().is_err() {
+          h.deallocate(buf);
+        }
+      }
+    }
+  }
+
+  #[inline]
   pub unsafe fn clone_atomic(&self) -> RawIobuf<'a> {
-    self.header().map(|h| h.inc_ref_count_atomic());
+    self.atomic_inc_ref_count();
 
     RawIobuf {
       buf:    self.buf,
@@ -301,11 +330,23 @@ impl<'a> RawIobuf<'a> {
     }
   }
 
+// Keep this out of line to guide inlining.
+  unsafe fn clone_from_fix_nonatomic_refcounts(&self, source: &RawIobuf<'a>) {
+    source.nonatomic_inc_ref_count();
+    self.nonatomic_dec_ref_count();
+  }
+
+  // Keep this out of line to guide inlining.
+  unsafe fn clone_from_fix_atomic_refcounts(&self, source: &RawIobuf<'a>) {
+    source.atomic_inc_ref_count();
+    self.atomic_dec_ref_count();
+  }
+
   #[inline]
   pub unsafe fn clone_from_atomic(&mut self, source: &RawIobuf<'a>) {
     if self.ptr()      != source.ptr()
     || self.is_owned() != source.is_owned() {
-      clone_from_fix_atomic_refcounts(self, source);
+      self.clone_from_fix_atomic_refcounts(source);
     }
 
     self.buf    = source.buf;
@@ -317,7 +358,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn clone_nonatomic(&self) -> RawIobuf<'a> {
-    self.header().map(|h| h.inc_ref_count_nonatomic());
+    self.nonatomic_inc_ref_count();
 
     RawIobuf {
       buf:    self.buf,
@@ -334,7 +375,7 @@ impl<'a> RawIobuf<'a> {
   pub unsafe fn clone_from_nonatomic(&mut self, source: &RawIobuf<'a>) {
     if self.ptr()      != source.ptr()
     || self.is_owned() != source.is_owned() {
-      clone_from_fix_nonatomic_refcounts(self, source);
+      self.clone_from_fix_nonatomic_refcounts(source);
     }
 
     self.buf    = source.buf;
@@ -346,10 +387,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn drop_atomic(&mut self) {
-    let buf = self.buf;
-    self.header()
-        .and_then(|hdr| hdr.dec_ref_count_atomic())
-        .map(|dealloc| dealloc.deallocate(buf));
+    self.atomic_dec_ref_count();
 
     // Reset the owned bit, to prevent double-frees when drop reform lands.
     self.lo_min_and_owned_bit = 0;
@@ -357,10 +395,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn drop_nonatomic(&mut self) {
-    let buf = self.buf;
-    self.header()
-        .and_then(|hdr| hdr.dec_ref_count_nonatomic())
-        .map(|dealloc| dealloc.deallocate(buf));
+    self.nonatomic_dec_ref_count();
 
     // Reset the owned bit, to prevent double-frees when drop reform lands.
     self.lo_min_and_owned_bit = 0;
