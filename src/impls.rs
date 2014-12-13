@@ -6,7 +6,7 @@ use core::fmt::{mod, Formatter, Show};
 use core::kinds::marker::{NoSend, NoSync};
 use core::mem;
 use core::ops::Drop;
-use core::result::{Result, Ok, Err};
+use core::result::Result::{mod, Ok, Err};
 use core::slice::SlicePrelude;
 use core::str::StrPrelude;
 
@@ -562,7 +562,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// ```
   /// use std::iter::range;
-  /// use std::result::{Result,Ok};
+  /// use std::result::Result::{mod,Ok};
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// // A header, saying how many shorts will follow. Unfortunately, our buffer

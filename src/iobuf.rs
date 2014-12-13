@@ -376,7 +376,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use std::mem;
-  /// use std::result::{Result,Ok};
+  /// use std::result::Result::{mod,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [2, 0x12, 0x34, 0x56, 0x78];
@@ -411,7 +411,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```
   /// use std::mem;
-  /// use std::result::{Result,Ok};
+  /// use std::result::Result::{mod,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
   /// let data = [2, 0x12, 0x34, 0x56, 0x78];
   /// let mut b = ROIobuf::from_slice(&data);
@@ -882,7 +882,7 @@ pub trait Iobuf: Clone + Show {
   /// Below is a correct usage of `check_range` to minimize bounds checks:
   ///
   /// ```
-  /// use std::result::{Result,Ok};
+  /// use std::result::Result::{mod,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// // [ number of byte buffers, size of first byte buffer, ...bytes, etc. ]

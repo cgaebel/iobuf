@@ -9,8 +9,9 @@ use core::intrinsics::move_val_init;
 use core::iter::{mod, order, Extend, AdditiveIterator, Iterator, IteratorExt};
 use core::iter::{FromIterator, DoubleEndedIterator, DoubleEndedIteratorExt};
 use core::iter::ExactSizeIterator;
-use core::option::{mod, Some, None, Option};
-use core::result::{Ok, Err};
+use core::option;
+use core::option::Option::{mod, Some, None};
+use core::result::Result::{mod, Ok, Err};
 
 use iobuf::Iobuf;
 
