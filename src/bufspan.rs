@@ -263,9 +263,15 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// Returns an iterator over the bytes in the `BufSpan`.
   #[inline]
   pub fn iter_bytes<'a>(&'a self) -> ByteIter<'a, Buf> {
-    self.iter()
-        .flat_map(|buf| unsafe { buf.as_window_slice().iter() })
-        .map(|&b| b)
+    #[inline]
+    fn iter_buf<'a, B: Iobuf>(buf: &'a B) -> slice::Items<'a, u8> {
+        unsafe { buf.as_window_slice().iter() }
+    }
+
+    #[inline]
+    fn deref_u8(x: &u8) -> u8 { *x }
+
+    self.iter().flat_map(iter_buf).map(deref_u8)
   }
 
   /// Returns `true` iff the bytes in this `BufSpan` are the same as the bytes
@@ -465,10 +471,12 @@ impl<Buf: Iobuf> Ord for BufSpan<Buf> {
 
 /// An iterator over the bytes in a `BufSpan`.
 pub type ByteIter<'a, Buf> =
-  iter::Map<'static, &'a u8, u8,
-    iter::FlatMap<'static, &'a Buf,
+  iter::Map<&'a u8, u8,
+    iter::FlatMap<&'a Buf, &'a u8,
       SpanIter<'a, Buf>,
-      slice::Items<'a, u8>>>;
+      slice::Items<'a, u8>,
+      fn(&Buf) -> slice::Items<u8>>,
+    fn(&u8) -> u8>;
 
 /// An iterator over references to buffers inside a `BufSpan`.
 pub enum SpanIter<'a, Buf: 'a> {

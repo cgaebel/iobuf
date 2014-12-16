@@ -7,6 +7,7 @@ env:
 script:
   - cargo build --verbose
   - cargo test --verbose
+  - cargo bench --verbose
   - cargo doc --verbose
 after_script:
   - cp -R target/doc doc

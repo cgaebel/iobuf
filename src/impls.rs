@@ -170,7 +170,7 @@ impl<'a> Drop for RWIobuf<'a> {
 /// for i in range(0u32, 4) {
 ///   // This clone modifies the AROIobuf's atomic refcount.
 ///   let mut b = shared_b.clone();
-///   tasks.push(Future::spawn(proc() {
+///   tasks.push(Future::spawn(move || {
 ///     let start = i*0x40;
 ///     assert_eq!(b.advance(start), Ok(()));
 ///     assert_eq!(b.resize(0x40), Ok(()));
