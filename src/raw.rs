@@ -14,10 +14,10 @@ use core::option::Option::{mod, Some, None};
 use core::ptr::{mod, RawPtr};
 use core::raw::{mod, Repr};
 use core::result::Result::{mod, Ok, Err};
+use core::slice::SliceExt;
 use core::str::StrPrelude;
 use core::u32;
 use core::uint;
-use core::slice::{SliceExt, AsSlice};
 
 /// A generic, over all built-in number types. Think of it as [u,i][8,16,32,64].
 ///
@@ -434,7 +434,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn from_str<'a>(s: &'a str) -> RawIobuf<'a> {
+  pub fn from_str(s: &'a str) -> RawIobuf<'a> {
     RawIobuf::from_slice(s.as_bytes())
   }
 
@@ -449,7 +449,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn from_slice<'a>(s: &'a [u8]) -> RawIobuf<'a> {
+  pub fn from_slice(s: &'a [u8]) -> RawIobuf<'a> {
     unsafe {
       let s_slice: raw::Slice<u8> = mem::transmute(s);
       let ptr = s_slice.data as *mut u8;

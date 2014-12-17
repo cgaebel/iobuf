@@ -1072,7 +1072,7 @@ pub trait Iobuf: Clone + Show {
   unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T;
 
   /// For internal use only.
-  unsafe fn as_raw<'a>(&self) -> &RawIobuf<'a>;
+  unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b>;
 
   /// Gets a pointer to the start of the internal backing buffer. This is
   /// extremely low level, and it is not recommended you use this interface.

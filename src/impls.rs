@@ -273,7 +273,7 @@ impl<'a> ROIobuf<'a> {
   /// unsafe { assert_eq!(b.as_limit_slice(), b"hello"); }
   /// ```
   #[inline(always)]
-  pub fn from_str<'a>(s: &'a str) -> ROIobuf<'a> {
+  pub fn from_str(s: &'a str) -> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_str(s), nosync: NoSync, nosend: NoSend }
   }
 
@@ -345,7 +345,7 @@ impl<'a> ROIobuf<'a> {
   /// assert_eq!(b.peek_be(1), Ok(0x0304u16)); // ...and the Iobuf!
   /// ```
   #[inline(always)]
-  pub fn from_slice<'a>(s: &'a [u8]) -> ROIobuf<'a> {
+  pub fn from_slice(s: &'a [u8]) -> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_slice(s), nosync: NoSync, nosend: NoSend }
   }
 }
@@ -442,7 +442,7 @@ impl<'a> RWIobuf<'a> {
   /// assert_eq!(s[2], 100);
   /// ```
   #[inline(always)]
-  pub fn from_slice<'a>(s: &'a mut [u8]) -> RWIobuf<'a> {
+  pub fn from_slice(s: &'a mut [u8]) -> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::from_slice(s), nosync: NoSync, nosend: NoSend }
   }
 
@@ -1154,7 +1154,7 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
-  unsafe fn as_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
+  unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
 
   #[inline(always)]
   fn ptr(&self) -> *mut u8 { self.raw.ptr() }
@@ -1362,7 +1362,7 @@ impl Iobuf for AROIobuf {
   unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
-  unsafe fn as_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
+  unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
 
   #[inline(always)]
   fn ptr(&self) -> *mut u8 { self.raw.ptr() }
@@ -1574,7 +1574,7 @@ impl<'a> Iobuf for RWIobuf<'a> {
   unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
-  unsafe fn as_raw<'a>(&self) -> &RawIobuf<'a> { mem::transmute(&self.raw) }
+  unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
 
   #[inline(always)]
   fn ptr(&self) -> *mut u8 { self.raw.ptr() }
