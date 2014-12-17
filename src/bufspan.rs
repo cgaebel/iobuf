@@ -1,4 +1,3 @@
-use collections::slice::{mod, AsSlice, SlicePrelude};
 use collections::vec::{mod, Vec};
 use core::clone::Clone;
 use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
@@ -12,6 +11,8 @@ use core::iter::ExactSizeIterator;
 use core::option;
 use core::option::Option::{mod, Some, None};
 use core::result::Result::{mod, Ok, Err};
+use core::slice;
+use core::slice::{SliceExt, AsSlice};
 
 use iobuf::Iobuf;
 

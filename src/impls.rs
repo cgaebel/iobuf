@@ -7,9 +7,8 @@ use core::kinds::marker::{NoSend, NoSync};
 use core::mem;
 use core::ops::Drop;
 use core::result::Result::{mod, Ok, Err};
-use core::slice::SlicePrelude;
 use core::str::StrPrelude;
-
+use collections::slice::SliceExt;
 use raw::{Prim, Allocator, RawIobuf};
 use iobuf::Iobuf;
 
