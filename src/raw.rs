@@ -14,10 +14,10 @@ use core::option::Option::{mod, Some, None};
 use core::ptr::{mod, RawPtr};
 use core::raw::{mod, Repr};
 use core::result::Result::{mod, Ok, Err};
-use core::slice::SlicePrelude;
 use core::str::StrPrelude;
 use core::u32;
 use core::uint;
+use core::slice::{SliceExt, AsSlice};
 
 /// A generic, over all built-in number types. Think of it as [u,i][8,16,32,64].
 ///

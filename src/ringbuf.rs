@@ -1,7 +1,5 @@
-use collections::slice::SlicePrelude;
 use core::mem;
 use core::str::StrPrelude;
-
 use iobuf::Iobuf;
 use impls::{RWIobuf, ROIobuf};
 
