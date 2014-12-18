@@ -4,12 +4,11 @@ use alloc::boxed::Box;
 
 use core::atomic::{mod, AtomicUint};
 use core::fmt::{mod, Formatter};
-use core::kinds::{Copy, Sync, Send};
+use core::kinds::{Sync, Send};
 use core::kinds::marker::{ContravariantLifetime, NoCopy};
-use core::iter::{mod, IteratorExt};
+use core::iter::IteratorExt;
 use core::mem;
-use core::num::{FromPrimitive, ToPrimitive};
-use core::ops::{Shl, Shr, BitOr, BitAnd};
+use core::num::Int;
 use core::option::Option::{mod, Some, None};
 use core::ptr::{mod, RawPtr};
 use core::raw::{mod, Repr};
@@ -18,29 +17,6 @@ use core::slice::SliceExt;
 use core::str::StrPrelude;
 use core::u32;
 use core::uint;
-
-/// A generic, over all built-in number types. Think of it as [u,i][8,16,32,64].
-///
-/// `Prim` is intentionally not implemented for `int` and `uint`, since these
-/// have no portable representation. Are they 32 or 64 bits? No one knows.
-pub trait Prim
-  : Copy
-  + Shl<uint, Self>
-  + Shr<uint, Self>
-  + BitOr<Self, Self>
-  + BitAnd<Self, Self>
-  + FromPrimitive
-  + ToPrimitive
-{}
-
-impl Prim for i8  {}
-impl Prim for u8  {}
-impl Prim for i16 {}
-impl Prim for u16 {}
-impl Prim for i32 {}
-impl Prim for u32 {}
-impl Prim for i64 {}
-impl Prim for u64 {}
 
 #[cfg(target_word_size = "64")]
 const TARGET_WORD_SIZE: uint = 64;
@@ -952,7 +928,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn peek_be<T: Prim>(&self, pos: u32) -> Result<T, ()> {
+  pub fn peek_be<T: Int>(&self, pos: u32) -> Result<T, ()> {
     unsafe {
       try!(self.check_range_u32(pos, mem::size_of::<T>() as u32));
       Ok(self.unsafe_peek_be::<T>(pos))
@@ -960,7 +936,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn peek_le<T: Prim>(&self, pos: u32) -> Result<T, ()> {
+  pub fn peek_le<T: Int>(&self, pos: u32) -> Result<T, ()> {
     unsafe {
       try!(self.check_range_u32(pos, mem::size_of::<T>() as u32));
       Ok(self.unsafe_peek_le::<T>(pos))
@@ -976,7 +952,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn poke_be<T: Prim>(&self, pos: u32, t: T) -> Result<(), ()> {
+  pub fn poke_be<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> {
     unsafe {
       try!(self.check_range_u32(pos, mem::size_of::<T>() as u32));
       Ok(self.unsafe_poke_be(pos, t))
@@ -984,7 +960,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn poke_le<T: Prim>(&self, pos: u32, t: T) -> Result<(), ()> {
+  pub fn poke_le<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> {
     unsafe {
       try!(self.check_range_u32(pos, mem::size_of::<T>() as u32));
       Ok(self.unsafe_poke_le(pos, t))
@@ -1000,7 +976,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn fill_be<T: Prim>(&mut self, t: T) -> Result<(), ()> {
+  pub fn fill_be<T: Int>(&mut self, t: T) -> Result<(), ()> {
     unsafe {
       try!(self.check_range_u32(0, mem::size_of::<T>() as u32));
       Ok(self.unsafe_fill_be(t))
@@ -1008,7 +984,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn fill_le<T: Prim>(&mut self, t: T) -> Result<(), ()> {
+  pub fn fill_le<T: Int>(&mut self, t: T) -> Result<(), ()> {
     unsafe {
       try!(self.check_range_u32(0, mem::size_of::<T>() as u32));
       Ok(self.unsafe_fill_le(t)) // Ok, unsafe fillet? om nom.
@@ -1024,7 +1000,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn consume_le<T: Prim>(&mut self) -> Result<T, ()> {
+  pub fn consume_le<T: Int>(&mut self) -> Result<T, ()> {
     unsafe {
       try!(self.check_range_u32(0, mem::size_of::<T>() as u32));
       Ok(self.unsafe_consume_le())
@@ -1032,27 +1008,11 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn consume_be<T: Prim>(&mut self) -> Result<T, ()> {
+  pub fn consume_be<T: Int>(&mut self) -> Result<T, ()> {
     unsafe {
       try!(self.check_range_u32(0, mem::size_of::<T>() as u32));
       Ok(self.unsafe_consume_be())
     }
-  }
-
-  #[inline]
-  pub unsafe fn get_at<T: Prim>(&self, pos: u32) -> T {
-    self.debug_check_range_u32(pos, 1);
-    FromPrimitive::from_u8(
-      ptr::read(self.buf.offset((self.lo + pos) as int) as *const u8))
-      .unwrap()
-  }
-
-  #[inline]
-  pub unsafe fn set_at<T: Prim>(&self, pos: u32, val: T) {
-    self.debug_check_range_u32(pos, 1);
-    ptr::write(
-      self.buf.offset((self.lo + pos) as int),
-      val.to_u8().unwrap())
   }
 
   #[inline]
@@ -1069,36 +1029,37 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_peek_be<T: Prim>(&self, pos: u32) -> T {
-    let bytes = mem::size_of::<T>() as u32;
-    self.debug_check_range_u32(pos, bytes);
+  pub unsafe fn unsafe_peek_be<T: Int>(&self, pos: u32) -> T {
+    let len = mem::size_of::<T>();
+    self.debug_check_range_uint(pos, len);
 
-    let mut x: T = FromPrimitive::from_u8(0).unwrap();
+    // workaround for the fact that size_of doesn't yield a constant.
+    assert!(len <= 8);
+    let mut dst: [u8, ..8] = mem::uninitialized();
 
-    // Left shift by 8 is undefined for u8.
-    if bytes == 1 {
-      x = self.get_at::<T>(pos);
-    } else {
-      for i in iter::range(0, bytes) {
-        x = self.get_at::<T>(pos+i) | (x << 8);
-      }
-    }
-
-    x
+    let dst_ptr: *mut u8 = dst.as_mut_ptr();
+    ptr::copy_nonoverlapping_memory(
+      dst_ptr,
+      self.buf.offset((self.lo + pos) as int) as *const u8,
+      len);
+    Int::from_be(*(dst_ptr as *const T))
   }
 
   #[inline]
-  pub unsafe fn unsafe_peek_le<T: Prim>(&self, pos: u32) -> T {
-    let bytes = mem::size_of::<T>() as u32;
-    self.debug_check_range_u32(pos, bytes);
+  pub unsafe fn unsafe_peek_le<T: Int>(&self, pos: u32) -> T {
+    let len = mem::size_of::<T>();
+    self.debug_check_range_uint(pos, len);
 
-    let mut x: T = FromPrimitive::from_u8(0).unwrap();
+    // workaround for the fact that size_of doesn't yield a constant.
+    assert!(len <= 8);
+    let mut dst: [u8, ..8] = mem::uninitialized();
 
-    for i in iter::range(0, bytes) {
-      x = (x >> 8) | (self.get_at::<T>(pos+i) << ((bytes - 1) * 8) as uint);
-    }
-
-    x
+    let dst_ptr: *mut u8 = dst.as_mut_ptr();
+    ptr::copy_nonoverlapping_memory(
+      dst_ptr,
+      self.buf.offset((self.lo + pos) as int) as *const u8,
+      len);
+    Int::from_le(*(dst_ptr as *const T))
   }
 
   #[inline]
@@ -1115,27 +1076,31 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_poke_be<T: Prim>(&self, pos: u32, t: T) {
-    let bytes = mem::size_of::<T>() as u32;
-    self.debug_check_range_u32(pos, bytes);
+  pub unsafe fn unsafe_poke_be<T: Int>(&self, pos: u32, mut t: T) {
+    let len = mem::size_of::<T>();
+    self.debug_check_range_uint(pos, len);
 
-    let msk: T = FromPrimitive::from_u8(0xFF).unwrap();
+    t = t.to_be();
 
-    for i in iter::range(0, bytes) {
-      self.set_at(pos+i, (t >> ((bytes-i-1)*8) as uint) & msk);
-    }
+    let tp = &t as *const T;
+
+    ptr::copy_nonoverlapping_memory(
+      self.buf.offset((self.lo + pos) as int),
+      tp as *const u8,
+      len);
   }
 
   #[inline]
-  pub unsafe fn unsafe_poke_le<T: Prim>(&self, pos: u32, t: T) {
-    let bytes = mem::size_of::<T>() as u32;
-    self.debug_check_range_u32(pos, bytes);
+  pub unsafe fn unsafe_poke_le<T: Int>(&self, pos: u32, mut t: T) {
+    let len = mem::size_of::<T>();
+    self.debug_check_range_uint(pos, len);
 
-    let msk: T = FromPrimitive::from_u8(0xFF).unwrap();
+    t = t.to_le();
 
-    for i in iter::range(0, bytes) {
-      self.set_at(pos+i, (t >> (i*8) as uint) & msk);
-    }
+    ptr::copy_nonoverlapping_memory(
+      self.buf.offset((self.lo + pos) as int),
+      &t as *const T as *const u8,
+      len);
   }
 
   #[inline]
@@ -1146,7 +1111,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_fill_be<T: Prim>(&mut self, t: T) {
+  pub unsafe fn unsafe_fill_be<T: Int>(&mut self, t: T) {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(0, bytes);
     self.unsafe_poke_be(0, t);
@@ -1154,7 +1119,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_fill_le<T: Prim>(&mut self, t: T) {
+  pub unsafe fn unsafe_fill_le<T: Int>(&mut self, t: T) {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(0, bytes);
     self.unsafe_poke_le(0, t);
@@ -1169,7 +1134,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T {
+  pub unsafe fn unsafe_consume_le<T: Int>(&mut self) -> T {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(0, bytes);
     let ret = self.unsafe_peek_le::<T>(0);
@@ -1178,7 +1143,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T {
+  pub unsafe fn unsafe_consume_be<T: Int>(&mut self) -> T {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(0, bytes);
     let ret = self.unsafe_peek_be::<T>(0);

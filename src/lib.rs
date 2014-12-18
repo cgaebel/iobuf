@@ -58,7 +58,7 @@
 // Also, when you do that, file an issue letting me know you had to do that.
 // I'll use that as a cue to break out `BufSpan` into its own library.
 
-pub use raw::{Prim, Allocator};
+pub use raw::Allocator;
 pub use iobuf::Iobuf;
 pub use impls::{RWIobuf, ROIobuf, AROIobuf, UniqueIobuf};
 pub use ringbuf::IORingbuf;

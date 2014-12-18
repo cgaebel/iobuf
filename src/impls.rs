@@ -5,11 +5,12 @@ use core::clone::Clone;
 use core::fmt::{mod, Formatter, Show};
 use core::kinds::marker::{NoSend, NoSync};
 use core::mem;
+use core::num::Int;
 use core::ops::Drop;
 use core::result::Result::{mod, Ok, Err};
 use core::str::StrPrelude;
 use collections::slice::SliceExt;
-use raw::{Prim, Allocator, RawIobuf};
+use raw::{Allocator, RawIobuf};
 use iobuf::Iobuf;
 
 /// Read-Only Iobuf
@@ -645,7 +646,7 @@ impl<'a> RWIobuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
   /// ```
   #[inline(always)]
-  pub fn poke_be<T: Prim>(&self, pos: u32, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
+  pub fn poke_be<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
 
   /// Writes a little-endian primitive at a given offset from the beginning of
   /// the window.
@@ -666,7 +667,7 @@ impl<'a> RWIobuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
   /// ```
   #[inline(always)]
-  pub fn poke_le<T: Prim>(&self, pos: u32, t: T) -> Result<(), ()> { self.raw.poke_le(pos, t) }
+  pub fn poke_le<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> { self.raw.poke_le(pos, t) }
 
   /// Writes bytes from the supplied buffer, starting from the front of the
   /// window. Either the entire buffer is copied, or an error is returned
@@ -717,7 +718,7 @@ impl<'a> RWIobuf<'a> {
   ///                                          , 0x88, 0x77 ].as_slice()); }
   /// ```
   #[inline(always)]
-  pub fn fill_be<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_be(t) }
+  pub fn fill_be<T: Int>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_be(t) }
 
   /// Writes a little-endian primitive into the beginning of the window.
   ///
@@ -743,7 +744,7 @@ impl<'a> RWIobuf<'a> {
   ///                                          , 0x77, 0x88 ].as_slice()); }
   /// ```
   #[inline(always)]
-  pub fn fill_le<T: Prim>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
+  pub fn fill_le<T: Int>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
 
   /// Writes the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. It is undefined behavior to write outside the iobuf
@@ -795,7 +796,7 @@ impl<'a> RWIobuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), [ 3, 5, 5, 6, 7, 8, 9 ].as_slice()); }
   /// ```
   #[inline(always)]
-  pub unsafe fn unsafe_poke_be<T: Prim>(&self, pos: u32, t: T) { self.raw.unsafe_poke_be(pos, t) }
+  pub unsafe fn unsafe_poke_be<T: Int>(&self, pos: u32, t: T) { self.raw.unsafe_poke_be(pos, t) }
 
   /// Writes a little-endian primitive at a given offset from the beginning of
   /// the window. It is undefined behavior to write outside the iobuf window.
@@ -818,7 +819,7 @@ impl<'a> RWIobuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
   /// ```
   #[inline(always)]
-  pub unsafe fn unsafe_poke_le<T: Prim>(&self, pos: u32, t: T) { self.raw.unsafe_poke_le(pos, t) }
+  pub unsafe fn unsafe_poke_le<T: Int>(&self, pos: u32, t: T) { self.raw.unsafe_poke_le(pos, t) }
 
   /// Writes bytes from the supplied buffer, starting from the front of the
   /// window. It is undefined behavior to write outside the iobuf window.
@@ -874,7 +875,7 @@ impl<'a> RWIobuf<'a> {
   ///                                          , 0x88, 0x77 ].as_slice()); }
   /// ```
   #[inline(always)]
-  pub unsafe fn unsafe_fill_be<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_be(t) }
+  pub unsafe fn unsafe_fill_be<T: Int>(&mut self, t: T) { self.raw.unsafe_fill_be(t) }
 
   /// Writes a little-endian primitive into the beginning of the window. It is
   /// undefined behavior to write outside the iobuf window.
@@ -903,7 +904,7 @@ impl<'a> RWIobuf<'a> {
   ///                                          , 0x77, 0x88 ].as_slice()); }
   /// ```
   #[inline(always)]
-  pub unsafe fn unsafe_fill_le<T: Prim>(&mut self, t: T) { self.raw.unsafe_fill_le(t) }
+  pub unsafe fn unsafe_fill_le<T: Int>(&mut self, t: T) { self.raw.unsafe_fill_le(t) }
 }
 
 impl AROIobuf {
@@ -1116,16 +1117,16 @@ impl<'a> Iobuf for ROIobuf<'a> {
   #[inline(always)]
   fn peek(&self, pos: u32, dst: &mut [u8]) -> Result<(), ()> { self.raw.peek(pos, dst) }
   #[inline(always)]
-  fn peek_be<T: Prim>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_be(pos) }
+  fn peek_be<T: Int>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_be(pos) }
   #[inline(always)]
-  fn peek_le<T: Prim>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_le(pos) }
+  fn peek_le<T: Int>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_le(pos) }
 
   #[inline(always)]
   fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()> { self.raw.consume(dst) }
   #[inline(always)]
-  fn consume_be<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_be::<T>() }
+  fn consume_be<T: Int>(&mut self) -> Result<T, ()> { self.raw.consume_be::<T>() }
   #[inline(always)]
-  fn consume_le<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_le::<T>() }
+  fn consume_le<T: Int>(&mut self) -> Result<T, ()> { self.raw.consume_le::<T>() }
 
   #[inline(always)]
   fn check_range(&self, pos: u32, len: u32) -> Result<(), ()> { self.raw.check_range_u32(pos, len) }
@@ -1142,16 +1143,16 @@ impl<'a> Iobuf for ROIobuf<'a> {
   #[inline(always)]
   unsafe fn unsafe_peek(&self, pos: u32, dst: &mut [u8]) { self.raw.unsafe_peek(pos, dst) }
   #[inline(always)]
-  unsafe fn unsafe_peek_be<T: Prim>(&self, pos: u32) -> T { self.raw.unsafe_peek_be(pos) }
+  unsafe fn unsafe_peek_be<T: Int>(&self, pos: u32) -> T { self.raw.unsafe_peek_be(pos) }
   #[inline(always)]
-  unsafe fn unsafe_peek_le<T: Prim>(&self, pos: u32) -> T { self.raw.unsafe_peek_le(pos) }
+  unsafe fn unsafe_peek_le<T: Int>(&self, pos: u32) -> T { self.raw.unsafe_peek_le(pos) }
 
   #[inline(always)]
   unsafe fn unsafe_consume(&mut self, dst: &mut [u8]) { self.raw.unsafe_consume(dst) }
   #[inline(always)]
-  unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_be::<T>() }
+  unsafe fn unsafe_consume_be<T: Int>(&mut self) -> T { self.raw.unsafe_consume_be::<T>() }
   #[inline(always)]
-  unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
+  unsafe fn unsafe_consume_le<T: Int>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
   unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
@@ -1324,16 +1325,16 @@ impl Iobuf for AROIobuf {
   #[inline(always)]
   fn peek(&self, pos: u32, dst: &mut [u8]) -> Result<(), ()> { self.raw.peek(pos, dst) }
   #[inline(always)]
-  fn peek_be<T: Prim>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_be(pos) }
+  fn peek_be<T: Int>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_be(pos) }
   #[inline(always)]
-  fn peek_le<T: Prim>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_le(pos) }
+  fn peek_le<T: Int>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_le(pos) }
 
   #[inline(always)]
   fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()> { self.raw.consume(dst) }
   #[inline(always)]
-  fn consume_be<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_be::<T>() }
+  fn consume_be<T: Int>(&mut self) -> Result<T, ()> { self.raw.consume_be::<T>() }
   #[inline(always)]
-  fn consume_le<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_le::<T>() }
+  fn consume_le<T: Int>(&mut self) -> Result<T, ()> { self.raw.consume_le::<T>() }
 
   #[inline(always)]
   fn check_range(&self, pos: u32, len: u32) -> Result<(), ()> { self.raw.check_range_u32(pos, len) }
@@ -1350,16 +1351,16 @@ impl Iobuf for AROIobuf {
   #[inline(always)]
   unsafe fn unsafe_peek(&self, pos: u32, dst: &mut [u8]) { self.raw.unsafe_peek(pos, dst) }
   #[inline(always)]
-  unsafe fn unsafe_peek_be<T: Prim>(&self, pos: u32) -> T { self.raw.unsafe_peek_be(pos) }
+  unsafe fn unsafe_peek_be<T: Int>(&self, pos: u32) -> T { self.raw.unsafe_peek_be(pos) }
   #[inline(always)]
-  unsafe fn unsafe_peek_le<T: Prim>(&self, pos: u32) -> T { self.raw.unsafe_peek_le(pos) }
+  unsafe fn unsafe_peek_le<T: Int>(&self, pos: u32) -> T { self.raw.unsafe_peek_le(pos) }
 
   #[inline(always)]
   unsafe fn unsafe_consume(&mut self, dst: &mut [u8]) { self.raw.unsafe_consume(dst) }
   #[inline(always)]
-  unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_be::<T>() }
+  unsafe fn unsafe_consume_be<T: Int>(&mut self) -> T { self.raw.unsafe_consume_be::<T>() }
   #[inline(always)]
-  unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
+  unsafe fn unsafe_consume_le<T: Int>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
   unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
@@ -1536,16 +1537,16 @@ impl<'a> Iobuf for RWIobuf<'a> {
   #[inline(always)]
   fn peek(&self, pos: u32, dst: &mut [u8]) -> Result<(), ()> { self.raw.peek(pos, dst) }
   #[inline(always)]
-  fn peek_be<T: Prim>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_be(pos) }
+  fn peek_be<T: Int>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_be(pos) }
   #[inline(always)]
-  fn peek_le<T: Prim>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_le(pos) }
+  fn peek_le<T: Int>(&self, pos: u32) -> Result<T, ()> { self.raw.peek_le(pos) }
 
   #[inline(always)]
   fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()> { self.raw.consume(dst) }
   #[inline(always)]
-  fn consume_be<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_be::<T>() }
+  fn consume_be<T: Int>(&mut self) -> Result<T, ()> { self.raw.consume_be::<T>() }
   #[inline(always)]
-  fn consume_le<T: Prim>(&mut self) -> Result<T, ()> { self.raw.consume_le::<T>() }
+  fn consume_le<T: Int>(&mut self) -> Result<T, ()> { self.raw.consume_le::<T>() }
 
   #[inline(always)]
   fn check_range(&self, pos: u32, len: u32) -> Result<(), ()> { self.raw.check_range_u32(pos, len) }
@@ -1562,16 +1563,16 @@ impl<'a> Iobuf for RWIobuf<'a> {
   #[inline(always)]
   unsafe fn unsafe_peek(&self, pos: u32, dst: &mut [u8]) { self.raw.unsafe_peek(pos, dst) }
   #[inline(always)]
-  unsafe fn unsafe_peek_be<T: Prim>(&self, pos: u32) -> T { self.raw.unsafe_peek_be(pos) }
+  unsafe fn unsafe_peek_be<T: Int>(&self, pos: u32) -> T { self.raw.unsafe_peek_be(pos) }
   #[inline(always)]
-  unsafe fn unsafe_peek_le<T: Prim>(&self, pos: u32) -> T { self.raw.unsafe_peek_le(pos) }
+  unsafe fn unsafe_peek_le<T: Int>(&self, pos: u32) -> T { self.raw.unsafe_peek_le(pos) }
 
   #[inline(always)]
   unsafe fn unsafe_consume(&mut self, dst: &mut [u8]) { self.raw.unsafe_consume(dst) }
   #[inline(always)]
-  unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_be::<T>() }
+  unsafe fn unsafe_consume_be<T: Int>(&mut self) -> T { self.raw.unsafe_consume_be::<T>() }
   #[inline(always)]
-  unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
+  unsafe fn unsafe_consume_le<T: Int>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
   unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }

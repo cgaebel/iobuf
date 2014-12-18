@@ -3,9 +3,10 @@ use alloc::boxed::Box;
 
 use core::clone::Clone;
 use core::fmt::Show;
+use core::num::Int;
 use core::result::Result;
 
-use raw::{Prim, Allocator, RawIobuf};
+use raw::{Allocator, RawIobuf};
 use impls::{AROIobuf, RWIobuf, UniqueIobuf};
 
 /// Input/Output Buffer
@@ -782,7 +783,7 @@ pub trait Iobuf: Clone + Show {
   /// assert_eq!(b.peek_be(1), Ok(0x0304u16));
   /// assert_eq!(b.peek_be::<u16>(2), Err(()));
   /// ```
-  fn peek_be<T: Prim>(&self, pos: u32) -> Result<T, ()>;
+  fn peek_be<T: Int>(&self, pos: u32) -> Result<T, ()>;
 
   /// Reads a little-endian primitive at a given offset from the beginning of
   /// the window.
@@ -801,7 +802,7 @@ pub trait Iobuf: Clone + Show {
   /// assert_eq!(b.peek_le(1), Ok(0x0403u16));
   /// assert_eq!(b.peek_le::<u16>(2), Err(()));
   /// ```
-  fn peek_le<T: Prim>(&self, pos: u32) -> Result<T, ()>;
+  fn peek_le<T: Int>(&self, pos: u32) -> Result<T, ()>;
 
   /// Reads bytes, starting from the front of the window, into the supplied
   /// buffer. Either the entire buffer is filled, or an error is returned
@@ -847,7 +848,7 @@ pub trait Iobuf: Clone + Show {
   /// assert_eq!(b.consume_be::<u16>(), Err(()));
   /// assert_eq!(b.consume_be(), Ok(0x04u8));
   /// ```
-  fn consume_be<T: Prim>(&mut self) -> Result<T, ()>;
+  fn consume_be<T: Int>(&mut self) -> Result<T, ()>;
 
   /// Reads a little-endian primitive from the beginning of the window.
   ///
@@ -868,7 +869,7 @@ pub trait Iobuf: Clone + Show {
   /// assert_eq!(b.consume_le::<u16>(), Err(()));
   /// assert_eq!(b.consume_le(), Ok(0x04u8));
   /// ```
-  fn consume_le<T: Prim>(&mut self) -> Result<T, ()>;
+  fn consume_le<T: Int>(&mut self) -> Result<T, ()>;
 
   /// Returns an `Err(())` if the `len` bytes, starting at `pos`, are not all
   /// in the window. To be used with the `try!` macro.
@@ -995,7 +996,7 @@ pub trait Iobuf: Clone + Show {
   ///   assert_eq!(z, 0x0102 + 0x03040506);
   /// }
   /// ```
-  unsafe fn unsafe_peek_be<T: Prim>(&self, pos: u32) -> T;
+  unsafe fn unsafe_peek_be<T: Int>(&self, pos: u32) -> T;
 
   /// Reads a little-endian primitive at a given offset from the beginning of
   /// the window. It is undefined behavior to read outside the iobuf window.
@@ -1016,7 +1017,7 @@ pub trait Iobuf: Clone + Show {
   ///   assert_eq!(z, 0x0201 + 0x06050403);
   /// }
   /// ```
-  unsafe fn unsafe_peek_le<T: Prim>(&self, pos: u32) -> T;
+  unsafe fn unsafe_peek_le<T: Int>(&self, pos: u32) -> T;
 
   /// Reads bytes, starting from the front of the window, into the supplied
   /// buffer. After the bytes have been read, the window will be moved to no
@@ -1046,7 +1047,7 @@ pub trait Iobuf: Clone + Show {
   ///   assert_eq!(b.unsafe_consume_be::<u8>(), 0x04u8);
   /// }
   /// ```
-  unsafe fn unsafe_consume_be<T: Prim>(&mut self) -> T;
+  unsafe fn unsafe_consume_be<T: Int>(&mut self) -> T;
 
   /// Reads a little-endian primitive at the beginning of the window.
   ///
@@ -1069,7 +1070,7 @@ pub trait Iobuf: Clone + Show {
   ///   assert_eq!(b.unsafe_consume_le::<u8>(), 0x04u8);
   /// }
   /// ```
-  unsafe fn unsafe_consume_le<T: Prim>(&mut self) -> T;
+  unsafe fn unsafe_consume_le<T: Int>(&mut self) -> T;
 
   /// For internal use only.
   unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b>;
