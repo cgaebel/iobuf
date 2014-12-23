@@ -482,19 +482,9 @@ pub type ByteIter<'a, Buf> =
 /// An iterator over references to buffers inside a `BufSpan`.
 pub enum SpanIter<'a, Buf: 'a> {
   /// An optional item to iterate over.
-  Opt(option::Item<&'a Buf>),
+  Opt(option::IntoIter<&'a Buf>),
   /// A lot of items to iterate over.
   Lot(slice::Items<'a, Buf>),
-}
-
-impl<'a, Buf: Iobuf> Clone for SpanIter<'a, Buf> {
-  #[inline(always)]
-  fn clone(&self) -> SpanIter<'a, Buf> {
-    match *self {
-      Opt(ref iter) => Opt((*iter).clone()),
-      Lot(ref iter) => Lot((*iter).clone()),
-    }
-  }
 }
 
 impl<'a, Buf: Iobuf> Iterator<&'a Buf> for SpanIter<'a, Buf> {
@@ -534,7 +524,7 @@ impl<'a, Buf: Iobuf> ExactSizeIterator<&'a Buf> for SpanIter<'a, Buf> {}
 /// A moving iterator over buffers inside a `BufSpan`.
 pub enum SpanMoveIter<Buf> {
   /// An optional item to iterate over.
-  MoveOpt(option::Item<Buf>),
+  MoveOpt(option::IntoIter<Buf>),
   /// A lot of items to iterate over.
   MoveLot(vec::MoveItems<Buf>),
 }

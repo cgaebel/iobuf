@@ -1033,16 +1033,14 @@ impl<'a> RawIobuf<'a> {
     let len = mem::size_of::<T>();
     self.debug_check_range_uint(pos, len);
 
-    // workaround for the fact that size_of doesn't yield a constant.
-    assert!(len <= 8);
-    let mut dst: [u8, ..8] = mem::uninitialized();
+    let mut dst: T = mem::uninitialized();
 
-    let dst_ptr: *mut u8 = dst.as_mut_ptr();
+    let dst_ptr = &mut dst as *mut T;
     ptr::copy_nonoverlapping_memory(
-      dst_ptr,
+      dst_ptr as *mut u8,
       self.buf.offset((self.lo + pos) as int) as *const u8,
       len);
-    Int::from_be(*(dst_ptr as *const T))
+    Int::from_be(dst)
   }
 
   #[inline]
@@ -1050,16 +1048,14 @@ impl<'a> RawIobuf<'a> {
     let len = mem::size_of::<T>();
     self.debug_check_range_uint(pos, len);
 
-    // workaround for the fact that size_of doesn't yield a constant.
-    assert!(len <= 8);
-    let mut dst: [u8, ..8] = mem::uninitialized();
+    let mut dst: T = mem::uninitialized();
 
-    let dst_ptr: *mut u8 = dst.as_mut_ptr();
+    let dst_ptr = &mut dst as *mut T;
     ptr::copy_nonoverlapping_memory(
-      dst_ptr,
+      dst_ptr as *mut u8,
       self.buf.offset((self.lo + pos) as int) as *const u8,
       len);
-    Int::from_le(*(dst_ptr as *const T))
+    Int::from_le(dst)
   }
 
   #[inline]
