@@ -14,9 +14,9 @@ use core::ptr::{mod, RawPtr};
 use core::raw::{mod, Repr};
 use core::result::Result::{mod, Ok, Err};
 use core::slice::SliceExt;
-use core::str::StrPrelude;
 use core::u32;
 use core::uint;
+use collections::str::StrExt;
 
 #[cfg(target_word_size = "64")]
 const TARGET_WORD_SIZE: uint = 64;
