@@ -13,6 +13,7 @@ use core::option::Option::{mod, Some, None};
 use core::result::Result::{mod, Ok, Err};
 use core::slice;
 use core::slice::{SliceExt, AsSlice};
+use core::ops::Fn;
 
 use iobuf::Iobuf;
 
@@ -265,12 +266,15 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   #[inline]
   pub fn iter_bytes<'a>(&'a self) -> ByteIter<'a, Buf> {
     #[inline]
-    fn iter_buf<'a, B: Iobuf>(buf: &'a B) -> slice::Items<'a, u8> {
+    fn iter_buf_<B: Iobuf>(buf: &B) -> slice::Iter<u8> {
         unsafe { buf.as_window_slice().iter() }
     }
 
     #[inline]
-    fn deref_u8(x: &u8) -> u8 { *x }
+    fn deref_u8_(x: &u8) -> u8 { *x }
+
+    let iter_buf : fn(&Buf) -> slice::Iter<u8> = iter_buf_;
+    let deref_u8 : fn(&u8) -> u8 = deref_u8_;
 
     self.iter().flat_map(iter_buf).map(deref_u8)
   }
@@ -475,8 +479,8 @@ pub type ByteIter<'a, Buf> =
   iter::Map<&'a u8, u8,
     iter::FlatMap<&'a Buf, &'a u8,
       SpanIter<'a, Buf>,
-      slice::Items<'a, u8>,
-      fn(&Buf) -> slice::Items<u8>>,
+      slice::Iter<'a, u8>,
+      fn(&Buf) -> slice::Iter<u8>>,
     fn(&u8) -> u8>;
 
 /// An iterator over references to buffers inside a `BufSpan`.
@@ -484,7 +488,7 @@ pub enum SpanIter<'a, Buf: 'a> {
   /// An optional item to iterate over.
   Opt(option::IntoIter<&'a Buf>),
   /// A lot of items to iterate over.
-  Lot(slice::Items<'a, Buf>),
+  Lot(slice::Iter<'a, Buf>),
 }
 
 impl<'a, Buf: Iobuf> Iterator<&'a Buf> for SpanIter<'a, Buf> {
@@ -526,7 +530,7 @@ pub enum SpanMoveIter<Buf> {
   /// An optional item to iterate over.
   MoveOpt(option::IntoIter<Buf>),
   /// A lot of items to iterate over.
-  MoveLot(vec::MoveItems<Buf>),
+  MoveLot(vec::IntoIter<Buf>),
 }
 
 impl<Buf: Iobuf> Iterator<Buf> for SpanMoveIter<Buf> {

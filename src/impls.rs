@@ -8,7 +8,6 @@ use core::mem;
 use core::num::Int;
 use core::ops::Drop;
 use core::result::Result::{mod, Ok, Err};
-use core::str::StrPrelude;
 use collections::slice::SliceExt;
 use raw::{Allocator, RawIobuf};
 use iobuf::Iobuf;
