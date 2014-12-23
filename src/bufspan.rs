@@ -613,8 +613,10 @@ mod bench {
   fn extend_1k_iobuf_0(b: &mut Bencher) {
     b.iter(|| {
       let source = RWIobuf::new(1024);
-      for i in range(0, 1000) {
+      let mut i = 0u32;
+      for _ in range(0u32, 1000) {
         unsafe { source.unsafe_poke_be(i, b'a'); }
+        i += 1;
       }
       let mut source = source.read_only();
 
@@ -636,8 +638,10 @@ mod bench {
   fn extend_1k_iobuf_1(b: &mut Bencher) {
     b.iter(|| {
       let source = RWIobuf::new(1024);
-      for i in range(0, 1000) {
+      let mut i = 0u32;
+      for _ in range(0u32, 1000) {
         unsafe { source.unsafe_poke_be(i, b'a'); }
+        i += 1;
       }
       let mut source = source.read_only();
 
@@ -657,16 +661,16 @@ mod bench {
   #[bench]
   fn extend_1k_iobuf_2(b: &mut Bencher) {
     let source = RWIobuf::new(1024);
-    for i in range(0, 500) {
-      unsafe {
-        source.unsafe_poke_be(i, b'a');
-      }
+    let mut i = 0u32;
+    for _ in range(0u32, 500) {
+      unsafe { source.unsafe_poke_be(i, b'a'); }
+      i += 1;
     }
 
-    for i in range(500, 1000) {
-      unsafe {
-        source.unsafe_poke_be(i, b'b');
-      }
+    i = 500;
+    for _ in range(500u32, 1000) {
+      unsafe { source.unsafe_poke_be(i, b'b'); }
+      i += 1;
     }
 
     b.iter(|| {
@@ -695,16 +699,16 @@ mod bench {
   #[bench]
   fn extend_1k_iobuf_3(b: &mut Bencher) {
     let source = RWIobuf::new(1024);
-    for i in range(0, 500) {
-      unsafe {
-        source.unsafe_poke_be(i, b'a');
-      }
+    let mut i = 0u32;
+    for _ in range(0u32, 500) {
+      unsafe { source.unsafe_poke_be(i, b'a'); }
+      i += 1;
     }
 
-    for i in range(500, 1000) {
-      unsafe {
-        source.unsafe_poke_be(i, b'b');
-      }
+    let mut i = 500;
+    for _ in range(500u32, 1000) {
+      unsafe { source.unsafe_poke_be(i, b'b'); }
+      i += 1;
     }
 
     b.iter(|| {
