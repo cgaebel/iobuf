@@ -13,7 +13,6 @@ use core::option::Option::{mod, Some, None};
 use core::result::Result::{mod, Ok, Err};
 use core::slice;
 use core::slice::{SliceExt, AsSlice};
-use core::ops::Fn;
 
 use iobuf::Iobuf;
 
@@ -92,7 +91,7 @@ impl<Buf: Iobuf> Extend<Buf> for BufSpan<Buf> {
 impl<Buf: Iobuf> BufSpan<Buf> {
   /// Creates a new, empty `Bufspan`.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let s: BufSpan<ROIobuf<'static>> = BufSpan::new();
@@ -105,7 +104,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// Creates a new `BufSpan` from an Iobuf.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let s = BufSpan::from_buf(ROIobuf::from_slice(b"hello"));
@@ -119,7 +118,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// Returns `true` iff the span is over an empty range.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, Iobuf, ROIobuf};
   ///
   /// let mut s = BufSpan::new();
@@ -175,7 +174,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// previously pushed buffer, the range will be extended. Otherwise, the new
   /// non-extension buffer will be added to the end of a vector.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, Iobuf, ROIobuf};
   ///
   /// let mut s = BufSpan::new();
@@ -282,7 +281,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// Returns `true` iff the bytes in this `BufSpan` are the same as the bytes
   /// in the other `BufSpan`.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, ROIobuf, RWIobuf};
   ///
   /// let a = BufSpan::from_buf(ROIobuf::from_str("hello"));
@@ -307,7 +306,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// A more efficient version of byte_equal, specialized to work exclusively on
   /// slices.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let a = BufSpan::from_buf(ROIobuf::from_str("hello"));
@@ -324,7 +323,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// Counts the number of bytes this `BufSpan` is over. This is
   /// `O(self.iter().len())`.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
@@ -350,7 +349,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// comparing that result, since we might be able to avoid iterating over all
   /// the buffers.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
@@ -386,7 +385,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// Extends this span to include the range denoted by another span.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
@@ -409,7 +408,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// Returns `true` if the span begins with the given bytes.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
@@ -432,7 +431,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// Returns `true` if the span ends with the given bytes.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));

@@ -117,7 +117,7 @@ impl<'a> Drop for RWIobuf<'a> {
 /// Below is an example of fill an Iobuf in one thread with the numbers 0x00 to
 /// 0xFF, and consuming/validating these numbers in parallel in 4 other threads:
 ///
-/// ```
+/// ```rust
 /// use iobuf::{RWIobuf, AROIobuf, Iobuf};
 /// use std::iter::range_inclusive;
 /// use std::sync::Future;
@@ -244,7 +244,7 @@ impl<'a> ROIobuf<'a> {
   /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
   /// an empty backing buffer. This will not allocate.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::empty();
@@ -262,7 +262,7 @@ impl<'a> ROIobuf<'a> {
   ///
   /// No copying or allocating will be done by this function.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -280,7 +280,7 @@ impl<'a> ROIobuf<'a> {
   /// Copies a `str` into a read-only Iobuf. The contents of the `str` will be
   /// copied, so prefer to use the other constructors whenever possible.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str_copy("hello");
@@ -306,7 +306,7 @@ impl<'a> ROIobuf<'a> {
   /// slice will be copied, so prefer to use the other constructors whenever
   /// possible.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut v = vec!(1u8, 2, 3, 4, 5, 6);
@@ -332,7 +332,7 @@ impl<'a> ROIobuf<'a> {
   /// Constructs an Iobuf from a slice. The Iobuf will not copy the slice
   /// contents, and therefore their lifetimes will be linked.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let s = [1,2,3,4];
@@ -354,7 +354,7 @@ impl<'a> RWIobuf<'a> {
   /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
   /// an empty backing buffer. This will not allocate.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::empty();
@@ -372,7 +372,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// The maximum length of an Iobuf is approximately 2 GB.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(10);
@@ -398,7 +398,7 @@ impl<'a> RWIobuf<'a> {
   /// Copies a `str` into a writeable Iobuf. The contents of the `str` will be
   /// copied, so prefer to use the non-copying constructors whenever possible.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::from_str_copy("hello");
@@ -425,7 +425,7 @@ impl<'a> RWIobuf<'a> {
   /// Constructs an Iobuf from a slice. The Iobuf will not copy the slice
   /// contents, and therefore their lifetimes will be linked.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut s = [1,2,3,4];
@@ -450,7 +450,7 @@ impl<'a> RWIobuf<'a> {
   /// slice will be copied, so prefer to use the other constructors whenever
   /// possible.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut v = vec!(1u8, 2, 3, 4, 5, 6, 10);
@@ -481,7 +481,7 @@ impl<'a> RWIobuf<'a> {
   /// interacts with the slice, as they point to the same data. `peek`ing or
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf, Iobuf};
   ///
   /// let mut s = [1,2,3];
@@ -509,7 +509,7 @@ impl<'a> RWIobuf<'a> {
   /// interacts with the slice, as they point to the same data. `peek`ing or
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf, Iobuf};
   ///
   /// let mut s = [1,2,3];
@@ -535,7 +535,7 @@ impl<'a> RWIobuf<'a> {
   /// In general, ROIobuf should never be used as a function parameter. If
   /// read-only acceess is all that is required, take a generic `<T: Iobuf>`.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,RWIobuf,Iobuf};
   ///
   /// let mut s = [1,2,3,4];
@@ -559,7 +559,7 @@ impl<'a> RWIobuf<'a> {
   /// is typically called after a series of `Consume`s to save unread data and
   /// prepare for the next series of `Fill`s and `flip_lo`s.
   ///
-  /// ```
+  /// ```rust
   /// use std::iter::range;
   /// use std::result::Result::{mod,Ok};
   /// use iobuf::{RWIobuf,Iobuf};
@@ -607,7 +607,7 @@ impl<'a> RWIobuf<'a> {
   /// the supplied buffer. Either the entire buffer is copied, or an error is
   /// returned because bytes outside of the window would be written.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1,2,3,4 ];
@@ -630,7 +630,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// An error is returned if bytes outside of the window would be accessed.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(10);
@@ -652,7 +652,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// An error is returned if bytes outside of the window would be accessed.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(10);
@@ -675,7 +675,7 @@ impl<'a> RWIobuf<'a> {
   /// After the bytes have been written, the window will be moved to no longer
   /// include then.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1, 2, 3, 4 ];
@@ -700,7 +700,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// An error is returned if bytes outside of the window were requested.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(10);
@@ -726,7 +726,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// An error is returned if bytes outside of the window were requested.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(10);
@@ -749,7 +749,7 @@ impl<'a> RWIobuf<'a> {
   /// the supplied buffer. It is undefined behavior to write outside the iobuf
   /// window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1,2,3,4 ];
@@ -777,7 +777,7 @@ impl<'a> RWIobuf<'a> {
   /// Writes a big-endian primitive at a given offset from the beginning of the
   /// window. It is undefined behavior to write outside the iobuf window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(10);
@@ -800,7 +800,7 @@ impl<'a> RWIobuf<'a> {
   /// Writes a little-endian primitive at a given offset from the beginning of
   /// the window. It is undefined behavior to write outside the iobuf window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(10);
@@ -826,7 +826,7 @@ impl<'a> RWIobuf<'a> {
   /// After the bytes have been written, the window will be moved to no longer
   /// include then.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1, 2, 3, 4 ];
@@ -853,7 +853,7 @@ impl<'a> RWIobuf<'a> {
   /// After the primitive has been written, the window will be moved such that
   /// it is no longer included.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(10);
@@ -882,7 +882,7 @@ impl<'a> RWIobuf<'a> {
   /// After the primitive has been written, the window will be moved such that
   /// it is no longer included.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(10);
@@ -910,7 +910,7 @@ impl AROIobuf {
   /// Stops atomically reference counting a unique buffer. This method returns
   /// `Ok` if the `AROIobuf` is the last of its kind, and `Err` if it's not.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{AROIobuf, ROIobuf, Iobuf};
   ///
   /// let buf: ROIobuf<'static> = ROIobuf::from_str_copy("hello, world!");
@@ -935,7 +935,7 @@ impl AROIobuf {
   /// Stops atomically reference counting a unique buffer. This method returns
   /// `Ok` if the `AROIobuf` is the last of its kind, and `Err` if it's not.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{AROIobuf, ROIobuf, RWIobuf, Iobuf};
   ///
   /// let buf: ROIobuf<'static> = ROIobuf::from_str_copy("hello, world!");

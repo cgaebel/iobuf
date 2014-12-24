@@ -31,7 +31,7 @@ lto = false
 
 # The testing profile, used for `cargo test`
 [profile.test]
-opt-level = 0
+opt-level = 1
 debug = true
 rpath = false
 lto = false

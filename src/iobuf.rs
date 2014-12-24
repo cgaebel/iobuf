@@ -32,7 +32,7 @@ pub trait Iobuf: Clone + Show {
   /// Copies the data byte-by-byte in the Iobuf into a new, writeable Iobuf.
   /// The new Iobuf and the old Iobuf will not share storage.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut s = [ 1, 2 ];
@@ -62,7 +62,7 @@ pub trait Iobuf: Clone + Show {
   /// Returns `Err` if the buffer is not the last to reference the underlying
   /// data. If this case is hit, the buffer passed by value is returned by value.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let b = RWIobuf::from_str_copy("hello, world");
@@ -88,7 +88,7 @@ pub trait Iobuf: Clone + Show {
   /// Returns `Err` if the buffer is not the last to reference the underlying
   /// data. If this case is hit, the buffer passed by value is returned by value.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let b = RWIobuf::from_str_copy("hello, world");
@@ -105,7 +105,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Returns the size of the window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("Hello");
@@ -119,7 +119,7 @@ pub trait Iobuf: Clone + Show {
   /// Returns the size of the limits. The capacity of an iobuf can be reduced
   /// via `narrow`.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("Hello");
@@ -135,7 +135,7 @@ pub trait Iobuf: Clone + Show {
 
   /// `true` if `len() == 0`.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// assert!(ROIobuf::from_str("").is_empty());
@@ -153,7 +153,7 @@ pub trait Iobuf: Clone + Show {
   /// immediately poke it into itself. This is unsafe, and undefined. However,
   /// it can be safely poked into a _different_ iobuf without issue.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// unsafe {
@@ -175,7 +175,7 @@ pub trait Iobuf: Clone + Show {
   /// immediately poke it into itself. This is unsafe, and undefined. However,
   /// it can be safely poked into a _different_ iobuf without issue.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// unsafe {
@@ -192,7 +192,7 @@ pub trait Iobuf: Clone + Show {
   /// Changes the Iobuf's bounds to the subrange specified by `pos` and `len`,
   /// which must lie within the current window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -207,7 +207,7 @@ pub trait Iobuf: Clone + Show {
   /// If your position and length do not lie in the current window, you will get
   /// an error.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -217,7 +217,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// If you want to slice from the start, use `sub_to`:
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -227,7 +227,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// If you want to slice to the end, use `sub_from`:
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -261,7 +261,7 @@ pub trait Iobuf: Clone + Show {
   /// Changes the Iobuf's limits and bounds to the subrange specified by
   /// `pos` and `len`, which must lie within the current window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -277,7 +277,7 @@ pub trait Iobuf: Clone + Show {
   /// If your position and length do not lie in the current window, you will get
   /// an error.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -287,7 +287,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// If you want to slice from the start, use `sub_to`:
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -297,7 +297,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// If you want to slice to the end, use `sub_from`:
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -329,7 +329,7 @@ pub trait Iobuf: Clone + Show {
   /// Overrides the existing limits and window of the Iobuf, returning `Err(())`
   /// if attempting to widen either of them.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -345,7 +345,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Sets the limits to the current window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -358,7 +358,7 @@ pub trait Iobuf: Clone + Show {
   /// Advances the lower bound of the window by `len`. `Err(())` will be
   /// returned if you advance past the upper bound of the window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -375,7 +375,7 @@ pub trait Iobuf: Clone + Show {
   /// checks into one. In this example, O(n) bounds checks are consolidated into
   /// O(1) bounds checks:
   ///
-  /// ```
+  /// ```rust
   /// use std::mem;
   /// use std::result::Result::{mod,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
@@ -410,7 +410,7 @@ pub trait Iobuf: Clone + Show {
   /// Alternatively, you could use `unsafe_consume` in a similar, arguably
   /// clearer way:
   ///
-  /// ```
+  /// ```rust
   /// use std::mem;
   /// use std::result::Result::{mod,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
@@ -443,7 +443,7 @@ pub trait Iobuf: Clone + Show {
   /// Advances the upper bound of the window by `len`. `Err(())` will be
   /// returned if you advance past the upper limit.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -463,7 +463,7 @@ pub trait Iobuf: Clone + Show {
   /// our window. This does not inspect the buffer -- it only compares raw
   /// pointers.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut a = ROIobuf::from_str_copy("hello");
@@ -492,7 +492,7 @@ pub trait Iobuf: Clone + Show {
   /// no extension will be performed and `Err(())` will be returned. If the
   /// operation was successful, `Ok(())` will be returned.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut a = ROIobuf::from_str_copy("hello");
@@ -523,7 +523,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Sets the length of the window, provided it does not exceed the limits.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -538,7 +538,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Sets the length of the window. No bounds checking will be performed.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -555,7 +555,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Splits an Iobuf around an index.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("helloworld");
@@ -588,7 +588,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Splits out the start of an Iobuf at an index.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("helloworld");
@@ -621,7 +621,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Sets the lower bound of the window to the lower limit.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -641,7 +641,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// "Take it to the limit..."
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -665,7 +665,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// `After:  [xxxxxxx      ]`
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(4);
@@ -695,7 +695,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// `After:  [           xx]`
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -718,7 +718,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Returns the number of bytes between the lower limit and the lower bound.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(100);
@@ -732,7 +732,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Returns the number of bytes between the upper bound and the upper limit.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut b = RWIobuf::new(100);
@@ -748,7 +748,7 @@ pub trait Iobuf: Clone + Show {
   /// the supplied buffer. Either the entire buffer is filled, or an error is
   /// returned because bytes outside of the window were requested.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   /// use std::iter::AdditiveIterator;
   ///
@@ -771,7 +771,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// An error is returned if bytes outside of the window were requested.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
@@ -790,7 +790,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// An error is returned if bytes outside of the window were requested.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
@@ -811,7 +811,7 @@ pub trait Iobuf: Clone + Show {
   /// After the bytes have been read, the window will be moved to no longer
   /// include then.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   /// use std::iter::AdditiveIterator;
   ///
@@ -836,7 +836,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// An error is returned if bytes outside of the window were requested.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
@@ -857,7 +857,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// An error is returned if bytes outside of the window were requested.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
@@ -882,7 +882,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// Below is a correct usage of `check_range` to minimize bounds checks:
   ///
-  /// ```
+  /// ```rust
   /// use std::result::Result::{mod,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
   ///
@@ -920,7 +920,7 @@ pub trait Iobuf: Clone + Show {
   /// the range of something which might overflow an `i32`, use this version
   /// instead of `check_range`.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
@@ -956,7 +956,7 @@ pub trait Iobuf: Clone + Show {
   /// the supplied buffer. It is undefined behavior to read outside the iobuf
   /// window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [1,2,3,4,5,6];
@@ -980,7 +980,7 @@ pub trait Iobuf: Clone + Show {
   /// Reads a big-endian primitive at a given offset from the beginning of the
   /// window. It is undefined behavior to read outside the iobuf window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [1,2,3,4,5,6];
@@ -1001,7 +1001,7 @@ pub trait Iobuf: Clone + Show {
   /// Reads a little-endian primitive at a given offset from the beginning of
   /// the window. It is undefined behavior to read outside the iobuf window.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [1,2,3,4,5,6];
@@ -1033,7 +1033,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// It is undefined behavior if bytes outside the window are requested.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
@@ -1056,7 +1056,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// It is undefined behavior if bytes outside of the window are requested.
   ///
-  /// ```
+  /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
