@@ -113,6 +113,7 @@ impl AllocationHeader {
   }
 
   // Keep this out of line to allow inlining of the drop glue.
+  #[cold]
   unsafe fn deallocate(&self, buf: *mut u8) {
     self.deallocator().deallocate(buf)
   }
@@ -306,13 +307,15 @@ impl<'a> RawIobuf<'a> {
     }
   }
 
-// Keep this out of line to guide inlining.
+  // Keep this out of line to guide inlining.
+  #[cold]
   unsafe fn clone_from_fix_nonatomic_refcounts(&self, source: &RawIobuf<'a>) {
     source.nonatomic_inc_ref_count();
     self.nonatomic_dec_ref_count();
   }
 
   // Keep this out of line to guide inlining.
+  #[cold]
   unsafe fn clone_from_fix_atomic_refcounts(&self, source: &RawIobuf<'a>) {
     source.atomic_inc_ref_count();
     self.atomic_dec_ref_count();
