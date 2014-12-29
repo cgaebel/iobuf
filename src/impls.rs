@@ -3,6 +3,7 @@ use alloc::boxed::Box;
 
 use core::clone::Clone;
 use core::fmt::{mod, Formatter, Show};
+use core::kinds::Send;
 use core::kinds::marker::{NoSend, NoSync};
 use core::mem;
 use core::num::Int;
@@ -192,7 +193,9 @@ pub struct AROIobuf {
   raw: RawIobuf<'static>,
 }
 
-impl<'a> Clone for AROIobuf {
+unsafe impl Send for AROIobuf {}
+
+impl Clone for AROIobuf {
   #[inline(always)]
   fn clone(&self) -> AROIobuf { AROIobuf { raw: unsafe { self.raw.clone_atomic() } } }
 
@@ -214,6 +217,8 @@ impl Drop for AROIobuf {
 pub struct UniqueIobuf {
   raw: RawIobuf<'static>,
 }
+
+unsafe impl Send for UniqueIobuf {}
 
 impl UniqueIobuf {
   /// Safely converts a `UniqueIobuf` into a `ROIobuf`.
