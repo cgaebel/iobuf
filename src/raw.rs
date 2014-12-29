@@ -158,17 +158,10 @@ fn buffer_too_big(actual_size: uint) -> ! {
 /// A `RawIobuf` is the representation of both a `RWIobuf` and a `ROIobuf`.
 /// It is very cheap to clone, as the backing buffer is shared and refcounted.
 pub struct RawIobuf<'a> {
-  // The -1nd size_of<uint>() bytes of `buf` is the refcount. This is a uint
-  //   if the "atomic bit" is not set, and AtomicUint if it is set.
-  // The -2st size_of<uint>() bytes of `buf` is:
-  //   - top bit is for the "atomic bit"
-  //   - the rest of the bits are for the length of the allocation.
-  // The -3rd size_of<uint>() bytes of `buf` is one of:
-  //   - NULL (just use heap::deallocate)
-  //   - An Rc<Allocator> if the atomic bit is not set.
-  //   - An Arc<Allocator> if the atomic bit is set.
-  //   function.
   // Starting at `buf` is the raw data itself.
+  // If the buf was allocated by us (i.e. the owned bit is set), the bytes
+  // immediately preceding represent the allocation header. See the `header`
+  // function.
   buf:    *mut u8,
   // If the highest bit of this is set, `buf` is owned and the data before the
   // pointer is valid. If it is not set, then the buffer wasn't allocated by us:
