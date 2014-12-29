@@ -15,7 +15,6 @@ use core::raw::{mod, Repr};
 use core::result::Result::{mod, Ok, Err};
 use core::slice::SliceExt;
 use core::u32;
-use core::uint;
 use collections::str::StrExt;
 
 #[cfg(target_word_size = "64")]
@@ -66,6 +65,7 @@ impl AllocationHeader {
     self.refcount
   }
 
+  #[inline]
   unsafe fn atomic_refcount<'a>(&'a self) -> &'a AtomicUint {
     mem::transmute(&self.refcount)
   }
@@ -402,7 +402,8 @@ impl<'a> RawIobuf<'a> {
   pub fn header(&self) -> Option<&mut AllocationHeader> {
     unsafe {
       if self.is_owned() {
-        Some(mem::transmute(self.buf.offset(-3*(uint::BYTES as int))))
+        Some(mem::transmute(
+          self.buf.offset(-(mem::size_of::<AllocationHeader>() as int))))
       } else {
         None
       }
