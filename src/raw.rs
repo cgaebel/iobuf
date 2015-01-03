@@ -2,17 +2,17 @@ use alloc::heap;
 use alloc::arc::Arc;
 use alloc::boxed::Box;
 
-use core::atomic::{mod, AtomicUint};
-use core::fmt::{mod, Formatter};
+use core::atomic::{self, AtomicUint, Ordering};
+use core::fmt::{self, Formatter};
 use core::kinds::{Sync, Send};
 use core::kinds::marker::{ContravariantLifetime, NoCopy};
 use core::iter::IteratorExt;
 use core::mem;
 use core::num::Int;
-use core::option::Option::{mod, Some, None};
-use core::ptr::{mod, RawPtr};
-use core::raw::{mod, Repr};
-use core::result::Result::{mod, Ok, Err};
+use core::option::Option::{self, Some, None};
+use core::ptr::{self, PtrExt};
+use core::raw::{self, Repr};
+use core::result::Result::{self, Ok, Err};
 use core::slice::SliceExt;
 use core::u32;
 use collections::str::StrExt;
@@ -72,7 +72,7 @@ impl AllocationHeader {
 
   #[inline]
   unsafe fn inc_ref_count_atomic(&mut self) {
-    self.atomic_refcount().fetch_add(1, atomic::Relaxed);
+    self.atomic_refcount().fetch_add(1, Ordering::Relaxed);
   }
 
   #[inline]
@@ -104,8 +104,8 @@ impl AllocationHeader {
   #[inline]
   #[must_use]
   unsafe fn dec_ref_count_atomic(&mut self) -> Result<(), ()> {
-    if self.atomic_refcount().fetch_sub(1, atomic::Release) == 1 {
-      atomic::fence(atomic::Acquire);
+    if self.atomic_refcount().fetch_sub(1, Ordering::Release) == 1 {
+      atomic::fence(Ordering::Acquire);
       Err(())
     } else {
       Ok(())
@@ -499,7 +499,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn is_unique_atomic(&self) -> bool {
     match self.header() {
-      Some(ref header) if header.atomic_refcount().load(atomic::SeqCst) == 1 => true,
+      Some(ref header) if header.atomic_refcount().load(Ordering::SeqCst) == 1 => true,
       _ => false,
     }
   }

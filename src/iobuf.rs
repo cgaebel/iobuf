@@ -962,7 +962,7 @@ pub trait Iobuf: Clone + Show {
   /// let data = [1,2,3,4,5,6];
   /// let mut b = ROIobuf::from_slice(&data);
   ///
-  /// let mut dst = [0, ..4];
+  /// let mut dst = [0; 4];
   ///
   /// unsafe {
   ///   // one range check, instead of two!

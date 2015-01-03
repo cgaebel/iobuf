@@ -2,13 +2,13 @@ use alloc::arc::Arc;
 use alloc::boxed::Box;
 
 use core::clone::Clone;
-use core::fmt::{mod, Formatter, Show};
+use core::fmt::{self, Formatter, Show};
 use core::kinds::Send;
 use core::kinds::marker::{NoSend, NoSync};
 use core::mem;
 use core::num::Int;
 use core::ops::Drop;
-use core::result::Result::{mod, Ok, Err};
+use core::result::Result::{self, Ok, Err};
 use collections::slice::SliceExt;
 use raw::{Allocator, RawIobuf};
 use iobuf::Iobuf;

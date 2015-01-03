@@ -1,16 +1,16 @@
-use collections::vec::{mod, Vec};
+use collections::vec::{self, Vec};
 use core::clone::Clone;
 use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
 use core::fmt;
 use core::mem;
 use core::num::ToPrimitive;
 use core::intrinsics::move_val_init;
-use core::iter::{mod, order, Extend, AdditiveIterator, Iterator, IteratorExt};
+use core::iter::{self, order, Extend, AdditiveIterator, Iterator, IteratorExt};
 use core::iter::{FromIterator, DoubleEndedIterator, DoubleEndedIteratorExt};
 use core::iter::ExactSizeIterator;
 use core::option;
-use core::option::Option::{mod, Some, None};
-use core::result::Result::{mod, Ok, Err};
+use core::option::Option::{self, Some, None};
+use core::result::Result::{self, Ok, Err};
 use core::slice;
 use core::slice::{SliceExt, AsSlice};
 
@@ -216,7 +216,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
       One(_) => {},
       Many(ref mut v) => unsafe {
         let last_pos = v.len() - 1;
-        match v.unsafe_mut(last_pos).extend_with(&b) {
+        match v.get_unchecked_mut(last_pos).extend_with(&b) {
           Ok (()) => {},
           Err(()) => v.push(b),
         }
@@ -350,6 +350,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// the buffers.
   ///
   /// ```rust
+  /// use std::cmp::Ordering;
   /// use iobuf::{BufSpan, ROIobuf};
   ///
   /// let mut a = BufSpan::from_buf(ROIobuf::from_str("hello"));
