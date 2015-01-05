@@ -6,7 +6,7 @@ use core::mem;
 use core::num::ToPrimitive;
 use core::intrinsics::move_val_init;
 use core::iter::{self, order, Extend, AdditiveIterator, Iterator, IteratorExt};
-use core::iter::{FromIterator, DoubleEndedIterator, DoubleEndedIteratorExt};
+use core::iter::{FromIterator, DoubleEndedIterator};
 use core::iter::ExactSizeIterator;
 use core::option;
 use core::option::Option::{self, Some, None};
@@ -72,7 +72,7 @@ impl<Buf: Iobuf> fmt::Show for BufSpan<Buf> {
 
 impl<Buf: Iobuf> FromIterator<Buf> for BufSpan<Buf> {
   #[inline]
-  fn from_iter<T: Iterator<Buf>>(iterator: T) -> BufSpan<Buf> {
+  fn from_iter<I: Iterator<Item=Buf>>(iterator: I) -> BufSpan<Buf> {
     let mut ret = BufSpan::new();
     ret.extend(iterator);
     ret
@@ -81,7 +81,7 @@ impl<Buf: Iobuf> FromIterator<Buf> for BufSpan<Buf> {
 
 impl<Buf: Iobuf> Extend<Buf> for BufSpan<Buf> {
   #[inline]
-  fn extend<T: Iterator<Buf>>(&mut self, mut iterator: T) {
+  fn extend<I: Iterator<Item=Buf>>(&mut self, mut iterator: I) {
     for x in iterator {
       self.push(x);
     }
@@ -491,7 +491,9 @@ pub enum SpanIter<'a, Buf: 'a> {
   Lot(slice::Iter<'a, Buf>),
 }
 
-impl<'a, Buf: Iobuf> Iterator<&'a Buf> for SpanIter<'a, Buf> {
+impl<'a, Buf: Iobuf> Iterator for SpanIter<'a, Buf> {
+  type Item = &'a Buf;
+
   #[inline(always)]
   fn next(&mut self) -> Option<&'a Buf> {
     // I'm couting on this match getting lifted out of the loop with
@@ -511,7 +513,7 @@ impl<'a, Buf: Iobuf> Iterator<&'a Buf> for SpanIter<'a, Buf> {
   }
 }
 
-impl<'a, Buf: Iobuf> DoubleEndedIterator<&'a Buf> for SpanIter<'a, Buf> {
+impl<'a, Buf: Iobuf> DoubleEndedIterator for SpanIter<'a, Buf> {
   #[inline(always)]
   fn next_back(&mut self) -> Option<&'a Buf> {
     // I'm couting on this match getting lifted out of the loop with
@@ -523,7 +525,7 @@ impl<'a, Buf: Iobuf> DoubleEndedIterator<&'a Buf> for SpanIter<'a, Buf> {
   }
 }
 
-impl<'a, Buf: Iobuf> ExactSizeIterator<&'a Buf> for SpanIter<'a, Buf> {}
+impl<'a, Buf: Iobuf> ExactSizeIterator for SpanIter<'a, Buf> {}
 
 /// A moving iterator over buffers inside a `BufSpan`.
 pub enum SpanMoveIter<Buf> {
@@ -533,7 +535,9 @@ pub enum SpanMoveIter<Buf> {
   MoveLot(vec::IntoIter<Buf>),
 }
 
-impl<Buf: Iobuf> Iterator<Buf> for SpanMoveIter<Buf> {
+impl<Buf: Iobuf> Iterator for SpanMoveIter<Buf> {
+  type Item = Buf;
+
   #[inline(always)]
   fn next(&mut self) -> Option<Buf> {
     // I'm couting on this match getting lifted out of the loop with
@@ -553,7 +557,7 @@ impl<Buf: Iobuf> Iterator<Buf> for SpanMoveIter<Buf> {
   }
 }
 
-impl<Buf: Iobuf> DoubleEndedIterator<Buf> for SpanMoveIter<Buf> {
+impl<Buf: Iobuf> DoubleEndedIterator for SpanMoveIter<Buf> {
   #[inline(always)]
   fn next_back(&mut self) -> Option<Buf> {
     // I'm couting on this match getting lifted out of the loop with
@@ -565,7 +569,7 @@ impl<Buf: Iobuf> DoubleEndedIterator<Buf> for SpanMoveIter<Buf> {
   }
 }
 
-impl<Buf: Iobuf> ExactSizeIterator<Buf> for SpanMoveIter<Buf> {}
+impl<Buf: Iobuf> ExactSizeIterator for SpanMoveIter<Buf> {}
 
 #[cfg(test)]
 mod bench {

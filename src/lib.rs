@@ -38,6 +38,7 @@
 
 #![feature(phase)]
 #![feature(unsafe_destructor)]
+#![feature(associated_types)]
 
 #![deny(missing_docs)]
 
