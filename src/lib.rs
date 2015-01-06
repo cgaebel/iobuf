@@ -42,32 +42,14 @@
 
 #![deny(missing_docs)]
 
-#![no_std]
-
-                                   extern crate alloc;
-                                   extern crate collections;
-             #[phase(plugin,link)] extern crate core;
-
-// For tests only:
-#[cfg(test)] #[phase(plugin,link)] extern crate std;
-#[cfg(test)]                       extern crate test;
-
-// NOTE: libcollections is only needed for `BufSpan`. If you don't need that
-// functionality, feel free to hack this library to remove that file, and
-// therefore the dependency.
-//
-// Also, when you do that, file an issue letting me know you had to do that.
-// I'll use that as a cue to break out `BufSpan` into its own library.
+extern crate alloc;
+#[cfg(test)] extern crate test;
 
 pub use raw::Allocator;
 pub use iobuf::Iobuf;
 pub use impls::{RWIobuf, ROIobuf, AROIobuf, UniqueIobuf};
 pub use ringbuf::IORingbuf;
 pub use bufspan::{BufSpan, ByteIter, SpanIter, SpanMoveIter};
-
-// https://github.com/rust-lang/rust/issues/18491#issuecomment-61293267
-#[cfg(not(test))]
-mod std { pub use core::fmt; }
 
 mod raw;
 mod iobuf;

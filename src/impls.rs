@@ -1,14 +1,8 @@
-use alloc::arc::Arc;
-use alloc::boxed::Box;
+use std::fmt::{self, Show, Formatter};
+use std::mem;
+use std::num::Int;
+use std::sync::Arc;
 
-use core::clone::Clone;
-use core::fmt::{self, Formatter, Show};
-use core::kinds::{Send, Sync};
-use core::mem;
-use core::num::Int;
-use core::ops::Drop;
-use core::result::Result::{self, Ok, Err};
-use collections::slice::SliceExt;
 use raw::{Allocator, RawIobuf};
 use iobuf::Iobuf;
 

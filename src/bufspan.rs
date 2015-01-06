@@ -1,18 +1,12 @@
-use collections::vec::{self, Vec};
-use core::clone::Clone;
-use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
-use core::fmt;
-use core::mem;
-use core::num::ToPrimitive;
-use core::intrinsics::move_val_init;
-use core::iter::{self, order, Extend, AdditiveIterator, Iterator, IteratorExt};
-use core::iter::{FromIterator, DoubleEndedIterator};
-use core::iter::ExactSizeIterator;
-use core::option;
-use core::option::Option::{self, Some, None};
-use core::result::Result::{self, Ok, Err};
-use core::slice;
-use core::slice::{SliceExt, AsSlice};
+use std::cmp::Ordering;
+use std::fmt;
+use std::intrinsics::move_val_init;
+use std::iter::{self, order, FromIterator, AdditiveIterator};
+use std::mem;
+use std::num::ToPrimitive;
+use std::option;
+use std::slice;
+use std::vec;
 
 use iobuf::Iobuf;
 
@@ -573,12 +567,11 @@ impl<Buf: Iobuf> ExactSizeIterator for SpanMoveIter<Buf> {}
 
 #[cfg(test)]
 mod bench {
-  use core::prelude::Clone;
   use test::{black_box, Bencher};
   use super::super::iobuf::Iobuf;
   use super::super::impls::{ROIobuf, RWIobuf};
   use super::BufSpan;
-  use core::iter::range;
+  use std::iter::range;
 
   #[bench]
   fn create_roiobuf(b: &mut Bencher) {

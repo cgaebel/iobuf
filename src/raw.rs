@@ -1,21 +1,14 @@
 use alloc::heap;
-use alloc::arc::Arc;
-use alloc::boxed::Box;
 
-use core::atomic::{self, AtomicUint, Ordering};
-use core::fmt::{self, Formatter};
-use core::kinds::{Sync, Send};
-use core::kinds::marker::{ContravariantLifetime, NoCopy};
-use core::iter::IteratorExt;
-use core::mem;
-use core::num::Int;
-use core::option::Option::{self, Some, None};
-use core::ptr::{self, PtrExt};
-use core::raw::{self, Repr};
-use core::result::Result::{self, Ok, Err};
-use core::slice::SliceExt;
-use core::u32;
-use collections::str::StrExt;
+use std::fmt::{self, Formatter};
+use std::kinds::marker::{NoCopy, ContravariantLifetime};
+use std::mem;
+use std::num::Int;
+use std::ptr;
+use std::raw::{self, Repr};
+use std::u32;
+use std::sync::Arc;
+use std::sync::atomic::{self, AtomicUint, Ordering};
 
 #[cfg(target_word_size = "64")]
 const TARGET_WORD_SIZE: uint = 64;
@@ -1256,7 +1249,7 @@ fn peek_le() {
 fn poke_be() {
   use iobuf::Iobuf;
   use impls::RWIobuf;
-  use core::slice::AsSlice;
+  use std::slice::AsSlice;
 
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_be(0, 0x01020304u32), Ok(()));
@@ -1268,7 +1261,7 @@ fn poke_be() {
 fn poke_le() {
   use iobuf::Iobuf;
   use impls::RWIobuf;
-  use core::slice::AsSlice;
+  use std::slice::AsSlice;
 
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_le(0, 0x01020304u32), Ok(()));

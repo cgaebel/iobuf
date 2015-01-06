@@ -1,10 +1,6 @@
-use alloc::arc::Arc;
-use alloc::boxed::Box;
-
-use core::clone::Clone;
-use core::fmt::Show;
-use core::num::Int;
-use core::result::Result;
+use std::fmt::Show;
+use std::num::Int;
+use std::sync::Arc;
 
 use raw::{Allocator, RawIobuf};
 use impls::{AROIobuf, RWIobuf, UniqueIobuf};

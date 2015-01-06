@@ -1,4 +1,5 @@
-use core::mem;
+use std::mem;
+
 use iobuf::Iobuf;
 use impls::{RWIobuf, ROIobuf};
 
