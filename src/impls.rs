@@ -3,8 +3,7 @@ use alloc::boxed::Box;
 
 use core::clone::Clone;
 use core::fmt::{self, Formatter, Show};
-use core::kinds::Send;
-use core::kinds::marker::{NoSend, NoSync};
+use core::kinds::{Send, Sync};
 use core::mem;
 use core::num::Int;
 use core::ops::Drop;
@@ -25,8 +24,6 @@ use iobuf::Iobuf;
 #[unsafe_no_drop_flag]
 pub struct ROIobuf<'a> {
   raw: RawIobuf<'a>,
-  nosend: NoSend,
-  nosync: NoSync,
 }
 
 #[test]
@@ -39,8 +36,6 @@ impl<'a> Clone for ROIobuf<'a> {
   fn clone(&self) -> ROIobuf<'a> {
     ROIobuf {
       raw: unsafe { self.raw.clone_nonatomic() },
-      nosend: NoSend,
-      nosync: NoSync,
     }
   }
 
@@ -76,8 +71,6 @@ impl<'a> Drop for ROIobuf<'a> {
 #[unsafe_no_drop_flag]
 pub struct RWIobuf<'a> {
   raw: RawIobuf<'a>,
-  nosend: NoSend,
-  nosync: NoSync,
 }
 
 #[test]
@@ -90,8 +83,6 @@ impl<'a> Clone for RWIobuf<'a> {
   fn clone(&self) -> RWIobuf<'a> {
     RWIobuf {
       raw: unsafe { self.raw.clone_nonatomic() },
-      nosend: NoSend,
-      nosync: NoSync,
     }
   }
 
@@ -194,6 +185,7 @@ pub struct AROIobuf {
 }
 
 unsafe impl Send for AROIobuf {}
+unsafe impl Sync for AROIobuf {}
 
 impl Clone for AROIobuf {
   #[inline(always)]
@@ -219,6 +211,7 @@ pub struct UniqueIobuf {
 }
 
 unsafe impl Send for UniqueIobuf {}
+unsafe impl Sync for UniqueIobuf {}
 
 impl UniqueIobuf {
   /// Safely converts a `UniqueIobuf` into a `ROIobuf`.
@@ -259,7 +252,7 @@ impl<'a> ROIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn empty() -> ROIobuf<'static> {
-    ROIobuf { raw: RawIobuf::empty(), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: RawIobuf::empty() }
   }
 
   /// Constructs an Iobuf with the same contents as a string. The limits and
@@ -279,7 +272,7 @@ impl<'a> ROIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn from_str(s: &'a str) -> ROIobuf<'a> {
-    ROIobuf { raw: RawIobuf::from_str(s), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: RawIobuf::from_str(s) }
   }
 
   /// Copies a `str` into a read-only Iobuf. The contents of the `str` will be
@@ -297,14 +290,14 @@ impl<'a> ROIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn from_str_copy(s: &str) -> ROIobuf<'static> {
-    ROIobuf { raw: RawIobuf::from_str_copy(s), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: RawIobuf::from_str_copy(s) }
   }
 
   /// Copies a `str` into a read-only Iobuf, whose memory comes from the given
   /// allocator.
   #[inline(always)]
   pub fn from_str_copy_with_allocator(s: &str, allocator: Arc<Box<Allocator>>) -> ROIobuf<'static> {
-    ROIobuf { raw: RawIobuf::from_str_copy_with_allocator(s, allocator), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: RawIobuf::from_str_copy_with_allocator(s, allocator) }
   }
 
   /// Copies the contents of a slice into a read-only Iobuf. The contents of the
@@ -324,14 +317,14 @@ impl<'a> ROIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn from_slice_copy(s: &[u8]) -> ROIobuf<'static> {
-    ROIobuf { raw: RawIobuf::from_slice_copy(s), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: RawIobuf::from_slice_copy(s) }
   }
 
   /// Copies a byte vector into a new read-only Iobuf, whose memory comes from
   /// the given allocator.
   #[inline(always)]
   pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> ROIobuf<'static> {
-    ROIobuf { raw: RawIobuf::from_slice_copy_with_allocator(s, allocator), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: RawIobuf::from_slice_copy_with_allocator(s, allocator) }
   }
 
   /// Constructs an Iobuf from a slice. The Iobuf will not copy the slice
@@ -351,7 +344,7 @@ impl<'a> ROIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn from_slice(s: &'a [u8]) -> ROIobuf<'a> {
-    ROIobuf { raw: RawIobuf::from_slice(s), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: RawIobuf::from_slice(s) }
   }
 }
 
@@ -369,7 +362,7 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn empty() -> RWIobuf<'static> {
-    RWIobuf { raw: RawIobuf::empty(), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: RawIobuf::empty() }
   }
 
   /// Constructs a new Iobuf with a buffer of size `len`, undefined contents,
@@ -387,7 +380,7 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn new(len: uint) -> RWIobuf<'static> {
-    RWIobuf { raw: RawIobuf::new(len), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: RawIobuf::new(len) }
   }
 
   /// Constructs a new Iobuf with a buffer of size `len`, undefined contents,
@@ -397,7 +390,7 @@ impl<'a> RWIobuf<'a> {
   /// The maximum length of an Iobuf is approximately 2 GB.
   #[inline(always)]
   pub fn new_with_allocator(len: uint, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
-    RWIobuf { raw: RawIobuf::new_with_allocator(len, allocator), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: RawIobuf::new_with_allocator(len, allocator) }
   }
 
   /// Copies a `str` into a writeable Iobuf. The contents of the `str` will be
@@ -417,14 +410,14 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn from_str_copy(s: &str) -> RWIobuf<'static> {
-    RWIobuf { raw: RawIobuf::from_str_copy(s), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: RawIobuf::from_str_copy(s) }
   }
 
   /// Copies a `str` into a writeable Iobuf, whose memory comes from the given
   /// allocator.
   #[inline(always)]
   pub fn from_str_copy_with_allocator(s: &str, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
-    RWIobuf { raw: RawIobuf::from_str_copy_with_allocator(s, allocator), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: RawIobuf::from_str_copy_with_allocator(s, allocator) }
   }
 
   /// Constructs an Iobuf from a slice. The Iobuf will not copy the slice
@@ -448,7 +441,7 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn from_slice(s: &'a mut [u8]) -> RWIobuf<'a> {
-    RWIobuf { raw: RawIobuf::from_slice(s), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: RawIobuf::from_slice(s) }
   }
 
   /// Copies a byte vector into a new, writeable Iobuf. The contents of the
@@ -468,14 +461,14 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn from_slice_copy(s: &[u8]) -> RWIobuf<'static> {
-    RWIobuf { raw: RawIobuf::from_slice_copy(s), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: RawIobuf::from_slice_copy(s) }
   }
 
   /// Copies a byte vector into a new writeable Iobuf, whose memory comes from
   /// the given allocator.
   #[inline(always)]
   pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
-    RWIobuf { raw: RawIobuf::from_slice_copy_with_allocator(s, allocator), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: RawIobuf::from_slice_copy_with_allocator(s, allocator) }
   }
 
   /// Reads the data in the window as a mutable slice. Note that since `&mut`
@@ -556,7 +549,7 @@ impl<'a> RWIobuf<'a> {
   /// ```
   #[inline(always)]
   pub fn read_only(&self) -> ROIobuf<'a> {
-    ROIobuf { raw: unsafe { self.raw.clone_nonatomic() }, nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: unsafe { self.raw.clone_nonatomic() } }
   }
 
   /// Copies data from the window to the lower limit fo the iobuf and sets the
@@ -965,11 +958,11 @@ impl AROIobuf {
 
 impl<'a> Iobuf for ROIobuf<'a> {
   #[inline(always)]
-  fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone(), nosync: NoSync, nosend: NoSend } }
+  fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone() } }
 
   #[inline(always)]
   fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
-    RWIobuf { raw: self.raw.deep_clone_with_allocator(allocator), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: self.raw.deep_clone_with_allocator(allocator) }
   }
 
   #[inline(always)]
@@ -1077,27 +1070,23 @@ impl<'a> Iobuf for ROIobuf<'a> {
 
   #[inline(always)]
   fn split_at(&self, pos: u32) -> Result<(ROIobuf<'a>, ROIobuf<'a>), ()> {
-    self.raw.split_at_nonatomic(pos).map(
-      |(a, b)| (ROIobuf { raw: a, nosync: NoSync, nosend: NoSend },
-                ROIobuf { raw: b, nosync: NoSync, nosend: NoSend }))
+    self.raw.split_at_nonatomic(pos).map(|(a, b)| (ROIobuf { raw: a }, ROIobuf { raw: b }))
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_at(&self, pos: u32) -> (ROIobuf<'a>, ROIobuf<'a>) {
     let (a, b) = self.raw.unsafe_split_at_nonatomic(pos);
-    (ROIobuf { raw: a, nosync: NoSync, nosend: NoSend },
-     ROIobuf { raw: b, nosync: NoSync, nosend: NoSend })
+    (ROIobuf { raw: a }, ROIobuf { raw: b })
   }
 
   #[inline(always)]
   fn split_start_at(&mut self, pos: u32) -> Result<ROIobuf<'a>, ()> {
-    self.raw.split_start_at_nonatomic(pos).map(
-      |b| ROIobuf { raw: b, nosync: NoSync, nosend: NoSend })
+    self.raw.split_start_at_nonatomic(pos).map(|b| ROIobuf { raw: b })
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> ROIobuf<'a> {
-    ROIobuf { raw: self.raw.unsafe_split_start_at_nonatomic(pos), nosync: NoSync, nosend: NoSend }
+    ROIobuf { raw: self.raw.unsafe_split_start_at_nonatomic(pos) }
   }
 
   #[inline(always)]
@@ -1178,12 +1167,12 @@ impl<'a> Iobuf for ROIobuf<'a> {
 impl Iobuf for AROIobuf {
   #[inline(always)]
   fn deep_clone(&self) -> RWIobuf<'static> {
-    RWIobuf { raw: self.raw.deep_clone(), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: self.raw.deep_clone() }
   }
 
   #[inline(always)]
   fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
-    RWIobuf { raw: self.raw.deep_clone_with_allocator(allocator), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: self.raw.deep_clone_with_allocator(allocator) }
   }
 
   #[inline(always)]
@@ -1385,11 +1374,11 @@ impl Iobuf for AROIobuf {
 
 impl<'a> Iobuf for RWIobuf<'a> {
   #[inline(always)]
-  fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone(), nosync: NoSync, nosend: NoSend } }
+  fn deep_clone(&self) -> RWIobuf<'static> { RWIobuf { raw: self.raw.deep_clone() } }
 
   #[inline(always)]
   fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
-    RWIobuf { raw: self.raw.deep_clone_with_allocator(allocator), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: self.raw.deep_clone_with_allocator(allocator) }
   }
 
   #[inline(always)]
@@ -1497,27 +1486,23 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   fn split_at(&self, pos: u32) -> Result<(RWIobuf<'a>, RWIobuf<'a>), ()> {
-    self.raw.split_at_nonatomic(pos).map(
-      |(a, b)| (RWIobuf { raw: a, nosync: NoSync, nosend: NoSend },
-                RWIobuf { raw: b, nosync: NoSync, nosend: NoSend }))
+    self.raw.split_at_nonatomic(pos).map(|(a, b)| (RWIobuf { raw: a }, RWIobuf { raw: b }))
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_at(&self, pos: u32) -> (RWIobuf<'a>, RWIobuf<'a>) {
     let (a, b) = self.raw.unsafe_split_at_nonatomic(pos);
-    (RWIobuf { raw: a, nosync: NoSync, nosend: NoSend },
-     RWIobuf { raw: b, nosync: NoSync, nosend: NoSend })
+    (RWIobuf { raw: a }, RWIobuf { raw: b })
   }
 
   #[inline(always)]
   fn split_start_at(&mut self, pos: u32) -> Result<RWIobuf<'a>, ()> {
-    self.raw.split_start_at_nonatomic(pos).map(
-      |b| RWIobuf { raw: b, nosync: NoSync, nosend: NoSend })
+    self.raw.split_start_at_nonatomic(pos).map(|b| RWIobuf { raw: b })
   }
 
   #[inline(always)]
   unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> RWIobuf<'a> {
-    RWIobuf { raw: self.raw.unsafe_split_start_at_nonatomic(pos), nosync: NoSync, nosend: NoSend }
+    RWIobuf { raw: self.raw.unsafe_split_start_at_nonatomic(pos) }
   }
 
   #[inline(always)]
