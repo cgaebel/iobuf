@@ -1,7 +1,11 @@
+use std::cmp::min;
 use std::fmt::{self, Show, Formatter};
 use std::mem;
 use std::num::Int;
 use std::sync::Arc;
+use std::u32;
+
+use quickcheck::{Arbitrary, Gen, Shrinker};
 
 use raw::{Allocator, RawIobuf};
 use iobuf::Iobuf;
@@ -192,6 +196,45 @@ impl Clone for AROIobuf {
 impl Drop for AROIobuf {
   #[inline(always)]
   fn drop(&mut self) { unsafe { self.raw.drop_atomic() } }
+}
+
+impl Arbitrary for AROIobuf {
+  fn arbitrary<G: Gen>(g: &mut G) -> AROIobuf {
+    let data: Vec<u8> = Arbitrary::arbitrary(g);
+
+    assert!(data.len() < u32::MAX as uint);
+
+    let (a, b, c, d): (u32, u32, u32, u32) = Arbitrary::arbitrary(g);
+
+    let hi_max = a % (data.len() as u32 + 1);
+    let hi     = b % (hi_max + 1);
+    let lo     = c % (hi + 1);
+    let lo_min = d % (lo + 1);
+
+    let mut buf = ROIobuf::from_slice_copy(data[]);
+    buf.set_limits_and_window((lo_min, hi_max), (lo, hi)).unwrap();
+
+    buf.atomic_read_only().unwrap()
+  }
+
+  fn shrink(&self) -> Box<Shrinker<AROIobuf>+'static> {
+    let mut v: Vec<AROIobuf> = vec!();
+
+    // explore every possible subset of limits and bounds
+    for hi_max in range(0, self.raw.hi_max()) {
+      for hi in range(0, min(hi_max, self.raw.hi())) {
+        for lo in range(self.raw.lo() + 1, hi + 1) {
+          for lo_min in range(self.raw.lo_min() + 1, lo + 1) {
+            let mut new_buf: AROIobuf = (*self).clone();
+            new_buf.set_limits_and_window((lo_min, hi_max), (lo, hi)).unwrap();
+            v.push(new_buf);
+          }
+        }
+      }
+    }
+
+    box v.into_iter()
+  }
 }
 
 /// A unique, immutable Iobuf.
@@ -1599,5 +1642,37 @@ impl Show for UniqueIobuf {
   #[inline]
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "unique")
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use impls::AROIobuf;
+  use iobuf::Iobuf;
+
+  use quickcheck::quickcheck;
+
+  #[test]
+  fn prop_valid_hi() {
+    fn test_hi(v: AROIobuf) -> bool {
+         v.hi() <= v.hi_max()
+    }
+    quickcheck(test_hi as fn(AROIobuf) -> bool)
+  }
+
+  #[test]
+  fn prop_valid_bounds() {
+    fn test_bounds(v: AROIobuf) -> bool {
+      v.lo() <= v.hi()
+    }
+    quickcheck(test_bounds as fn(AROIobuf) -> bool)
+  }
+
+  #[test]
+  fn prop_valid_lo() {
+    fn test_lo(v: AROIobuf) -> bool {
+      v.lo_min() <= v.lo()
+    }
+    quickcheck(test_lo as fn(AROIobuf) -> bool)
   }
 }

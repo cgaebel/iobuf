@@ -36,14 +36,16 @@
 
 #![doc(html_root_url = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/")]
 
-#![feature(phase)]
-#![feature(unsafe_destructor)]
 #![feature(associated_types)]
+#![feature(phase)]
+#![feature(slicing_syntax)]
+#![feature(unsafe_destructor)]
 
 #![deny(missing_docs)]
 
 extern crate alloc;
 #[cfg(test)] extern crate test;
+extern crate quickcheck;
 
 pub use raw::Allocator;
 pub use iobuf::Iobuf;
