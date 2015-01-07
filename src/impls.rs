@@ -1601,7 +1601,7 @@ impl<'a> Iobuf for RWIobuf<'a> {
   unsafe fn unsafe_consume_le<T: Int>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
-  unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
+  unsafe fn as_raw<'b>(&'b self) -> &'b RawIobuf<'b> { mem::transmute(&self.raw) }
 
   #[inline(always)]
   fn ptr(&self) -> *mut u8 { self.raw.ptr() }
