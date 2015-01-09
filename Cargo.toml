@@ -16,7 +16,7 @@ license = "MIT"
 
 description = "A contiguous region of bytes, useful for I/O operations."
 
-[dependencies]
+[dev-dependencies]
 quickcheck = "0"
 
 [profile.dev]
