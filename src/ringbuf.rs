@@ -5,7 +5,7 @@ use impls::{RWIobuf, ROIobuf};
 
 /// A ring buffer implemented with `Iobuf`s.
 pub struct IORingbuf {
-  /// The contents of the window is space for input to be put into. Therefore,
+  /// The contents of the window is space for input to be put isizeo. Therefore,
   /// initially full.
   i_buf: RWIobuf<'static>,
   /// The contents of the window are things needing to be output. Therefore,
@@ -15,7 +15,7 @@ pub struct IORingbuf {
 
 impl IORingbuf {
   /// Creates a new ring buffer, with room for `cap` bytes.
-  pub fn new(cap: uint) -> IORingbuf {
+  pub fn new(cap: usize) -> IORingbuf {
     let left_size = cap / 2;
     let mut ret =
       IORingbuf {
@@ -52,7 +52,7 @@ impl IORingbuf {
       self.o_buf.reset();
       mem::swap(&mut self.i_buf, &mut self.o_buf);
     }
-    // Clients should only be doing read-only operations into the iobuf, so
+    // Clients should only be doing read-only operations isizeo the iobuf, so
     // return a ROIobuf.
     unsafe { mem::transmute(&mut self.o_buf) }
   }

@@ -18,13 +18,13 @@ use SpanMoveIter::{MoveOpt, MoveLot};
 /// the contents of the string can come from multiple IObufs, and you want to
 /// avoid copying the buffer contents unnecessarily.
 ///
-/// As an optimization, pushing an Iobuf that points to data immediately after
+/// As an optimization, pushing an Iobuf that poisizes to data immediately after
 /// the range represented by the last Iobuf pushed will result in just expanding
 /// the held Iobuf's range. This prevents allocating lots of unnecessary
-/// intermediate buffers, while still maintaining the illusion of "pushing lots
+/// isizeermediate buffers, while still maisizeaining the illusion of "pushing lots
 /// of buffers" while incrementally parsing.
 ///
-/// A `BufSpan` is internally represented as either an `Iobuf` or a `Vec<Iobuf>`,
+/// A `BufSpan` is isizeernally represented as either an `Iobuf` or a `Vec<Iobuf>`,
 /// depending on how many different buffers were used.
 pub enum BufSpan<Buf> {
   /// A span over 0 bytes.
@@ -176,7 +176,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// s.push(ROIobuf::from_str("he"));
   /// s.push(ROIobuf::from_str("llo"));
   ///
-  /// assert_eq!(s.count_bytes() as uint, "hello".len());
+  /// assert_eq!(s.count_bytes() as usize, "hello".len());
   /// assert_eq!(s.iter().count(), 2);
   ///
   /// let mut b0 = ROIobuf::from_str(" world");
@@ -189,8 +189,8 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// s.push(b1);
   ///
   /// // b0 and b1 are immediately after each other, and from the same buffer,
-  /// // so get merged into one Iobuf.
-  /// assert_eq!(s.count_bytes() as uint, "hello world".len());
+  /// // so get merged isizeo one Iobuf.
+  /// assert_eq!(s.count_bytes() as usize, "hello world".len());
   /// assert_eq!(s.iter().count(), 3);
   /// ```
   #[inline(always)]
@@ -218,7 +218,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
       }
     }
 
-    // Need to upgrade from a `One` into a `Many`. This requires replacement.
+    // Need to upgrade from a `One` isizeo a `Many`. This requires replacement.
     let this = mem::replace(self, Empty);
     // We know that we're empty, therefore no drop glue needs to be run.
     unsafe {
@@ -247,7 +247,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// Returns a moving iterator over the buffers inside the `BufSpan`.
   #[inline]
-  pub fn into_iter(self) -> SpanMoveIter<Buf> {
+  pub fn isizeo_iter(self) -> SpanMoveIter<Buf> {
     match self {
       Empty   => MoveOpt(None.into_iter()),
       One (b) => MoveOpt(Some(b).into_iter()),
@@ -293,7 +293,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn byte_equal<Buf2: Iobuf>(&self, other: &BufSpan<Buf2>) -> bool {
-    self.count_bytes_cmp(other.count_bytes() as uint) == Ordering::Equal
+    self.count_bytes_cmp(other.count_bytes() as usize) == Ordering::Equal
     && self.iter_bytes().zip(other.iter_bytes()).all(|(a, b)| a == b)
   }
 
@@ -356,7 +356,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// assert_eq!(a.count_bytes_cmp(9001), Ordering::Less);
   /// ```
   #[inline]
-  pub fn count_bytes_cmp(&self, other: uint) -> Ordering {
+  pub fn count_bytes_cmp(&self, other: usize) -> Ordering {
     let mut other =
       match other.to_u32() {
         None        => return Ordering::Less,
@@ -397,7 +397,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
     if self.is_empty() {
       *self = other;
     } else {
-      self.extend(other.into_iter())
+      self.extend(other.isizeo_iter())
     }
   }
 
@@ -499,7 +499,7 @@ impl<'a, Buf: Iobuf> Iterator for SpanIter<'a, Buf> {
   }
 
   #[inline(always)]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     match *self {
       Opt(ref iter) => iter.size_hint(),
       Lot(ref iter) => iter.size_hint(),
@@ -543,7 +543,7 @@ impl<Buf: Iobuf> Iterator for SpanMoveIter<Buf> {
   }
 
   #[inline(always)]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     match *self {
       MoveOpt(ref iter) => iter.size_hint(),
       MoveLot(ref iter) => iter.size_hint(),

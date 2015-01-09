@@ -16,7 +16,7 @@
 //! any arbitrary subrange of the limits.
 //!
 //! Iobufs are cheap to `clone`, since the buffers are refcounted. Use this to
-//! construct multiple views into the same data.
+//! construct multiple views isizeo the same data.
 //!
 //! To keep the struct small (24 bytes!), the maximum size of an Iobuf is 2 GB.
 //! Please let me know if you need more than this. I have never before seen a
@@ -36,11 +36,9 @@
 
 #![doc(html_root_url = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/")]
 
-#![feature(associated_types)]
-#![feature(phase)]
 #![feature(slicing_syntax)]
 #![feature(unsafe_destructor)]
-
+#![allow(unstable)]
 #![deny(missing_docs)]
 
 extern crate alloc;
