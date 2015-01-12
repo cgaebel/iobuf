@@ -50,9 +50,11 @@ pub use iobuf::Iobuf;
 pub use impls::{RWIobuf, ROIobuf, AROIobuf, UniqueIobuf};
 pub use ringbuf::IORingbuf;
 pub use bufspan::{BufSpan, ByteIter, SpanIter, SpanMoveIter};
+pub use appendbuf::AppendBuf;
 
 mod raw;
 mod iobuf;
 mod impls;
 mod ringbuf;
 mod bufspan;
+mod appendbuf;
