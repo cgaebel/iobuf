@@ -18,13 +18,13 @@ use SpanMoveIter::{MoveOpt, MoveLot};
 /// the contents of the string can come from multiple IObufs, and you want to
 /// avoid copying the buffer contents unnecessarily.
 ///
-/// As an optimization, pushing an Iobuf that poisizes to data immediately after
+/// As an optimization, pushing an Iobuf that points to data immediately after
 /// the range represented by the last Iobuf pushed will result in just expanding
 /// the held Iobuf's range. This prevents allocating lots of unnecessary
-/// isizeermediate buffers, while still maisizeaining the illusion of "pushing lots
+/// intermediate buffers, while still maintaining the illusion of "pushing lots
 /// of buffers" while incrementally parsing.
 ///
-/// A `BufSpan` is isizeernally represented as either an `Iobuf` or a `Vec<Iobuf>`,
+/// A `BufSpan` is internally represented as either an `Iobuf` or a `Vec<Iobuf>`,
 /// depending on how many different buffers were used.
 pub enum BufSpan<Buf> {
   /// A span over 0 bytes.
@@ -189,7 +189,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// s.push(b1);
   ///
   /// // b0 and b1 are immediately after each other, and from the same buffer,
-  /// // so get merged isizeo one Iobuf.
+  /// // so get merged into one Iobuf.
   /// assert_eq!(s.count_bytes() as usize, "hello world".len());
   /// assert_eq!(s.iter().count(), 3);
   /// ```
@@ -218,7 +218,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
       }
     }
 
-    // Need to upgrade from a `One` isizeo a `Many`. This requires replacement.
+    // Need to upgrade from a `One` into a `Many`. This requires replacement.
     let this = mem::replace(self, Empty);
     // We know that we're empty, therefore no drop glue needs to be run.
     unsafe {
@@ -247,7 +247,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 
   /// Returns a moving iterator over the buffers inside the `BufSpan`.
   #[inline]
-  pub fn isizeo_iter(self) -> SpanMoveIter<Buf> {
+  pub fn into_iter(self) -> SpanMoveIter<Buf> {
     match self {
       Empty   => MoveOpt(None.into_iter()),
       One (b) => MoveOpt(Some(b).into_iter()),
@@ -397,7 +397,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
     if self.is_empty() {
       *self = other;
     } else {
-      self.extend(other.isizeo_iter())
+      self.extend(other.into_iter())
     }
   }
 

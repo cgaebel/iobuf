@@ -12,12 +12,12 @@ use impls::{AROIobuf, RWIobuf, UniqueIobuf};
 ///
 /// `peek` accesses a value at a position relative to the start of the
 /// window without advancing, and is meant to be used with `try!`. Its dual,
-/// `poke`, is only implemented for `RWIobuf`, since it needs to write isizeo the
+/// `poke`, is only implemented for `RWIobuf`, since it needs to write into the
 /// buffer.
 ///
 /// `consume` accesses a value at the beginning of the window, and advances the
 /// window to no longer cover include it. Its dual, `fill`, is only implemented
-/// for `RWIobuf`, since it needs to write isizeo the buffer.
+/// for `RWIobuf`, since it needs to write into the buffer.
 ///
 /// A suffix `_be` means the data will be read big-endian. A suffix `_le` means
 /// the data will be read little-endian.
@@ -25,7 +25,7 @@ use impls::{AROIobuf, RWIobuf, UniqueIobuf};
 /// The `unsafe_` prefix means the function omits bounds checks. Misuse can
 /// easily cause security issues. Be careful!
 pub trait Iobuf: Clone + Show {
-  /// Copies the data byte-by-byte in the Iobuf isizeo a new, writeable Iobuf.
+  /// Copies the data byte-by-byte in the Iobuf into a new, writeable Iobuf.
   /// The new Iobuf and the old Iobuf will not share storage.
   ///
   /// ```rust
@@ -41,7 +41,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn deep_clone(&self) -> RWIobuf<'static>;
 
-  /// Copies the data byte-by-byte in the Iobuf isizeo a new, writable Iobuf.
+  /// Copies the data byte-by-byte in the Iobuf into a new, writable Iobuf.
   /// The new Iobuf will have storage allocated out of `allocator`, and will not
   /// share the buffer with the original Iobuf.
   fn deep_clone_with_allocator(&self, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static>;
@@ -140,14 +140,14 @@ pub trait Iobuf: Clone + Show {
   fn is_empty(&self) -> bool;
 
   /// Reads the data in the window as an immutable slice. Note that `Peek`s
-  /// and `Poke`s isizeo the iobuf will change the contents of the slice, even
+  /// and `Poke`s into the iobuf will change the contents of the slice, even
   /// though it advertises itself as immutable. Therefore, this function is
   /// `unsafe`.
   ///
   /// To use this function safely, you must manually ensure that the slice never
-  /// isizeeracts with the same Iobuf. If you take a slice of an Iobuf, you can
-  /// immediately poke it isizeo itself. This is unsafe, and undefined. However,
-  /// it can be safely poked isizeo a _different_ iobuf without issue.
+  /// interacts with the same Iobuf. If you take a slice of an Iobuf, you can
+  /// immediately poke it into itself. This is unsafe, and undefined. However,
+  /// it can be safely poked into a _different_ iobuf without issue.
   ///
   /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
@@ -162,14 +162,14 @@ pub trait Iobuf: Clone + Show {
   unsafe fn as_window_slice<'b>(&'b self) -> &'b [u8];
 
   /// Reads the data in the limits as an immutable slice. Note that `Peek`s
-  /// and `Poke`s isizeo the iobuf will change the contents of the slice, even
+  /// and `Poke`s into the iobuf will change the contents of the slice, even
   /// though it advertises itself as immutable. Therefore, this function is
   /// `unsafe`.
   ///
   /// To use this function safely, you must manually ensure that the slice never
-  /// isizeeracts with the same Iobuf. If you take a slice of an Iobuf, you can
-  /// immediately poke it isizeo itself. This is unsafe, and undefined. However,
-  /// it can be safely poked isizeo a _different_ iobuf without issue.
+  /// interacts with the same Iobuf. If you take a slice of an Iobuf, you can
+  /// immediately poke it into itself. This is unsafe, and undefined. However,
+  /// it can be safely poked into a _different_ iobuf without issue.
   ///
   /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
@@ -368,7 +368,7 @@ pub trait Iobuf: Clone + Show {
   /// be performed.
   ///
   /// A common pattern with `unsafe_advance` is to consolidate multiple bounds
-  /// checks isizeo one. In this example, O(n) bounds checks are consolidated isizeo
+  /// checks into one. In this example, O(n) bounds checks are consolidated into
   /// O(1) bounds checks:
   ///
   /// ```rust
@@ -457,7 +457,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Returns `true` if the `other` Iobuf's window is the region directly after
   /// our window. This does not inspect the buffer -- it only compares raw
-  /// poisizeers.
+  /// pointeers.
   ///
   /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
@@ -740,7 +740,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn hi_space(&self) -> u32;
 
-  /// Reads the bytes at a given offset from the beginning of the window, isizeo
+  /// Reads the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. Either the entire buffer is filled, or an error is
   /// returned because bytes outside of the window were requested.
   ///
@@ -800,7 +800,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn peek_le<T: Int>(&self, pos: u32) -> Result<T, ()>;
 
-  /// Reads bytes, starting from the front of the window, isizeo the supplied
+  /// Reads bytes, starting from the front of the window, into the supplied
   /// buffer. Either the entire buffer is filled, or an error is returned
   /// because bytes outside the window were requested.
   ///
@@ -887,7 +887,7 @@ pub trait Iobuf: Clone + Show {
   /// let mut b = ROIobuf::from_slice(&data);
   ///
   /// // Returns the sum of the bytes, omitting as much bounds checking as
-  /// // possible while still maisizeaining safety.
+  /// // possible while still maintaining safety.
   /// fn parse<B: Iobuf>(b: &mut B) -> Result<usize, ()> {
   ///   let mut sum = 0u;
   ///
@@ -948,7 +948,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn check_range_usize_fail(&self, pos: u32, len: usize);
 
-  /// Reads the bytes at a given offset from the beginning of the window, isizeo
+  /// Reads the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. It is undefined behavior to read outside the iobuf
   /// window.
   ///
@@ -1015,7 +1015,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   unsafe fn unsafe_peek_le<T: Int>(&self, pos: u32) -> T;
 
-  /// Reads bytes, starting from the front of the window, isizeo the supplied
+  /// Reads bytes, starting from the front of the window, into the supplied
   /// buffer. After the bytes have been read, the window will be moved to no
   /// longer include then.
   ///
@@ -1068,30 +1068,30 @@ pub trait Iobuf: Clone + Show {
   /// ```
   unsafe fn unsafe_consume_le<T: Int>(&mut self) -> T;
 
-  /// For isizeernal use only.
+  /// For internal use only.
   unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b>;
 
-  /// Gets a poisizeer to the start of the isizeernal backing buffer. This is
-  /// extremely low level, and it is not recommended you use this isizeerface.
+  /// Gets a pointeer to the start of the internal backing buffer. This is
+  /// extremely low level, and it is not recommended you use this interface.
   fn ptr(&self) -> *mut u8;
 
-  /// Returns `true` if the Iobuf poisizes to owned memory (i.e. has to do a
+  /// Returns `true` if the Iobuf points to owned memory (i.e. has to do a
   /// refcount modification on `clone` or `drop`) or borrowed memory.
   fn is_owned(&self) -> bool;
 
-  /// Returns an index isizeo the buffer returned by `ptr` that represents the
+  /// Returns an index into the buffer returned by `ptr` that represents the
   /// inclusive lower bound of the limits.
   fn lo_min(&self) -> u32;
 
-  /// Returns an index isizeo the buffer returned by `ptr` that represents the
+  /// Returns an index into the buffer returned by `ptr` that represents the
   /// inclusive lower bound of the window.
   fn lo(&self) -> u32;
 
-  /// Returns an index isizeo the buffer returned by `ptr` that represents the
+  /// Returns an index into the buffer returned by `ptr` that represents the
   /// exclusive upper bound of the window.
   fn hi(&self) -> u32;
 
-  /// Returns an index isizeo the buffer returned by `ptr` that represents the
+  /// Returns an index into the buffer returned by `ptr` that represents the
   /// exclusive upper bound of the limits.
   fn hi_max(&self) -> u32;
 

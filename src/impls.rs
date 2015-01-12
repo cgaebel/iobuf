@@ -1,9 +1,7 @@
-use std::cmp::min;
 use std::fmt::{self, Show, Formatter};
 use std::mem;
 use std::num::Int;
 use std::sync::Arc;
-use std::u32;
 
 
 use raw::{Allocator, RawIobuf};
@@ -11,7 +9,7 @@ use iobuf::Iobuf;
 
 /// Read-Only Iobuf
 ///
-/// An `Iobuf` that cannot write isizeo the buffer, but all read-only operations
+/// An `Iobuf` that cannot write into the buffer, but all read-only operations
 /// are supported. It is possible to get a `RWIobuf` by performing a `deep_clone`
 /// of the Iobuf, but this is extremely inefficient.
 ///
@@ -50,11 +48,11 @@ impl<'a> Drop for ROIobuf<'a> {
 
 /// Read-Write Iobuf
 ///
-/// An `Iobuf` which can read and write isizeo a buffer.
+/// An `Iobuf` which can read and write into a buffer.
 ///
 /// Iobufs may be `cloned` cheaply. When cloned, the data itself is shared and
 /// refcounted, and a new copy of the limits and window is made. This can be
-/// used to construct multiple views isizeo the same buffer.
+/// used to construct multiple views into the same buffer.
 ///
 /// `poke` and `fill` write a value at a position relative to the start of
 /// the window. Only `fill` advances the window by the amount written.
@@ -111,7 +109,7 @@ impl<'a> Drop for RWIobuf<'a> {
 /// use std::iter::range_inclusive;
 /// use std::sync::Future;
 ///
-/// // Write the bytes 0x00 - 0xFF isizeo an Iobuf.
+/// // Write the bytes 0x00 - 0xFF into an Iobuf.
 /// fn fill(buf: &mut RWIobuf<'static>) -> Result<(), ()> {
 ///   for i in range_inclusive(0x00u8, 0xFF) {
 ///     try!(buf.fill_be(i));
@@ -172,7 +170,7 @@ impl<'a> Drop for RWIobuf<'a> {
 ///   }));
 /// }
 ///
-/// for mut t in tasks.isizeo_iter() {
+/// for mut t in tasks.into_iter() {
 ///   t.get();
 /// }
 /// ```
@@ -212,19 +210,19 @@ unsafe impl Send for UniqueIobuf {}
 unsafe impl Sync for UniqueIobuf {}
 
 impl UniqueIobuf {
-  /// Safely converts a `UniqueIobuf` isizeo a `ROIobuf`.
+  /// Safely converts a `UniqueIobuf` into a `ROIobuf`.
   #[inline(always)]
   pub fn read_only(self) -> ROIobuf<'static> {
     unsafe { mem::transmute(self) }
   }
 
-  /// Safely converts a `UniqueIobuf` isizeo a `RWIobuf`.
+  /// Safely converts a `UniqueIobuf` into a `RWIobuf`.
   #[inline(always)]
   pub fn read_write(self) -> RWIobuf<'static> {
     unsafe { mem::transmute(self) }
   }
 
-  /// Safely converts a `UniqueIobuf` isizeo a `AROIobuf`.
+  /// Safely converts a `UniqueIobuf` into a `AROIobuf`.
   #[inline(always)]
   pub fn atomic_read_only(self) -> AROIobuf {
     unsafe { mem::transmute(self) }
@@ -273,7 +271,7 @@ impl<'a> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_str(s) }
   }
 
-  /// Copies a `str` isizeo a read-only Iobuf. The contents of the `str` will be
+  /// Copies a `str` into a read-only Iobuf. The contents of the `str` will be
   /// copied, so prefer to use the other constructors whenever possible.
   ///
   /// ```rust
@@ -291,14 +289,14 @@ impl<'a> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_str_copy(s) }
   }
 
-  /// Copies a `str` isizeo a read-only Iobuf, whose memory comes from the given
+  /// Copies a `str` into a read-only Iobuf, whose memory comes from the given
   /// allocator.
   #[inline(always)]
   pub fn from_str_copy_with_allocator(s: &str, allocator: Arc<Box<Allocator>>) -> ROIobuf<'static> {
     ROIobuf { raw: RawIobuf::from_str_copy_with_allocator(s, allocator) }
   }
 
-  /// Copies the contents of a slice isizeo a read-only Iobuf. The contents of the
+  /// Copies the contents of a slice into a read-only Iobuf. The contents of the
   /// slice will be copied, so prefer to use the other constructors whenever
   /// possible.
   ///
@@ -318,7 +316,7 @@ impl<'a> ROIobuf<'a> {
     ROIobuf { raw: RawIobuf::from_slice_copy(s) }
   }
 
-  /// Copies a byte vector isizeo a new read-only Iobuf, whose memory comes from
+  /// Copies a byte vector into a new read-only Iobuf, whose memory comes from
   /// the given allocator.
   #[inline(always)]
   pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> ROIobuf<'static> {
@@ -391,7 +389,7 @@ impl<'a> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::new_with_allocator(len, allocator) }
   }
 
-  /// Copies a `str` isizeo a writeable Iobuf. The contents of the `str` will be
+  /// Copies a `str` into a writeable Iobuf. The contents of the `str` will be
   /// copied, so prefer to use the non-copying constructors whenever possible.
   ///
   /// ```rust
@@ -411,7 +409,7 @@ impl<'a> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::from_str_copy(s) }
   }
 
-  /// Copies a `str` isizeo a writeable Iobuf, whose memory comes from the given
+  /// Copies a `str` into a writeable Iobuf, whose memory comes from the given
   /// allocator.
   #[inline(always)]
   pub fn from_str_copy_with_allocator(s: &str, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
@@ -442,7 +440,7 @@ impl<'a> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::from_slice(s) }
   }
 
-  /// Copies a byte vector isizeo a new, writeable Iobuf. The contents of the
+  /// Copies a byte vector into a new, writeable Iobuf. The contents of the
   /// slice will be copied, so prefer to use the other constructors whenever
   /// possible.
   ///
@@ -462,7 +460,7 @@ impl<'a> RWIobuf<'a> {
     RWIobuf { raw: RawIobuf::from_slice_copy(s) }
   }
 
-  /// Copies a byte vector isizeo a new writeable Iobuf, whose memory comes from
+  /// Copies a byte vector into a new writeable Iobuf, whose memory comes from
   /// the given allocator.
   #[inline(always)]
   pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
@@ -474,7 +472,7 @@ impl<'a> RWIobuf<'a> {
   /// multiple slices of the same data. Therefore, this function is unsafe.
   ///
   /// It may only be used safely if you ensure that the data in the iobuf never
-  /// isizeeracts with the slice, as they poisize to the same data. `peek`ing or
+  /// interacts with the slice, as they pointe to the same data. `peek`ing or
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
@@ -502,7 +500,7 @@ impl<'a> RWIobuf<'a> {
   /// multiple slices of the same data. Therefore, this function is unsafe.
   ///
   /// It may only be used safely if you ensure that the data in the iobuf never
-  /// isizeeracts with the slice, as they poisize to the same data. `peek`ing or
+  /// interacts with the slice, as they pointe to the same data. `peek`ing or
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
@@ -525,7 +523,7 @@ impl<'a> RWIobuf<'a> {
   }
 
   /// Gets a read-only copy of this Iobuf. This is a very cheap operation, as
-  /// the backing buffers are shared. This can be useful for isizeerfacing with
+  /// the backing buffers are shared. This can be useful for interfacing with
   /// code that only accepts read-only Iobufs.
   ///
   /// In general, ROIobuf should never be used as a function parameter. If
@@ -538,7 +536,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// let rwb: RWIobuf = RWIobuf::from_slice(s.as_mut_slice());
   ///
-  /// // write some data isizeo rwb.
+  /// // write some data into rwb.
   ///
   /// let rb: ROIobuf = rwb.read_only();
   ///
@@ -599,7 +597,7 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn compact(&mut self) { self.raw.compact() }
 
-  /// Writes the bytes at a given offset from the beginning of the window, isizeo
+  /// Writes the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. Either the entire buffer is copied, or an error is
   /// returned because bytes outside of the window would be written.
   ///
@@ -689,7 +687,7 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn fill(&mut self, src: &[u8]) -> Result<(), ()> { self.raw.fill(src) }
 
-  /// Writes a big-endian primitive isizeo the beginning of the window.
+  /// Writes a big-endian primitive into the beginning of the window.
   ///
   /// After the primitive has been written, the window will be moved such that
   /// it is no longer included.
@@ -715,7 +713,7 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn fill_be<T: Int>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_be(t) }
 
-  /// Writes a little-endian primitive isizeo the beginning of the window.
+  /// Writes a little-endian primitive into the beginning of the window.
   ///
   /// After the primitive has been written, the window will be moved such that
   /// it is no longer included.
@@ -741,7 +739,7 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub fn fill_le<T: Int>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
 
-  /// Writes the bytes at a given offset from the beginning of the window, isizeo
+  /// Writes the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. It is undefined behavior to write outside the iobuf
   /// window.
   ///
@@ -843,7 +841,7 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub unsafe fn unsafe_fill(&mut self, src: &[u8]) { self.raw.unsafe_fill(src) }
 
-  /// Writes a big-endian primitive isizeo the beginning of the window. It is
+  /// Writes a big-endian primitive into the beginning of the window. It is
   /// undefined behavior to write outside the iobuf window.
   ///
   /// After the primitive has been written, the window will be moved such that
@@ -872,7 +870,7 @@ impl<'a> RWIobuf<'a> {
   #[inline(always)]
   pub unsafe fn unsafe_fill_be<T: Int>(&mut self, t: T) { self.raw.unsafe_fill_be(t) }
 
-  /// Writes a little-endian primitive isizeo the beginning of the window. It is
+  /// Writes a little-endian primitive into the beginning of the window. It is
   /// undefined behavior to write outside the iobuf window.
   ///
   /// After the primitive has been written, the window will be moved such that
@@ -1648,7 +1646,7 @@ mod test {
           }
         }
 
-        box v.isizeo_iter()
+        box v.into_iter()
       }
     }
 

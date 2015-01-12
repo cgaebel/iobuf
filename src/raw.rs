@@ -157,7 +157,7 @@ pub struct RawIobuf<'a> {
   // function.
   buf:    *mut u8,
   // If the highest bit of this is set, `buf` is owned and the data before the
-  // poisizeer is valid. If it is not set, then the buffer wasn't allocated by us:
+  // pointeer is valid. If it is not set, then the buffer wasn't allocated by us:
   // it's owned by someone else. Therefore, there's no header, and no need to
   // deallocate or refcount.
   lo_min_and_owned_bit: u32,
