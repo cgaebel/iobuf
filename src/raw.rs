@@ -1,7 +1,7 @@
 use alloc::heap;
 
 use std::fmt::{self, Formatter};
-use std::kinds::marker::{NoCopy, ContravariantLifetime};
+use std::marker::{NoCopy, ContravariantLifetime};
 use std::mem;
 use std::num::Int;
 use std::ptr;
@@ -10,17 +10,17 @@ use std::u32;
 use std::sync::Arc;
 use std::sync::atomic::{self, AtomicUint, Ordering};
 
-#[cfg(target_word_size = "64")]
-const TARGET_WORD_SIZE: uint = 64;
+#[cfg(target_pointer_width = "64")]
+const TARGET_WORD_SIZE: usize = 64;
 
-#[cfg(target_word_size = "32")]
-const TARGET_WORD_SIZE: uint = 32;
+#[cfg(target_pointer_width = "32")]
+const TARGET_WORD_SIZE: usize = 32;
 
 /// The biggest Iobuf supported, to allow us to have a small RawIobuf struct.
 /// By limiting the buffer sizes, we can bring the struct down from 40 bytes to
 /// 24 bytes -- a 40% reduction. This frees up precious cache and registers for
 /// the actual processing.
-const MAX_BUFFER_LEN: uint = 0x7FFF_FFFF - 3*TARGET_WORD_SIZE;
+const MAX_BUFFER_LEN: usize = 0x7FFF_FFFF - 3*TARGET_WORD_SIZE;
 
 /// The bitmask to get the "is the buffer owned" bit.
 const OWNED_MASK:  u32  = 1u32 << (u32::BITS  - 1);
@@ -28,33 +28,33 @@ const OWNED_MASK:  u32  = 1u32 << (u32::BITS  - 1);
 /// Used to provide custom memory to Iobufs, instead of just using the heap.
 pub trait Allocator: Sync + Send {
   /// Allocates `len` bytes of memory, with an alignment of `align`.
-  fn allocate(&self, len: uint, align: uint) -> *mut u8;
+  fn allocate(&self, len: usize, align: usize) -> *mut u8;
 
   /// Deallocates memory allocated by `allocate`.
-  fn deallocate(&self, ptr: *mut u8, len: uint, align: uint);
+  fn deallocate(&self, ptr: *mut u8, len: usize, align: usize);
 }
 
 struct AllocationHeader {
   allocator: *mut (),
-  allocation_length: uint,
-  refcount: uint,
+  allocation_length: usize,
+  refcount: usize,
 }
 
 impl AllocationHeader {
   #[inline]
-  fn allocate(&self, len: uint) -> *mut u8 {
+  fn allocate(&self, len: usize) -> *mut u8 {
     unsafe {
       if self.allocator.is_null() {
-        heap::allocate(len, mem::size_of::<uint>())
+        heap::allocate(len, mem::size_of::<usize>())
       } else {
         let allocator: &Arc<Box<Allocator>> = mem::transmute(&self.allocator);
-        allocator.allocate(len, mem::size_of::<uint>())
+        allocator.allocate(len, mem::size_of::<usize>())
       }
     }
   }
 
   #[inline]
-  unsafe fn nonatomic_refcount(&self) -> uint {
+  unsafe fn nonatomic_refcount(&self) -> usize {
     self.refcount
   }
 
@@ -115,19 +115,19 @@ impl AllocationHeader {
 /// Each leaf of this enum is tagged with the allocation length listed in the
 /// header.
 enum Deallocator {
-  Heap(uint),
-  Custom(Arc<Box<Allocator>>, uint),
+  Heap(usize),
+  Custom(Arc<Box<Allocator>>, usize),
 }
 
 impl Deallocator {
   fn deallocate(self, ptr: *mut u8) {
     unsafe {
-      let ptr = ptr.offset(-(mem::size_of::<AllocationHeader>() as int));
+      let ptr = ptr.offset(-(mem::size_of::<AllocationHeader>() as isize));
       match self {
         Deallocator::Heap(len) =>
-          heap::deallocate(ptr, len, mem::align_of::<uint>()),
+          heap::deallocate(ptr, len, mem::align_of::<usize>()),
         Deallocator::Custom(arc, len) =>
-          arc.deallocate(ptr, len, mem::align_of::<uint>()),
+          arc.deallocate(ptr, len, mem::align_of::<usize>()),
       }
     }
   }
@@ -143,7 +143,7 @@ fn bad_range(pos: u64, len: u64) -> ! {
 }
 
 #[cold]
-fn buffer_too_big(actual_size: uint) -> ! {
+fn buffer_too_big(actual_size: usize) -> ! {
   panic!("Tried to create an Iobuf that's too big: {} bytes. Max size = {}",
          actual_size, MAX_BUFFER_LEN)
 }
@@ -157,7 +157,7 @@ pub struct RawIobuf<'a> {
   // function.
   buf:    *mut u8,
   // If the highest bit of this is set, `buf` is owned and the data before the
-  // pointer is valid. If it is not set, then the buffer wasn't allocated by us:
+  // pointeer is valid. If it is not set, then the buffer wasn't allocated by us:
   // it's owned by someone else. Therefore, there's no header, and no need to
   // deallocate or refcount.
   lo_min_and_owned_bit: u32,
@@ -176,7 +176,7 @@ fn check_sane_raw_size() {
 
 impl<'a> RawIobuf<'a> {
   pub fn new_impl(
-      len:       uint,
+      len:       usize,
       allocator: *mut ()) -> RawIobuf<'static> {
     unsafe {
       if len > MAX_BUFFER_LEN {
@@ -195,7 +195,7 @@ impl<'a> RawIobuf<'a> {
       let buf = allocation_header.allocate(data_len);
       ptr::write(buf as *mut AllocationHeader, allocation_header);
 
-      let buf: *mut u8 = buf.offset(mem::size_of::<AllocationHeader>() as int);
+      let buf: *mut u8 = buf.offset(mem::size_of::<AllocationHeader>() as isize);
 
       RawIobuf {
         buf:    buf,
@@ -210,12 +210,12 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn new(len: uint) -> RawIobuf<'static> {
+  pub fn new(len: usize) -> RawIobuf<'static> {
     RawIobuf::new_impl(len, ptr::null_mut())
   }
 
   #[inline]
-  pub fn new_with_allocator(len: uint, allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
+  pub fn new_with_allocator(len: usize, allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
     unsafe {
       RawIobuf::new_impl(len, mem::transmute(allocator))
     }
@@ -392,7 +392,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       if self.is_owned() {
         Some(mem::transmute(
-          self.buf.offset(-(mem::size_of::<AllocationHeader>() as int))))
+          self.buf.offset(-(mem::size_of::<AllocationHeader>() as isize))))
       } else {
         None
       }
@@ -500,8 +500,8 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn as_raw_limit_slice(&self) -> raw::Slice<u8> {
     raw::Slice {
-      data: self.buf.offset(self.lo_min() as int) as *const u8,
-      len:  self.cap() as uint,
+      data: self.buf.offset(self.lo_min() as isize) as *const u8,
+      len:  self.cap() as usize,
     }
   }
 
@@ -518,8 +518,8 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn as_raw_window_slice(&self) -> raw::Slice<u8> {
     raw::Slice {
-      data: self.buf.offset(self.lo as int) as *const u8,
-      len:  self.len() as uint,
+      data: self.buf.offset(self.lo as isize) as *const u8,
+      len:  self.len() as usize,
     }
   }
 
@@ -548,7 +548,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn check_range_uint(&self, pos: u32, len: uint) -> Result<(), ()> {
+  pub fn check_range_usize(&self, pos: u32, len: usize) -> Result<(), ()> {
     self.check_range(pos as u64, len as u64)
   }
 
@@ -561,8 +561,8 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn check_range_uint_fail(&self, pos: u32, len: uint) {
-    match self.check_range_uint(pos, len) {
+  pub fn check_range_usize_fail(&self, pos: u32, len: usize) {
+    match self.check_range_usize(pos, len) {
       Ok(())  => {},
       Err(()) => bad_range(pos as u64, len as u64),
     }
@@ -576,9 +576,9 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn debug_check_range_uint(&self, pos: u32, len: uint) {
+  pub fn debug_check_range_usize(&self, pos: u32, len: usize) {
     if cfg!(debug) {
-      self.check_range_uint_fail(pos, len);
+      self.check_range_usize_fail(pos, len);
     }
   }
 
@@ -691,6 +691,24 @@ impl<'a> RawIobuf<'a> {
     Ok(())
   }
 
+  /// Both the limits and the window are [lo, hi).
+  #[inline]
+  pub fn expand_limits_and_window(&mut self, limits: (u32, u32), window: (u32, u32)) -> Result<(), ()> {
+    let (new_lo_min, new_hi_max) = limits;
+    let (new_lo, new_hi) = window;
+    let lo_min = self.lo_min();
+    if new_hi_max < new_lo_min  { return Err(()); }
+    if new_hi     < new_lo      { return Err(()); }
+    if new_lo_min < lo_min      { return Err(()); }
+    if new_hi_max > self.hi_max { return Err(()); }
+    self.set_lo_min(new_lo_min);
+    self.lo     = new_lo;
+    self.hi     = new_hi;
+    self.hi_max = new_hi_max;
+    Ok(())
+  }
+
+
   #[inline]
   pub fn len(&self) -> u32 {
     self.hi - self.lo
@@ -760,7 +778,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn is_extended_by<'b>(&self, other: &RawIobuf<'b>) -> bool {
     unsafe {
-      self.buf.offset(self.hi as int) == other.buf.offset(other.lo as int)
+      self.buf.offset(self.hi as isize) == other.buf.offset(other.lo as isize)
          // check_range, but with `cap()` instead of `len()`.
       && self.hi as u64 + other.len() as u64 <= self.hi_max as u64
     }
@@ -901,9 +919,9 @@ impl<'a> RawIobuf<'a> {
       let len = self.len();
       let lo_min = self.lo_min();
       ptr::copy_memory(
-        self.buf.offset(lo_min as int),
-        self.buf.offset(self.lo as int) as *const u8,
-        len as uint);
+        self.buf.offset(lo_min as isize),
+        self.buf.offset(self.lo as isize) as *const u8,
+        len as usize);
       self.lo = lo_min + len;
       self.hi = self.hi_max;
     }
@@ -912,7 +930,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn peek(&self, pos: u32, dst: &mut [u8]) -> Result<(), ()> {
     unsafe {
-      try!(self.check_range_uint(pos, dst.len()));
+      try!(self.check_range_usize(pos, dst.len()));
       Ok(self.unsafe_peek(pos, dst))
     }
   }
@@ -936,7 +954,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn poke(&self, pos: u32, src: &[u8]) -> Result<(), ()> {
     unsafe {
-      try!(self.check_range_uint(pos, src.len()));
+      try!(self.check_range_usize(pos, src.len()));
       Ok(self.unsafe_poke(pos, src))
     }
   }
@@ -960,7 +978,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn fill(&mut self, src: &[u8]) -> Result<(), ()> {
     unsafe {
-      try!(self.check_range_uint(0, src.len()));
+      try!(self.check_range_usize(0, src.len()));
       Ok(self.unsafe_fill(src))
     }
   }
@@ -984,7 +1002,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn consume(&mut self, dst: &mut [u8]) -> Result<(), ()> {
     unsafe {
-      try!(self.check_range_uint(0, dst.len()));
+      try!(self.check_range_usize(0, dst.len()));
       Ok(self.unsafe_consume(dst))
     }
   }
@@ -1008,27 +1026,27 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn unsafe_peek(&self, pos: u32, dst: &mut [u8]) {
     let len = dst.len();
-    self.debug_check_range_uint(pos, len);
+    self.debug_check_range_usize(pos, len);
 
     let dst: raw::Slice<u8> = mem::transmute(dst);
 
     ptr::copy_nonoverlapping_memory(
       dst.data as *mut u8,
-      self.buf.offset((self.lo + pos) as int) as *const u8,
+      self.buf.offset((self.lo + pos) as isize) as *const u8,
       len);
   }
 
   #[inline]
   pub unsafe fn unsafe_peek_be<T: Int>(&self, pos: u32) -> T {
     let len = mem::size_of::<T>();
-    self.debug_check_range_uint(pos, len);
+    self.debug_check_range_usize(pos, len);
 
     let mut dst: T = mem::uninitialized();
 
     let dst_ptr = &mut dst as *mut T;
     ptr::copy_nonoverlapping_memory(
       dst_ptr as *mut u8,
-      self.buf.offset((self.lo + pos) as int) as *const u8,
+      self.buf.offset((self.lo + pos) as isize) as *const u8,
       len);
     Int::from_be(dst)
   }
@@ -1036,14 +1054,14 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn unsafe_peek_le<T: Int>(&self, pos: u32) -> T {
     let len = mem::size_of::<T>();
-    self.debug_check_range_uint(pos, len);
+    self.debug_check_range_usize(pos, len);
 
     let mut dst: T = mem::uninitialized();
 
     let dst_ptr = &mut dst as *mut T;
     ptr::copy_nonoverlapping_memory(
       dst_ptr as *mut u8,
-      self.buf.offset((self.lo + pos) as int) as *const u8,
+      self.buf.offset((self.lo + pos) as isize) as *const u8,
       len);
     Int::from_le(dst)
   }
@@ -1051,12 +1069,12 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn unsafe_poke(&self, pos: u32, src: &[u8]) {
     let len = src.len();
-    self.debug_check_range_uint(pos, len);
+    self.debug_check_range_usize(pos, len);
 
     let src: raw::Slice<u8> = mem::transmute(src);
 
     ptr::copy_nonoverlapping_memory(
-      self.buf.offset((self.lo + pos) as int),
+      self.buf.offset((self.lo + pos) as isize),
       src.data as *const u8,
       len);
   }
@@ -1064,14 +1082,14 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn unsafe_poke_be<T: Int>(&self, pos: u32, mut t: T) {
     let len = mem::size_of::<T>();
-    self.debug_check_range_uint(pos, len);
+    self.debug_check_range_usize(pos, len);
 
     t = t.to_be();
 
     let tp = &t as *const T;
 
     ptr::copy_nonoverlapping_memory(
-      self.buf.offset((self.lo + pos) as int),
+      self.buf.offset((self.lo + pos) as isize),
       tp as *const u8,
       len);
   }
@@ -1079,19 +1097,19 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn unsafe_poke_le<T: Int>(&self, pos: u32, mut t: T) {
     let len = mem::size_of::<T>();
-    self.debug_check_range_uint(pos, len);
+    self.debug_check_range_usize(pos, len);
 
     t = t.to_le();
 
     ptr::copy_nonoverlapping_memory(
-      self.buf.offset((self.lo + pos) as int),
+      self.buf.offset((self.lo + pos) as isize),
       &t as *const T as *const u8,
       len);
   }
 
   #[inline]
   pub unsafe fn unsafe_fill(&mut self, src: &[u8]) {
-    self.debug_check_range_uint(0, src.len());
+    self.debug_check_range_usize(0, src.len());
     self.unsafe_poke(0, src);
     self.lo += src.len() as u32;
   }
@@ -1114,7 +1132,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn unsafe_consume(&mut self, dst: &mut [u8]) {
-    self.debug_check_range_uint(0, dst.len());
+    self.debug_check_range_usize(0, dst.len());
     self.unsafe_peek(0, dst);
     self.lo += dst.len() as u32;
   }
@@ -1174,7 +1192,7 @@ impl<'a> RawIobuf<'a> {
     Ok(())
   }
 
-  fn show_line(&self, f: &mut Formatter, line_number: uint, chunk: &[u8])
+  fn show_line(&self, f: &mut Formatter, line_number: usize, chunk: &[u8])
       -> fmt::Result {
 
     if      self.len() <= 1 <<  8 { try!(write!(f, "0x{:02x}",  line_number * 8)) }
@@ -1314,18 +1332,19 @@ fn check_large_range_len() {
 #[test]
 fn test_allocator() {
   use impls::RWIobuf;
+  use self::Allocator;
 
   struct MyAllocator;
 
   impl Allocator for MyAllocator {
-    fn allocate(&self, size: uint, align: uint) -> *mut u8 {
+    fn allocate(&self, size: usize, align: usize) -> *mut u8 {
       unsafe { ::alloc::heap::allocate(size, align) }
     }
 
-    fn deallocate(&self, ptr: *mut u8, len: uint, align: uint) {
+    fn deallocate(&self, ptr: *mut u8, len: usize, align: usize) {
       unsafe { ::alloc::heap::deallocate(ptr, len, align) }
     }
   }
 
-  RWIobuf::new_with_allocator(1000, Arc::new(box MyAllocator as Box<Allocator>));
+  RWIobuf::new_with_allocator(1000, Arc::new(Box::new(MyAllocator) as Box<Allocator>));
 }

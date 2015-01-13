@@ -36,25 +36,25 @@
 
 #![doc(html_root_url = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/")]
 
-#![feature(associated_types)]
-#![feature(phase)]
 #![feature(slicing_syntax)]
 #![feature(unsafe_destructor)]
-
+#![allow(unstable)]
 #![deny(missing_docs)]
 
 extern crate alloc;
 #[cfg(test)] extern crate test;
-extern crate quickcheck;
+//#[cfg(test)] extern crate quickcheck;
 
 pub use raw::Allocator;
 pub use iobuf::Iobuf;
 pub use impls::{RWIobuf, ROIobuf, AROIobuf, UniqueIobuf};
 pub use ringbuf::IORingbuf;
 pub use bufspan::{BufSpan, ByteIter, SpanIter, SpanMoveIter};
+pub use appendbuf::AppendBuf;
 
 mod raw;
 mod iobuf;
 mod impls;
 mod ringbuf;
 mod bufspan;
+mod appendbuf;

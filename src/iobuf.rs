@@ -373,7 +373,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```rust
   /// use std::mem;
-  /// use std::result::Result::{mod,Ok};
+  /// use std::result::Result::{self,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let data = [2, 0x12, 0x34, 0x56, 0x78];
@@ -389,7 +389,7 @@ pub trait Iobuf: Clone + Show {
   ///
   ///     let mut sum = 0u16;
   ///
-  ///     for i in range(0, num_shorts as u32).map(|x| x * short_size) {
+  ///     for i in (0 .. num_shorts as u32).map(|x| x * short_size) {
   ///       sum += b.unsafe_peek_be(i);
   ///     }
   ///
@@ -408,7 +408,7 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```rust
   /// use std::mem;
-  /// use std::result::Result::{mod,Ok};
+  /// use std::result::Result::{self,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
   /// let data = [2, 0x12, 0x34, 0x56, 0x78];
   /// let mut b = ROIobuf::from_slice(&data);
@@ -423,7 +423,7 @@ pub trait Iobuf: Clone + Show {
   ///
   ///     let mut sum = 0u16;
   ///
-  ///     for _ in range(0, num_shorts) {
+  ///     for _ in (0 .. num_shorts) {
   ///       sum += b.unsafe_consume_be();
   ///     }
   ///
@@ -746,7 +746,6 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
-  /// use std::iter::AdditiveIterator;
   ///
   /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
   ///
@@ -755,9 +754,9 @@ pub trait Iobuf: Clone + Show {
   /// let mut tgt3 = [ 0x00, 0x00, 0x00 ];
   ///
   /// assert_eq!(b.peek(0, &mut tgt4), Ok(()));
-  /// assert_eq!(tgt4.iter().map(|&x| x).sum(), 10);
+  /// assert_eq!(tgt4.iter().map(|&x| x).fold(0,|a, b| a + b), 10);
   /// assert_eq!(b.peek(1, &mut tgt3), Ok(()));
-  /// assert_eq!(tgt3.iter().map(|&x| x).sum(), 9);
+  /// assert_eq!(tgt3.iter().map(|&x| x).fold(0, |a, b| a + b), 9);
   /// assert_eq!(b.peek(1, &mut tgt4), Err(()));
   /// ```
   fn peek(&self, pos: u32, dst: &mut [u8]) -> Result<(), ()>;
@@ -809,7 +808,6 @@ pub trait Iobuf: Clone + Show {
   ///
   /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
-  /// use std::iter::AdditiveIterator;
   ///
   /// let data = [ 0x01, 0x02, 0x03, 0x04 ];
   ///
@@ -818,7 +816,7 @@ pub trait Iobuf: Clone + Show {
   /// let mut tgt1 = [ 0x00 ];
   ///
   /// assert_eq!(b.consume(&mut tgt3), Ok(()));
-  /// assert_eq!(tgt3.iter().map(|&x| x).sum(), 6);
+  /// assert_eq!(tgt3.iter().map(|&x| x).fold(0, |a, b| a + b), 6);
   /// assert_eq!(b.consume(&mut tgt3), Err(()));
   /// assert_eq!(b.consume(&mut tgt1), Ok(()));
   /// assert_eq!(tgt1[0], 4);
@@ -879,28 +877,26 @@ pub trait Iobuf: Clone + Show {
   /// Below is a correct usage of `check_range` to minimize bounds checks:
   ///
   /// ```rust
-  /// use std::result::Result::{mod,Ok};
+  /// use std::result::Result::{self,Ok};
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// // [ number of byte buffers, size of first byte buffer, ...bytes, etc. ]
   /// let data = [ 0x02, 0x02, 0x55, 0x66, 0x03, 0x11, 0x22, 0x33 ];
   /// let mut b = ROIobuf::from_slice(&data);
   ///
-  /// // Returns the sum of the bytes, omitting as much bounds checking as
-  /// // possible while still maintaining safety.
-  /// fn parse<B: Iobuf>(b: &mut B) -> Result<uint, ()> {
-  ///   let mut sum = 0u;
+  /// fn parse<B: Iobuf>(b: &mut B) -> Result<usize, ()> {
+  ///   let mut sum = 0us;
   ///
   ///   let num_buffers: u8 = try!(b.consume_be());
   ///
-  ///   for _ in range(0, num_buffers) {
+  ///   for _ in (0 .. num_buffers) {
   ///     let len: u8 = try!(b.consume_be());
   ///
   ///     unsafe {
   ///       try!(b.check_range(0, len as u32));
   ///
-  ///       for _ in range(0, len) {
-  ///         sum += b.unsafe_consume_be::<u8>() as uint;
+  ///       for _ in (0 .. len) {
+  ///         sum += b.unsafe_consume_be::<u8>() as usize;
   ///       }
   ///     }
   ///   }
@@ -912,7 +908,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn check_range(&self, pos: u32, len: u32) -> Result<(), ()>;
 
-  /// The same as `check_range`, but with a `uint` length. If you're checking
+  /// The same as `check_range`, but with a `usize` length. If you're checking
   /// the range of something which might overflow an `i32`, use this version
   /// instead of `check_range`.
   ///
@@ -921,9 +917,9 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   ///
-  /// assert_eq!(b.check_range_uint(1u32, 5u), Err(()));
+  /// assert_eq!(b.check_range_usize(1u32, 5u), Err(()));
   /// ```
-  fn check_range_uint(&self, pos: u32, len: uint) -> Result<(), ()>;
+  fn check_range_usize(&self, pos: u32, len: usize) -> Result<(), ()>;
 
   /// The same as `check_range`, but fails if the bounds check returns `Err(())`.
   ///
@@ -936,7 +932,7 @@ pub trait Iobuf: Clone + Show {
   /// ```
   fn check_range_fail(&self, pos: u32, len: u32);
 
-  /// The same as `check_range_uint`, but fails if the bounds check returns
+  /// The same as `check_range_usize`, but fails if the bounds check returns
   /// `Err(())`.
   ///
   /// ```should_fail
@@ -944,9 +940,9 @@ pub trait Iobuf: Clone + Show {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   ///
-  /// b.check_range_uint_fail(1u32, 5u); // boom.
+  /// b.check_range_usize_fail(1u32, 5u); // boom.
   /// ```
-  fn check_range_uint_fail(&self, pos: u32, len: uint);
+  fn check_range_usize_fail(&self, pos: u32, len: usize);
 
   /// Reads the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. It is undefined behavior to read outside the iobuf
@@ -969,7 +965,7 @@ pub trait Iobuf: Clone + Show {
   /// }
   ///
   /// let expected = [ 2u8, 3, 4, 5 ];
-  /// assert_eq!(dst.as_slice(), expected.as_slice());
+  /// assert_eq!(dst, expected);
   /// ```
   unsafe fn unsafe_peek(&self, pos: u32, dst: &mut [u8]);
 

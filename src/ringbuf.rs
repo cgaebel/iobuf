@@ -15,7 +15,7 @@ pub struct IORingbuf {
 
 impl IORingbuf {
   /// Creates a new ring buffer, with room for `cap` bytes.
-  pub fn new(cap: uint) -> IORingbuf {
+  pub fn new(cap: usize) -> IORingbuf {
     let left_size = cap / 2;
     let mut ret =
       IORingbuf {

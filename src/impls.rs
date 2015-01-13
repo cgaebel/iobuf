@@ -1,11 +1,8 @@
-use std::cmp::min;
 use std::fmt::{self, Show, Formatter};
 use std::mem;
 use std::num::Int;
 use std::sync::Arc;
-use std::u32;
 
-use quickcheck::{Arbitrary, Gen, Shrinker};
 
 use raw::{Allocator, RawIobuf};
 use iobuf::Iobuf;
@@ -108,14 +105,14 @@ impl<'a> Drop for RWIobuf<'a> {
 /// 0xFF, and consuming/validating these numbers in parallel in 4 other threads:
 ///
 /// ```rust
+/// #![allow(unstable)]
 /// use iobuf::{RWIobuf, AROIobuf, Iobuf};
-/// use std::iter::range_inclusive;
 /// use std::sync::Future;
 ///
 /// // Write the bytes 0x00 - 0xFF into an Iobuf.
 /// fn fill(buf: &mut RWIobuf<'static>) -> Result<(), ()> {
-///   for i in range_inclusive(0x00u8, 0xFF) {
-///     try!(buf.fill_be(i));
+///   for i in (0x00 .. 0x100) {
+///     try!(buf.fill_be(i as u8));
 ///   }
 ///
 ///   Ok(())
@@ -198,44 +195,6 @@ impl Drop for AROIobuf {
   fn drop(&mut self) { unsafe { self.raw.drop_atomic() } }
 }
 
-impl Arbitrary for AROIobuf {
-  fn arbitrary<G: Gen>(g: &mut G) -> AROIobuf {
-    let data: Vec<u8> = Arbitrary::arbitrary(g);
-
-    assert!(data.len() < u32::MAX as uint);
-
-    let (a, b, c, d): (u32, u32, u32, u32) = Arbitrary::arbitrary(g);
-
-    let hi_max = a % (data.len() as u32 + 1);
-    let hi     = b % (hi_max + 1);
-    let lo     = c % (hi + 1);
-    let lo_min = d % (lo + 1);
-
-    let mut buf = ROIobuf::from_slice_copy(data[]);
-    buf.set_limits_and_window((lo_min, hi_max), (lo, hi)).unwrap();
-
-    buf.atomic_read_only().unwrap()
-  }
-
-  fn shrink(&self) -> Box<Shrinker<AROIobuf>+'static> {
-    let mut v: Vec<AROIobuf> = vec!();
-
-    // explore every possible subset of limits and bounds
-    for hi_max in range(0, self.raw.hi_max()) {
-      for hi in range(0, min(hi_max, self.raw.hi())) {
-        for lo in range(self.raw.lo() + 1, hi + 1) {
-          for lo_min in range(self.raw.lo_min() + 1, lo + 1) {
-            let mut new_buf: AROIobuf = (*self).clone();
-            new_buf.set_limits_and_window((lo_min, hi_max), (lo, hi)).unwrap();
-            v.push(new_buf);
-          }
-        }
-      }
-    }
-
-    box v.into_iter()
-  }
-}
 
 /// A unique, immutable Iobuf.
 ///
@@ -342,15 +301,16 @@ impl<'a> ROIobuf<'a> {
   /// possible.
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut v = vec!(1u8, 2, 3, 4, 5, 6);
   /// v.as_mut_slice()[1] = 20;
   ///
-  /// let mut b = ROIobuf::from_slice_copy(v.as_slice());
+  /// let mut b = ROIobuf::from_slice_copy(&v[]);
   ///
   /// let expected = [ 1,20,3,4,5,6 ];
-  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), &expected[]); }
   /// ```
   #[inline(always)]
   pub fn from_slice_copy(s: &[u8]) -> ROIobuf<'static> {
@@ -368,11 +328,12 @@ impl<'a> ROIobuf<'a> {
   /// contents, and therefore their lifetimes will be linked.
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let s = [1,2,3,4];
   ///
-  /// let mut b = ROIobuf::from_slice(s.as_slice());
+  /// let mut b = ROIobuf::from_slice(&s[]);
   ///
   /// assert_eq!(b.advance(1), Ok(()));
   ///
@@ -416,7 +377,7 @@ impl<'a> RWIobuf<'a> {
   /// assert_eq!(b.cap(), 10);
   /// ```
   #[inline(always)]
-  pub fn new(len: uint) -> RWIobuf<'static> {
+  pub fn new(len: usize) -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::new(len) }
   }
 
@@ -426,7 +387,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// The maximum length of an Iobuf is approximately 2 GB.
   #[inline(always)]
-  pub fn new_with_allocator(len: uint, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
+  pub fn new_with_allocator(len: usize, allocator: Arc<Box<Allocator>>) -> RWIobuf<'static> {
     RWIobuf { raw: RawIobuf::new_with_allocator(len, allocator) }
   }
 
@@ -486,15 +447,16 @@ impl<'a> RWIobuf<'a> {
   /// possible.
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut v = vec!(1u8, 2, 3, 4, 5, 6, 10);
   /// v.as_mut_slice()[1] = 20;
   ///
-  /// let mut b = RWIobuf::from_slice_copy(v.as_slice());
+  /// let mut b = RWIobuf::from_slice_copy(&v[]);
   ///
   /// let expected = [ 1,20,3,4,5,6,10 ];
-  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), expected); }
   /// ```
   #[inline(always)]
   pub fn from_slice_copy(s: &[u8]) -> RWIobuf<'static> {
@@ -517,19 +479,20 @@ impl<'a> RWIobuf<'a> {
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf, Iobuf};
   ///
   /// let mut s = [1,2,3];
   ///
   /// {
-  ///   let mut b = RWIobuf::from_slice(&mut s);
+  ///   let mut b = RWIobuf::from_slice(&mut s[]);
   ///
   ///   assert_eq!(b.advance(1), Ok(()));
   ///   unsafe { b.as_mut_window_slice()[1] = 30; }
   /// }
   ///
   /// let expected = [ 1,2,30 ];
-  /// assert_eq!(s.as_slice(), expected.as_slice());
+  /// assert_eq!(s, &expected[]);
   /// ```
   #[inline(always)]
   pub unsafe fn as_mut_window_slice<'b>(&'b self) -> &'b mut [u8] {
@@ -545,18 +508,19 @@ impl<'a> RWIobuf<'a> {
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf, Iobuf};
   ///
   /// let mut s = [1,2,3];
   ///
   /// {
-  ///   let mut b = RWIobuf::from_slice(&mut s);
+  ///   let mut b = RWIobuf::from_slice(&mut s[]);
   ///
   ///   assert_eq!(b.advance(1), Ok(()));
   ///   unsafe { b.as_mut_limit_slice()[1] = 20; }
   /// }
   ///
-  /// assert_eq!(s.as_slice(), [1,20,3].as_slice());
+  /// assert_eq!(s, &[1,20,3][]);
   /// ```
   #[inline(always)]
   pub unsafe fn as_mut_limit_slice<'b>(&'b self) -> &'b mut [u8] {
@@ -595,8 +559,7 @@ impl<'a> RWIobuf<'a> {
   /// prepare for the next series of `Fill`s and `flip_lo`s.
   ///
   /// ```rust
-  /// use std::iter::range;
-  /// use std::result::Result::{mod,Ok};
+  /// use std::result::Result::{self,Ok};
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// // A header, saying how many shorts will follow. Unfortunately, our buffer
@@ -605,7 +568,7 @@ impl<'a> RWIobuf<'a> {
   /// let mut s = [ 0x02, 0x11, 0x22, 0x33 ];
   /// let mut b = RWIobuf::from_slice(s.as_mut_slice());
   ///
-  /// #[deriving(Eq, PartialEq, Show)]
+  /// #[derive(Eq, PartialEq, Show)]
   /// enum ParseState {
   ///   NeedMore(u16), // sum so far
   ///   Done(u16),     // final sum
@@ -617,7 +580,7 @@ impl<'a> RWIobuf<'a> {
   ///   let len: u8 = try!(b.consume_be());
   ///   let mut sum = 0u16;
   ///
-  ///   for _ in range(0u8, len) {
+  ///   for _ in (0u8 .. len) {
   ///     unsafe {
   ///       if b.len() < 2 {
   ///         b.compact();
@@ -643,19 +606,20 @@ impl<'a> RWIobuf<'a> {
   /// returned because bytes outside of the window would be written.
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1,2,3,4 ];
   ///
   /// let mut b = RWIobuf::new(10);
   ///
-  /// assert_eq!(b.poke(0, data.as_slice()), Ok(()));
-  /// assert_eq!(b.poke(3, data.as_slice()), Ok(()));
+  /// assert_eq!(b.poke(0, &data[]), Ok(()));
+  /// assert_eq!(b.poke(3, &data[]), Ok(()));
   /// assert_eq!(b.resize(7), Ok(()));
-  /// assert_eq!(b.poke(4, data.as_slice()), Err(())); // no partial write, just failure
+  /// assert_eq!(b.poke(4, &data[]), Err(())); // no partial write, just failure
   ///
   /// let expected = [ 1,2,3,1,2,3,4 ];
-  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), expected); }
   /// ```
   #[inline(always)]
   pub fn poke(&self, pos: u32, src: &[u8]) -> Result<(), ()> { self.raw.poke(pos, src) }
@@ -677,7 +641,7 @@ impl<'a> RWIobuf<'a> {
   /// assert_eq!(b.resize(7), Ok(()));
   ///
   /// let expected = [ 3,5,5,6,7,8,9 ];
-  /// unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), expected); }
   /// ```
   #[inline(always)]
   pub fn poke_be<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
@@ -698,7 +662,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// assert_eq!(b.resize(7), Ok(()));
   ///
-  /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ]); }
   /// ```
   #[inline(always)]
   pub fn poke_le<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> { self.raw.poke_le(pos, t) }
@@ -711,19 +675,20 @@ impl<'a> RWIobuf<'a> {
   /// include then.
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1, 2, 3, 4 ];
   ///
   /// let mut b = RWIobuf::new(10);
   ///
-  /// assert_eq!(b.fill(data.as_slice()), Ok(()));
-  /// assert_eq!(b.fill(data.as_slice()), Ok(()));
-  /// assert_eq!(b.fill(data.as_slice()), Err(()));
+  /// assert_eq!(b.fill(&data[]), Ok(()));
+  /// assert_eq!(b.fill(&data[]), Ok(()));
+  /// assert_eq!(b.fill(&data[]), Err(()));
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_window_slice(), [ 1,2,3,4,1,2,3,4 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), &[ 1,2,3,4,1,2,3,4 ][]); }
   /// ```
   #[inline(always)]
   pub fn fill(&mut self, src: &[u8]) -> Result<(), ()> { self.raw.fill(src) }
@@ -749,7 +714,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// unsafe { assert_eq!(b.as_window_slice(), [ 0x12, 0x34, 0x56, 0x78
   ///                                          , 0x11, 0x22, 0x33, 0x44
-  ///                                          , 0x88, 0x77 ].as_slice()); }
+  ///                                          , 0x88, 0x77 ]); }
   /// ```
   #[inline(always)]
   pub fn fill_be<T: Int>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_be(t) }
@@ -775,7 +740,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// unsafe { assert_eq!(b.as_window_slice(), [ 0x78, 0x56, 0x34, 0x12
   ///                                          , 0x44, 0x33, 0x22, 0x11
-  ///                                          , 0x77, 0x88 ].as_slice()); }
+  ///                                          , 0x77, 0x88 ]); }
   /// ```
   #[inline(always)]
   pub fn fill_le<T: Int>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
@@ -804,7 +769,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_window_slice(), [ 1,2,3,1,2,3,4 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 1,2,3,1,2,3,4 ]); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_poke(&self, pos: u32, src: &[u8]) { self.raw.unsafe_poke(pos, src) }
@@ -827,7 +792,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// assert_eq!(b.resize(7), Ok(()));
   ///
-  /// unsafe { assert_eq!(b.as_window_slice(), [ 3, 5, 5, 6, 7, 8, 9 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 3, 5, 5, 6, 7, 8, 9 ]); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_poke_be<T: Int>(&self, pos: u32, t: T) { self.raw.unsafe_poke_be(pos, t) }
@@ -850,7 +815,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// assert_eq!(b.resize(7), Ok(()));
   ///
-  /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ]); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_poke_le<T: Int>(&self, pos: u32, t: T) { self.raw.unsafe_poke_le(pos, t) }
@@ -862,6 +827,7 @@ impl<'a> RWIobuf<'a> {
   /// include then.
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1, 2, 3, 4 ];
@@ -871,13 +837,13 @@ impl<'a> RWIobuf<'a> {
   /// unsafe {
   ///   b.check_range_fail(0, 8);
   ///
-  ///   b.unsafe_fill(data.as_slice());
-  ///   b.unsafe_fill(data.as_slice());
+  ///   b.unsafe_fill(&data[]);
+  ///   b.unsafe_fill(&data[]);
   /// }
   ///
   /// b.flip_lo();
   ///
-  /// unsafe { assert_eq!(b.as_window_slice(), [ 1,2,3,4,1,2,3,4 ].as_slice()); }
+  /// unsafe { assert_eq!(b.as_window_slice(), [ 1,2,3,4,1,2,3,4 ]); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill(&mut self, src: &[u8]) { self.raw.unsafe_fill(src) }
@@ -906,7 +872,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// unsafe { assert_eq!(b.as_window_slice(), [ 0x12, 0x34, 0x56, 0x78
   ///                                          , 0x11, 0x22, 0x33, 0x44
-  ///                                          , 0x88, 0x77 ].as_slice()); }
+  ///                                          , 0x88, 0x77 ]); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill_be<T: Int>(&mut self, t: T) { self.raw.unsafe_fill_be(t) }
@@ -935,7 +901,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// unsafe { assert_eq!(b.as_window_slice(), [ 0x78, 0x56, 0x34, 0x12
   ///                                          , 0x44, 0x33, 0x22, 0x11
-  ///                                          , 0x77, 0x88 ].as_slice()); }
+  ///                                          , 0x77, 0x88 ]); }
   /// ```
   #[inline(always)]
   pub unsafe fn unsafe_fill_le<T: Int>(&mut self, t: T) { self.raw.unsafe_fill_le(t) }
@@ -1162,13 +1128,13 @@ impl<'a> Iobuf for ROIobuf<'a> {
   fn check_range(&self, pos: u32, len: u32) -> Result<(), ()> { self.raw.check_range_u32(pos, len) }
 
   #[inline(always)]
-  fn check_range_uint(&self, pos: u32, len: uint) -> Result<(), ()> { self.raw.check_range_uint(pos, len) }
+  fn check_range_usize(&self, pos: u32, len: usize) -> Result<(), ()> { self.raw.check_range_usize(pos, len) }
 
   #[inline(always)]
   fn check_range_fail(&self, pos: u32, len: u32) { self.raw.check_range_u32_fail(pos, len) }
 
   #[inline(always)]
-  fn check_range_uint_fail(&self, pos: u32, len: uint) { self.raw.check_range_uint_fail(pos, len) }
+  fn check_range_usize_fail(&self, pos: u32, len: usize) { self.raw.check_range_usize_fail(pos, len) }
 
   #[inline(always)]
   unsafe fn unsafe_peek(&self, pos: u32, dst: &mut [u8]) { self.raw.unsafe_peek(pos, dst) }
@@ -1370,13 +1336,13 @@ impl Iobuf for AROIobuf {
   fn check_range(&self, pos: u32, len: u32) -> Result<(), ()> { self.raw.check_range_u32(pos, len) }
 
   #[inline(always)]
-  fn check_range_uint(&self, pos: u32, len: uint) -> Result<(), ()> { self.raw.check_range_uint(pos, len) }
+  fn check_range_usize(&self, pos: u32, len: usize) -> Result<(), ()> { self.raw.check_range_usize(pos, len) }
 
   #[inline(always)]
   fn check_range_fail(&self, pos: u32, len: u32) { self.raw.check_range_u32_fail(pos, len) }
 
   #[inline(always)]
-  fn check_range_uint_fail(&self, pos: u32, len: uint) { self.raw.check_range_uint_fail(pos, len) }
+  fn check_range_usize_fail(&self, pos: u32, len: usize) { self.raw.check_range_usize_fail(pos, len) }
 
   #[inline(always)]
   unsafe fn unsafe_peek(&self, pos: u32, dst: &mut [u8]) { self.raw.unsafe_peek(pos, dst) }
@@ -1578,13 +1544,13 @@ impl<'a> Iobuf for RWIobuf<'a> {
   fn check_range(&self, pos: u32, len: u32) -> Result<(), ()> { self.raw.check_range_u32(pos, len) }
 
   #[inline(always)]
-  fn check_range_uint(&self, pos: u32, len: uint) -> Result<(), ()> { self.raw.check_range_uint(pos, len) }
+  fn check_range_usize(&self, pos: u32, len: usize) -> Result<(), ()> { self.raw.check_range_usize(pos, len) }
 
   #[inline(always)]
   fn check_range_fail(&self, pos: u32, len: u32) { self.raw.check_range_u32_fail(pos, len) }
 
   #[inline(always)]
-  fn check_range_uint_fail(&self, pos: u32, len: uint) { self.raw.check_range_uint_fail(pos, len) }
+  fn check_range_usize_fail(&self, pos: u32, len: usize) { self.raw.check_range_usize_fail(pos, len) }
 
   #[inline(always)]
   unsafe fn unsafe_peek(&self, pos: u32, dst: &mut [u8]) { self.raw.unsafe_peek(pos, dst) }
@@ -1645,12 +1611,52 @@ impl Show for UniqueIobuf {
   }
 }
 
-#[cfg(test)]
+#[cfg(never)]
 mod test {
   use impls::AROIobuf;
   use iobuf::Iobuf;
 
-  use quickcheck::quickcheck;
+  use quickcheck::{quickcheck, Arbitrary, Gen, Shrinker};
+
+    impl Arbitrary for AROIobuf {
+      fn arbitrary<G: Gen>(g: &mut G) -> AROIobuf {
+        let data: Vec<u8> = Arbitrary::arbitrary(g);
+
+        assert!(data.len() < u32::MAX as usize);
+
+        let (a, b, c, d): (u32, u32, u32, u32) = Arbitrary::arbitrary(g);
+
+        let hi_max = a % (data.len() as u32 + 1);
+        let hi     = b % (hi_max + 1);
+        let lo     = c % (hi + 1);
+        let lo_min = d % (lo + 1);
+
+        let mut buf = ROIobuf::from_slice_copy(data[]);
+        buf.set_limits_and_window((lo_min, hi_max), (lo, hi)).unwrap();
+
+        buf.atomic_read_only().unwrap()
+      }
+
+      fn shrink(&self) -> Box<Shrinker<AROIobuf>+'static> {
+        let mut v: Vec<AROIobuf> = vec!();
+
+        // explore every possible subset of limits and bounds
+        for hi_max in range(0, self.raw.hi_max()) {
+          for hi in range(0, min(hi_max, self.raw.hi())) {
+            for lo in range(self.raw.lo() + 1, hi + 1) {
+              for lo_min in range(self.raw.lo_min() + 1, lo + 1) {
+                let mut new_buf: AROIobuf = (*self).clone();
+                new_buf.set_limits_and_window((lo_min, hi_max), (lo, hi)).unwrap();
+                v.push(new_buf);
+              }
+            }
+          }
+        }
+
+        box v.into_iter()
+      }
+    }
+
 
   #[test]
   fn prop_valid_hi() {

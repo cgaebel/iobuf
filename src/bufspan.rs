@@ -176,7 +176,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// s.push(ROIobuf::from_str("he"));
   /// s.push(ROIobuf::from_str("llo"));
   ///
-  /// assert_eq!(s.count_bytes() as uint, "hello".len());
+  /// assert_eq!(s.count_bytes() as usize, "hello".len());
   /// assert_eq!(s.iter().count(), 2);
   ///
   /// let mut b0 = ROIobuf::from_str(" world");
@@ -190,7 +190,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   ///
   /// // b0 and b1 are immediately after each other, and from the same buffer,
   /// // so get merged into one Iobuf.
-  /// assert_eq!(s.count_bytes() as uint, "hello world".len());
+  /// assert_eq!(s.count_bytes() as usize, "hello world".len());
   /// assert_eq!(s.iter().count(), 3);
   /// ```
   #[inline(always)]
@@ -293,7 +293,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn byte_equal<Buf2: Iobuf>(&self, other: &BufSpan<Buf2>) -> bool {
-    self.count_bytes_cmp(other.count_bytes() as uint) == Ordering::Equal
+    self.count_bytes_cmp(other.count_bytes() as usize) == Ordering::Equal
     && self.iter_bytes().zip(other.iter_bytes()).all(|(a, b)| a == b)
   }
 
@@ -356,7 +356,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// assert_eq!(a.count_bytes_cmp(9001), Ordering::Less);
   /// ```
   #[inline]
-  pub fn count_bytes_cmp(&self, other: uint) -> Ordering {
+  pub fn count_bytes_cmp(&self, other: usize) -> Ordering {
     let mut other =
       match other.to_u32() {
         None        => return Ordering::Less,
@@ -499,7 +499,7 @@ impl<'a, Buf: Iobuf> Iterator for SpanIter<'a, Buf> {
   }
 
   #[inline(always)]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     match *self {
       Opt(ref iter) => iter.size_hint(),
       Lot(ref iter) => iter.size_hint(),
@@ -543,7 +543,7 @@ impl<Buf: Iobuf> Iterator for SpanMoveIter<Buf> {
   }
 
   #[inline(always)]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     match *self {
       MoveOpt(ref iter) => iter.size_hint(),
       MoveLot(ref iter) => iter.size_hint(),

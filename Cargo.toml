@@ -16,9 +16,6 @@ license = "MIT"
 
 description = "A contiguous region of bytes, useful for I/O operations."
 
-[dependencies]
-quickcheck = "0"
-
 [profile.dev]
 opt-level = 1  # Controls the --opt-level the compiler builds with
 debug = true   # Controls whether the compiler passes -g or `--cfg ndebug`
