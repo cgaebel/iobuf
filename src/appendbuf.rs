@@ -24,9 +24,8 @@ use impls::{AROIobuf};
 ///
 #[unsafe_no_drop_flag]
 pub struct AppendBuf<'a> {
-    raw: RawIobuf<'a>,
+   raw: RawIobuf<'a>,
 }
-
 
 impl<'a> AppendBuf<'a> {
     /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
@@ -103,20 +102,22 @@ impl<'a> AppendBuf<'a> {
     ///   let e = unsafe { end.as_window_slice() };
     ///   let z = unsafe { meh.as_window_slice() };
     ///
-    ///   assert_eq!(b, "ABCDEFGH".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(m, "IJKLMNOP".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(e, "QRSTUVWX".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(z, "EFGHIJKL".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(b, b"ABCDEFGH");
+    ///   assert_eq!(m, b"IJKLMNOP");
+    ///   assert_eq!(e, b"QRSTUVWX");
+    ///   assert_eq!(z, b"EFGHIJKL");
     /// ```
     ///
-    #[inline(always)]
-    pub fn atomic_slice_from_end(&self, len: u32) -> Result<AROIobuf, ()> { unsafe {
+    #[inline]
+    pub fn atomic_slice_from_end(&self, len: u32) -> Result<AROIobuf, ()> {
+      unsafe {
         let mut ret = self.raw.clone_atomic();
         if len > self.raw.lo() { return Err(()) }
         let lim = (self.raw.lo() - len,self.raw.lo()) ;
         try!(ret.expand_limits_and_window(lim, lim));
         Ok(mem::transmute(ret))
-    }}
+      }
+    }
 
     /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
     /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
@@ -148,20 +149,22 @@ impl<'a> AppendBuf<'a> {
     ///   let e = unsafe { end.as_window_slice() };
     ///   let z = unsafe { meh.as_window_slice() };
     ///
-    ///   assert_eq!(b, "ABCDEFGH".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(m, "IJKLMNOP".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(e, "QRSTUVWX".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(z, "EFGHIJKL".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(b, b"ABCDEFGH");
+    ///   assert_eq!(m, b"IJKLMNOP");
+    ///   assert_eq!(e, b"QRSTUVWX");
+    ///   assert_eq!(z, b"EFGHIJKL");
     /// ```
     ///
-    #[inline(always)]
-    pub fn atomic_slice_pos_from_end(&self, pos: u32, len: u32) -> Result<AROIobuf, ()> { unsafe {
+    #[inline]
+    pub fn atomic_slice_pos_from_end(&self, pos: u32, len: u32) -> Result<AROIobuf, ()> {
+      unsafe {
         let mut ret = self.raw.clone_atomic();
         if pos > self.raw.lo() { return Err(()) }
         let lim = (self.raw.lo() - pos, (self.raw.lo() - pos) + len);
         try!(ret.expand_limits_and_window(lim, lim));
         Ok(mem::transmute(ret))
-    }}
+      }
+    }
 
     /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
     /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
@@ -193,19 +196,21 @@ impl<'a> AppendBuf<'a> {
     ///   let e = unsafe { end.as_window_slice() };
     ///   let z = unsafe { meh.as_window_slice() };
     ///
-    ///   assert_eq!(b, "ABCDEFGH".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(m, "IJKLMNOP".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(e, "QRSTUVWX".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(z, "EFGHIJKL".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(b, b"ABCDEFGH");
+    ///   assert_eq!(m, b"IJKLMNOP");
+    ///   assert_eq!(e, b"QRSTUVWX");
+    ///   assert_eq!(z, b"EFGHIJKL");
     /// ```
     ///
-    #[inline(always)]
-    pub fn atomic_slice_from_begin(&self, len: u32) -> Result<AROIobuf, ()> { unsafe {
+    #[inline]
+    pub fn atomic_slice_from_begin(&self, len: u32) -> Result<AROIobuf, ()> {
+      unsafe {
         let mut ret = self.raw.clone_atomic();
         let lim = (self.raw.lo_min(), self.raw.lo_min() + len);
         try!(ret.expand_limits_and_window(lim, lim));
         Ok(mem::transmute(ret))
-    }}
+      }
+    }
 
     /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
     /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
@@ -237,20 +242,21 @@ impl<'a> AppendBuf<'a> {
     ///   let e = unsafe { end.as_window_slice() };
     ///   let z = unsafe { meh.as_window_slice() };
     ///
-    ///   assert_eq!(b, "ABCDEFGH".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(m, "IJKLMNOP".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(e, "QRSTUVWX".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(z, "EFGHIJKL".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(b, b"ABCDEFGH");
+    ///   assert_eq!(m, b"IJKLMNOP");
+    ///   assert_eq!(e, b"QRSTUVWX");
+    ///   assert_eq!(z, b"EFGHIJKL");
     /// ```
     ///
-    #[inline(always)]
-    pub fn atomic_slice_pos_from_begin(&self, pos: u32, len: u32) -> Result<AROIobuf, ()> { unsafe {
+    #[inline]
+    pub fn atomic_slice_pos_from_begin(&self, pos: u32, len: u32) -> Result<AROIobuf, ()> {
+      unsafe {
         let mut ret = self.raw.clone_atomic();
         let lim = (self.raw.lo_min() + pos, self.raw.lo_min() + pos + len);
         try!(ret.expand_limits_and_window(lim, lim));
         Ok(mem::transmute(ret))
-    }}
-
+      }
+    }
 
     /// Writes the bytes at a given offset from the beginning of the window, into
     /// the supplied buffer. Either the entire buffer is copied, or an error is
@@ -394,7 +400,6 @@ impl<'a> AppendBuf<'a> {
     #[inline(always)]
     pub fn fill_le<T: Int>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
 
-
     /// Advances the lower bound of the window by `len`. `Err(())` will be
     /// returned if you advance past the upper bound of the window.
     ///
@@ -408,7 +413,6 @@ impl<'a> AppendBuf<'a> {
     /// ```
     #[inline(always)]
     pub fn advance(&mut self, len: u32) -> Result<(), ()> { self.raw.advance(len) }
-
 
     /// Sets the window to the limits.
     ///
@@ -427,6 +431,7 @@ impl<'a> AppendBuf<'a> {
     /// b.reset();
     /// unsafe { assert_eq!(b.as_window_slice(), b"hello"); }
     /// ```
+    #[inline]
     pub fn reset(&mut self) -> Result<(), ()> { unsafe {
         if self.raw.is_unique_atomic() {
             Ok(self.raw.reset())
@@ -435,20 +440,15 @@ impl<'a> AppendBuf<'a> {
         }
     }}
 
-    ///
     /// Returns the capacity of the current writing window
-    ///
     #[inline(always)]
     pub fn len(&self) -> u32 { self.raw.len() }
 
-    ///
     /// Returns the capacity of the entire buffer, written or not
     #[inline(always)]
     pub fn cap(&self) -> u32 { self.raw.cap() }
 
-    ///
-    /// Calculates the effect of Jupiter on Earths gravity
-    ///
+    /// Returns whether or not `len() == 0`.
     #[inline(always)]
     pub fn is_empty(&self) -> bool { self.raw.is_empty() }
 }
@@ -458,4 +458,12 @@ impl<'a> Show for AppendBuf<'a> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.raw.show(f, "append-only")
     }
+}
+
+#[unsafe_destructor]
+impl<'a> Drop for AppendBuf<'a> {
+  #[inline(always)]
+  fn drop(&mut self) {
+    unsafe { self.raw.drop_atomic() }
+  }
 }
