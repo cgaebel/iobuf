@@ -457,7 +457,7 @@ pub trait Iobuf: Clone + Show {
 
   /// Returns `true` if the `other` Iobuf's window is the region directly after
   /// our window. This does not inspect the buffer -- it only compares raw
-  /// pointeers.
+  /// pointers.
   ///
   /// ```rust
   /// use iobuf::{ROIobuf,Iobuf};
@@ -1067,7 +1067,7 @@ pub trait Iobuf: Clone + Show {
   /// For internal use only.
   unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b>;
 
-  /// Gets a pointeer to the start of the internal backing buffer. This is
+  /// Gets a pointer to the start of the internal backing buffer. This is
   /// extremely low level, and it is not recommended you use this interface.
   fn ptr(&self) -> *mut u8;
 

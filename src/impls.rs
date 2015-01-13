@@ -475,7 +475,7 @@ impl<'a> RWIobuf<'a> {
   /// multiple slices of the same data. Therefore, this function is unsafe.
   ///
   /// It may only be used safely if you ensure that the data in the iobuf never
-  /// interacts with the slice, as they pointe to the same data. `peek`ing or
+  /// interacts with the slice, as they point to the same data. `peek`ing or
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
@@ -504,7 +504,7 @@ impl<'a> RWIobuf<'a> {
   /// multiple slices of the same data. Therefore, this function is unsafe.
   ///
   /// It may only be used safely if you ensure that the data in the iobuf never
-  /// interacts with the slice, as they pointe to the same data. `peek`ing or
+  /// interacts with the slice, as they point to the same data. `peek`ing or
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust

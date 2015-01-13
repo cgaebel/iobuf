@@ -7,10 +7,9 @@ use raw::{Allocator, RawIobuf};
 use iobuf::{Iobuf};
 use impls::{AROIobuf};
 
-/// ## AppendBuf
 /// append-only input buffer
 ///
-/// This buffer is intended to act as a intermediate buffer to be filled by
+/// This buffer is intended to act as a intermediate buffer to be `fill`ed by
 /// incoming streaming data, such as sockets, files, or perhaps DB results
 ///
 /// It has the unique feature of being able to break off reference counted
@@ -19,7 +18,7 @@ use impls::{AROIobuf};
 /// This invariant is enforced by allowing slices to be taken only from the
 /// low side of the buffer, before the start of the window
 ///
-/// Its primary interface is fill, which is the mechanism for appending data,
+/// Its primary interface is `fill`, which is the mechanism for appending data,
 /// and atomic_slice, which will take a position
 /// and a length and return a Result<AROIobuf, ()>
 ///
@@ -77,7 +76,7 @@ impl<'a> AppendBuf<'a> {
     /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
     /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
     /// This guarantees that the AROIobuf can be thought of as safely immutable while this
-    /// buffer can continue to be filled and poked. There are no operations for this buffer
+    /// buffer can continue to be `fill`ed and `poke`d. There are no operations for this buffer
     /// to reset the window to a lower position in the buffer.
     /// len is the number of bytes back from the start of the window where the slice begins
     ///  (and also the length of the slice)
@@ -104,15 +103,16 @@ impl<'a> AppendBuf<'a> {
     ///   let e = unsafe { end.as_window_slice() };
     ///   let z = unsafe { meh.as_window_slice() };
     ///
-    ///   assert_eq!(b, ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(m, ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(e, ['Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(z, ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(b, "ABCDEFGH".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(m, "IJKLMNOP".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(e, "QRSTUVWX".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(z, "EFGHIJKL".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
     /// ```
     ///
     #[inline(always)]
     pub fn atomic_slice_from_end(&self, len: u32) -> Result<AROIobuf, ()> { unsafe {
         let mut ret = self.raw.clone_atomic();
+        if len > self.raw.lo() { return Err(()) }
         let lim = (self.raw.lo() - len,self.raw.lo()) ;
         try!(ret.expand_limits_and_window(lim, lim));
         Ok(mem::transmute(ret))
@@ -121,7 +121,7 @@ impl<'a> AppendBuf<'a> {
     /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
     /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
     /// This guarantees that the AROIobuf can be thought of as safely immutable while this
-    /// buffer can continue to be filled and poked. There are no operations for this buffer
+    /// buffer can continue to be `fill`ed and `poke`d. There are no operations for this buffer
     /// to reset the window to a lower position in the buffer.
     /// pos is the offset backwards from the beginning of the window
     /// len is the length of the slice
@@ -148,15 +148,16 @@ impl<'a> AppendBuf<'a> {
     ///   let e = unsafe { end.as_window_slice() };
     ///   let z = unsafe { meh.as_window_slice() };
     ///
-    ///   assert_eq!(b, ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(m, ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(e, ['Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(z, ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(b, "ABCDEFGH".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(m, "IJKLMNOP".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(e, "QRSTUVWX".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(z, "EFGHIJKL".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
     /// ```
     ///
     #[inline(always)]
     pub fn atomic_slice_pos_from_end(&self, pos: u32, len: u32) -> Result<AROIobuf, ()> { unsafe {
         let mut ret = self.raw.clone_atomic();
+        if pos > self.raw.lo() { return Err(()) }
         let lim = (self.raw.lo() - pos, (self.raw.lo() - pos) + len);
         try!(ret.expand_limits_and_window(lim, lim));
         Ok(mem::transmute(ret))
@@ -165,7 +166,7 @@ impl<'a> AppendBuf<'a> {
     /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
     /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
     /// This guarantees that the AROIobuf can be thought of as safely immutable while this
-    /// buffer can continue to be filled and poked. There are no operations for this buffer
+    /// buffer can continue to be `fill`ed and `poke`d. There are no operations for this buffer
     /// to reset the window to a lower position in the buffer.
     /// pos is the point from the beginning of the buffer, or lo_min.
     /// len is the length
@@ -192,10 +193,10 @@ impl<'a> AppendBuf<'a> {
     ///   let e = unsafe { end.as_window_slice() };
     ///   let z = unsafe { meh.as_window_slice() };
     ///
-    ///   assert_eq!(b, ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(m, ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(e, ['Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(z, ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(b, "ABCDEFGH".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(m, "IJKLMNOP".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(e, "QRSTUVWX".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(z, "EFGHIJKL".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
     /// ```
     ///
     #[inline(always)]
@@ -209,7 +210,7 @@ impl<'a> AppendBuf<'a> {
     /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
     /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
     /// This guarantees that the AROIobuf can be thought of as safely immutable while this
-    /// buffer can continue to be filled and poked. There are no operations for this buffer
+    /// buffer can continue to be `fill`ed and `poke`d. There are no operations for this buffer
     /// to reset the window to a lower position in the buffer.
     /// pos is the point from the beginning of the buffer, or lo_min.
     /// len is the length
@@ -236,10 +237,10 @@ impl<'a> AppendBuf<'a> {
     ///   let e = unsafe { end.as_window_slice() };
     ///   let z = unsafe { meh.as_window_slice() };
     ///
-    ///   assert_eq!(b, ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(m, ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(e, ['Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
-    ///   assert_eq!(z, ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].iter().map(|&: x| *x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(b, "ABCDEFGH".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(m, "IJKLMNOP".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(e, "QRSTUVWX".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
+    ///   assert_eq!(z, "EFGHIJKL".chars().map(|&: x| x as u8).collect::<Vec<u8>>());
     /// ```
     ///
     #[inline(always)]
