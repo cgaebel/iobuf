@@ -7,7 +7,7 @@ use raw::{Allocator, RawIobuf};
 use iobuf::{Iobuf};
 use impls::{AROIobuf};
 
-/// append-only input buffer
+/// Append-Only Input Buffer
 ///
 /// This buffer is intended to act as a intermediate buffer to be `fill`ed by
 /// incoming streaming data, such as sockets, files, or perhaps DB results
@@ -21,7 +21,6 @@ use impls::{AROIobuf};
 /// Its primary interface is `fill`, which is the mechanism for appending data,
 /// and atomic_slice, which will take a position
 /// and a length and return a Result<AROIobuf, ()>
-///
 #[unsafe_no_drop_flag]
 pub struct AppendBuf<'a> {
    raw: RawIobuf<'a>,
