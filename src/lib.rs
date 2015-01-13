@@ -43,7 +43,7 @@
 
 extern crate alloc;
 #[cfg(test)] extern crate test;
-#[cfg(test)] extern crate quickcheck;
+//#[cfg(test)] extern crate quickcheck;
 
 pub use raw::Allocator;
 pub use iobuf::Iobuf;

@@ -691,6 +691,24 @@ impl<'a> RawIobuf<'a> {
     Ok(())
   }
 
+  /// Both the limits and the window are [lo, hi).
+  #[inline]
+  pub fn expand_limits_and_window(&mut self, limits: (u32, u32), window: (u32, u32)) -> Result<(), ()> {
+    let (new_lo_min, new_hi_max) = limits;
+    let (new_lo, new_hi) = window;
+    let lo_min = self.lo_min();
+    if new_hi_max < new_lo_min  { return Err(()); }
+    if new_hi     < new_lo      { return Err(()); }
+    if new_lo_min < lo_min      { return Err(()); }
+    if new_hi_max > self.hi_max { return Err(()); }
+    self.set_lo_min(new_lo_min);
+    self.lo     = new_lo;
+    self.hi     = new_hi;
+    self.hi_max = new_hi_max;
+    Ok(())
+  }
+
+
   #[inline]
   pub fn len(&self) -> u32 {
     self.hi - self.lo
@@ -1314,6 +1332,7 @@ fn check_large_range_len() {
 #[test]
 fn test_allocator() {
   use impls::RWIobuf;
+  use self::Allocator;
 
   struct MyAllocator;
 
@@ -1327,5 +1346,5 @@ fn test_allocator() {
     }
   }
 
-  RWIobuf::new_with_allocator(1000, Arc::new(Box::new(MyAllocator)));
+  RWIobuf::new_with_allocator(1000, Arc::new(Box::new(MyAllocator) as Box<Allocator>));
 }
