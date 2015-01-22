@@ -2,6 +2,7 @@ use std::fmt::{self, Show, Formatter};
 use std::mem;
 use std::num::Int;
 use std::sync::Arc;
+use std::raw;
 
 use raw::{Allocator, RawIobuf};
 use iobuf::{Iobuf};
@@ -217,7 +218,8 @@ impl<'a> AppendBuf<'a> {
   /// buffer can continue to be `fill`ed and `poke`d. There are no operations for this buffer
   /// to reset the window to a lower position in the buffer.
   /// pos is the point from the beginning of the buffer, or lo_min.
-  /// len is the length
+  /// len is the length -- If len is negative, then the slice
+  ///     will go until the end of the written window
   ///
   /// This function does not mutate the buffer, window, or limits.
   /// It just increases the refcount.
@@ -248,14 +250,104 @@ impl<'a> AppendBuf<'a> {
   /// ```
   ///
   #[inline]
-  pub fn atomic_slice_pos_from_begin(&self, pos: u32, len: u32) -> Result<AROIobuf, ()> {
+  pub fn atomic_slice_pos_from_begin(&self, pos: u32, len: i64) -> Result<AROIobuf, ()> {
     unsafe {
       let mut ret = self.raw.clone_atomic();
-      let lim = (self.raw.lo_min() + pos, self.raw.lo_min() + pos + len);
+      let lim = if len < 0 {
+        (self.raw.lo_min() + pos, self.raw.lo())
+      } else {
+        (self.raw.lo_min() + pos, self.raw.lo_min() + pos + len as u32)
+      };
       try!(ret.expand_limits_and_window(lim, lim));
       Ok(mem::transmute(ret))
     }
   }
+
+
+  /// Provides everything written into the buffer so far as an Iobuf
+  /// This function does not mutate the buffer, window, or limits.
+  /// It just increases the refcount.
+  ///
+  /// ```rust
+  /// #![allow(unstable)]
+  /// use iobuf::{AppendBuf, Iobuf};
+  ///
+  ///   let mut buf = AppendBuf::new(24);
+  ///   for i in b'A' .. b'X' + 1 {
+  ///   buf.fill_be(i).unwrap();
+  ///   }
+  ///
+  ///   let all = buf.atomic_slice().ok().expect("all");
+  ///
+  ///   let a = unsafe { all.as_window_slice() };
+  ///
+  ///   assert_eq!(a, b"ABCDEFGHIJKLMNOPQRSTUVWX");
+  /// ```
+  ///
+  #[inline]
+  pub fn atomic_slice(&self) -> Result<AROIobuf, ()> {
+    unsafe {
+      let mut ret = self.raw.clone_atomic();
+      let lim = (self.raw.lo_min(), self.raw.lo());
+      try!(ret.expand_limits_and_window(lim, lim));
+      Ok(mem::transmute(ret))
+    }
+  }
+
+
+
+  /// Reads the data in the window as a mutable slice.
+  ///
+  /// It may only be used safely if you ensure that the data in the iobuf never
+  /// interacts with the slice, as they point to the same data. `peek`ing or
+  /// `poke`ing the slice returned from this function is a big no-no.
+  ///
+  /// ```rust
+  /// #![allow(unstable)]
+  /// use iobuf::{RWIobuf, Iobuf};
+  ///
+  /// let mut s = [1,2,3];
+  ///
+  /// {
+  ///   let mut b = RWIobuf::from_slice(&mut s[]);
+  ///
+  ///   assert_eq!(b.advance(1), Ok(()));
+  ///   unsafe { b.as_mut_window_slice()[1] = 30; }
+  /// }
+  ///
+  /// let expected = [ 1,2,30 ];
+  /// assert_eq!(s, &expected[]);
+  /// ```
+  #[inline(always)]
+  pub fn as_mut_window_slice<'b>(&'b self) -> &'b mut [u8] { unsafe {
+    self.raw.as_mut_window_slice()
+  }}
+
+  /// Provides an immutable slice into the window of the buffer
+  ///
+  #[inline(always)]
+  pub fn as_window_slice<'b>(&'b self) -> &'b [u8] { unsafe {
+      self.raw.as_window_slice()
+  }}
+
+  /// Provides an immutable slice into the entire usable space
+  /// of the buffer
+  #[inline]
+  pub unsafe fn as_limit_slice<'b>(&'b self) -> &'b [u8] {
+    self.raw.as_limit_slice()
+  }
+
+
+  /// Provides an immutable slice from len bytes from the end of the
+  /// written buffer (before the start of the window)
+  #[inline]
+  pub fn slice_from_end<'b>(&'b self, len: u32) -> &'b [u8] { unsafe {
+    mem::transmute(
+        raw::Slice {
+          data: self.raw.ptr().offset((self.raw.lo() - len) as isize) as *const u8,
+          len:  len as usize,
+    })
+  }}
 
   /// Writes the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. Either the entire buffer is copied, or an error is
