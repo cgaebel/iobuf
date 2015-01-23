@@ -1,4 +1,4 @@
-use std::fmt::{self, Show, Formatter};
+use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use std::num::Int;
 use std::sync::Arc;
@@ -88,7 +88,7 @@ impl<'a> AppendBuf<'a> {
   ///
   ///   let mut buf = AppendBuf::new(24);
   ///   for i in b'A' .. b'X' + 1 {
-  ///   buf.fill_be(i).unwrap();
+  ///     assert_eq!(buf.fill_be(i), Ok(()));
   ///   }
   ///
   ///   let begin = buf.atomic_slice_from_begin(8).ok().expect("from_begin");
@@ -135,7 +135,7 @@ impl<'a> AppendBuf<'a> {
   ///
   ///   let mut buf = AppendBuf::new(24);
   ///   for i in b'A' .. b'X' + 1 {
-  ///   buf.fill_be(i).unwrap();
+  ///     assert_eq!(buf.fill_be(i), Ok(()));
   ///   }
   ///
   ///   let begin = buf.atomic_slice_from_begin(8).ok().expect("from_begin");
@@ -177,28 +177,27 @@ impl<'a> AppendBuf<'a> {
   /// It just increases the refcount.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
-  ///   let mut buf = AppendBuf::new(24);
-  ///   for i in b'A' .. b'X' + 1 {
-  ///   buf.fill_be(i).unwrap();
-  ///   }
+  /// let mut buf = AppendBuf::new(24);
+  /// for i in b'A' .. b'X' + 1 {
+  ///   assert_eq!(buf.fill_be(i), Ok(()));
+  /// }
   ///
-  ///   let begin = buf.atomic_slice_from_begin(8).ok().expect("from_begin");
-  ///   let middle = buf.atomic_slice_pos_from_end(16, 8).ok().expect("pos_from_end");
-  ///   let end = buf.atomic_slice_from_end(8).ok().expect("from_end");
-  ///   let meh = buf.atomic_slice_pos_from_begin(4, 8).ok().expect("pos_from_begin");
+  /// let begin = buf.atomic_slice_from_begin(8).ok().expect("from_begin");
+  /// let middle = buf.atomic_slice_pos_from_end(16, 8).ok().expect("pos_from_end");
+  /// let end = buf.atomic_slice_from_end(8).ok().expect("from_end");
+  /// let meh = buf.atomic_slice_pos_from_begin(4, 8).ok().expect("pos_from_begin");
   ///
-  ///   let b = unsafe { begin.as_window_slice() };
-  ///   let m = unsafe { middle.as_window_slice() };
-  ///   let e = unsafe { end.as_window_slice() };
-  ///   let z = unsafe { meh.as_window_slice() };
+  /// let b = unsafe { begin.as_window_slice() };
+  /// let m = unsafe { middle.as_window_slice() };
+  /// let e = unsafe { end.as_window_slice() };
+  /// let z = unsafe { meh.as_window_slice() };
   ///
-  ///   assert_eq!(b, b"ABCDEFGH");
-  ///   assert_eq!(m, b"IJKLMNOP");
-  ///   assert_eq!(e, b"QRSTUVWX");
-  ///   assert_eq!(z, b"EFGHIJKL");
+  /// assert_eq!(b, b"ABCDEFGH");
+  /// assert_eq!(m, b"IJKLMNOP");
+  /// assert_eq!(e, b"QRSTUVWX");
+  /// assert_eq!(z, b"EFGHIJKL");
   /// ```
   ///
   #[inline]
@@ -228,7 +227,7 @@ impl<'a> AppendBuf<'a> {
   ///
   ///   let mut buf = AppendBuf::new(24);
   ///   for i in b'A' .. b'X' + 1 {
-  ///   buf.fill_be(i).unwrap();
+  ///   assert_eq!(buf.fill_be(i), Ok(()));
   ///   }
   ///
   ///   let begin = buf.atomic_slice_from_begin(8).ok().expect("from_begin");
@@ -454,7 +453,7 @@ impl<'a> AppendBuf<'a> {
   pub fn is_empty(&self) -> bool { self.raw.is_empty() }
 }
 
-impl<'a> Show for AppendBuf<'a> {
+impl<'a> Debug for AppendBuf<'a> {
   #[inline]
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "append-only")

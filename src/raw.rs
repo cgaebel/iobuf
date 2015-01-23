@@ -1206,7 +1206,7 @@ impl<'a> RawIobuf<'a> {
 
     let (left_slice, right_slice) =
       if chunk_len >= 4 {
-        (chunk.slice(0, 4), Some(chunk.slice_from(4)))
+        (&chunk[0..4], Some(&chunk[4..]))
       } else {
         (chunk, None)
       };
