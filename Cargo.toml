@@ -2,7 +2,7 @@
 
 name = "iobuf"
 version = "5.2.2"
-authors = ["Clark Gaebel <cgaebel@mozilla.com>"]
+authors = ["Clark Gaebel <cg.wowus.cg@gmail.com>"]
 
 documentation = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/"
 homepage = "https://github.com/cgaebel/iobuf"
