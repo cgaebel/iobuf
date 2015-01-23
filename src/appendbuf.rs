@@ -83,7 +83,6 @@ impl<'a> AppendBuf<'a> {
   /// It just increases the refcount.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
   ///   let mut buf = AppendBuf::new(24);
@@ -130,7 +129,6 @@ impl<'a> AppendBuf<'a> {
   /// It just increases the refcount.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
   ///   let mut buf = AppendBuf::new(24);
@@ -222,7 +220,6 @@ impl<'a> AppendBuf<'a> {
   /// It just increases the refcount.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
   ///   let mut buf = AppendBuf::new(24);

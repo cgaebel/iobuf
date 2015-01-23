@@ -300,11 +300,10 @@ impl<'a> ROIobuf<'a> {
   /// possible.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut v = vec!(1u8, 2, 3, 4, 5, 6);
-  /// v.as_mut_slice()[1] = 20;
+  /// v[1] = 20;
   ///
   /// let mut b = ROIobuf::from_slice_copy(&v[]);
   ///
@@ -327,7 +326,6 @@ impl<'a> ROIobuf<'a> {
   /// contents, and therefore their lifetimes will be linked.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let s = [1,2,3,4];
@@ -446,7 +444,6 @@ impl<'a> RWIobuf<'a> {
   /// possible.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut v = vec!(1u8, 2, 3, 4, 5, 6, 10);
@@ -478,7 +475,6 @@ impl<'a> RWIobuf<'a> {
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf, Iobuf};
   ///
   /// let mut s = [1,2,3];
@@ -507,7 +503,6 @@ impl<'a> RWIobuf<'a> {
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf, Iobuf};
   ///
   /// let mut s = [1,2,3];
@@ -605,7 +600,6 @@ impl<'a> RWIobuf<'a> {
   /// returned because bytes outside of the window would be written.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1,2,3,4 ];
@@ -674,7 +668,6 @@ impl<'a> RWIobuf<'a> {
   /// include then.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1, 2, 3, 4 ];
@@ -826,7 +819,6 @@ impl<'a> RWIobuf<'a> {
   /// include then.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1, 2, 3, 4 ];
