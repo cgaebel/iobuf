@@ -1,4 +1,4 @@
-use std::fmt::Show;
+use std::fmt::Debug;
 use std::num::Int;
 use std::sync::Arc;
 
@@ -24,7 +24,7 @@ use impls::{AROIobuf, RWIobuf, UniqueIobuf};
 ///
 /// The `unsafe_` prefix means the function omits bounds checks. Misuse can
 /// easily cause security issues. Be careful!
-pub trait Iobuf: Clone + Show {
+pub trait Iobuf: Clone + Debug {
   /// Copies the data byte-by-byte in the Iobuf into a new, writeable Iobuf.
   /// The new Iobuf and the old Iobuf will not share storage.
   ///
@@ -443,7 +443,7 @@ pub trait Iobuf: Clone + Show {
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut b = ROIobuf::from_str("hello");
-  /// b.resize(2).unwrap();
+  /// assert_eq!(b.resize(2), Ok(()));
   /// assert_eq!(b.extend(1), Ok(()));
   /// unsafe { assert_eq!(b.as_window_slice(), b"hel"); }
   /// assert_eq!(b.extend(3), Err(()));

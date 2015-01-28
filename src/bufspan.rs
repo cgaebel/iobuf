@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::fmt;
+use std::fmt::{self, Formatter, Debug};
 use std::intrinsics::move_val_init;
 use std::iter::{self, order, FromIterator, AdditiveIterator};
 use std::mem;
@@ -46,8 +46,8 @@ impl<Buf: Iobuf> Clone for BufSpan<Buf> {
   }
 }
 
-impl<Buf: Iobuf> fmt::Show for BufSpan<Buf> {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl<Buf: Iobuf> Debug for BufSpan<Buf> {
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     let mut first_time = true;
 
     for b in self.iter() {
@@ -182,8 +182,8 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// let mut b0 = ROIobuf::from_str(" world");
   /// let mut b1 = b0.clone();
   ///
-  /// b0.resize(2).unwrap();
-  /// b1.advance(2).unwrap();
+  /// assert_eq!(b0.resize(2), Ok(()));
+  /// assert_eq!(b1.advance(2), Ok(()));
   ///
   /// s.push(b0);
   /// s.push(b1);

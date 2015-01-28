@@ -1,4 +1,4 @@
-use std::fmt::{self, Show, Formatter};
+use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use std::num::Int;
 use std::sync::Arc;
@@ -105,13 +105,12 @@ impl<'a> Drop for RWIobuf<'a> {
 /// 0xFF, and consuming/validating these numbers in parallel in 4 other threads:
 ///
 /// ```rust
-/// #![allow(unstable)]
 /// use iobuf::{RWIobuf, AROIobuf, Iobuf};
 /// use std::sync::Future;
 ///
 /// // Write the bytes 0x00 - 0xFF into an Iobuf.
 /// fn fill(buf: &mut RWIobuf<'static>) -> Result<(), ()> {
-///   for i in (0x00 .. 0x100) {
+///   for i in 0x00u32 .. 0x100 {
 ///     try!(buf.fill_be(i as u8));
 ///   }
 ///
@@ -149,7 +148,7 @@ impl<'a> Drop for RWIobuf<'a> {
 /// }
 ///
 /// // Now prepare it for sending to our 4 subtasks.
-/// let shared_b: AROIobuf = source_b.atomic_read_only().unwrap();
+/// let shared_b: AROIobuf = source_b.atomic_read_only().ok().unwrap();
 ///
 /// let mut tasks = vec!();
 ///
@@ -301,11 +300,10 @@ impl<'a> ROIobuf<'a> {
   /// possible.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let mut v = vec!(1u8, 2, 3, 4, 5, 6);
-  /// v.as_mut_slice()[1] = 20;
+  /// v[1] = 20;
   ///
   /// let mut b = ROIobuf::from_slice_copy(&v[]);
   ///
@@ -328,7 +326,6 @@ impl<'a> ROIobuf<'a> {
   /// contents, and therefore their lifetimes will be linked.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{ROIobuf,Iobuf};
   ///
   /// let s = [1,2,3,4];
@@ -399,7 +396,7 @@ impl<'a> RWIobuf<'a> {
   ///
   /// let mut b = RWIobuf::from_str_copy("hello");
   ///
-  /// b.poke_be(1, b'4').unwrap();
+  /// assert_eq!(b.poke_be(1, b'4'), Ok(()));
   ///
   /// assert_eq!(b.len(), 5);
   /// assert_eq!(b.cap(), 5);
@@ -447,7 +444,6 @@ impl<'a> RWIobuf<'a> {
   /// possible.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let mut v = vec!(1u8, 2, 3, 4, 5, 6, 10);
@@ -479,7 +475,6 @@ impl<'a> RWIobuf<'a> {
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf, Iobuf};
   ///
   /// let mut s = [1,2,3];
@@ -508,7 +503,6 @@ impl<'a> RWIobuf<'a> {
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf, Iobuf};
   ///
   /// let mut s = [1,2,3];
@@ -568,7 +562,7 @@ impl<'a> RWIobuf<'a> {
   /// let mut s = [ 0x02, 0x11, 0x22, 0x33 ];
   /// let mut b = RWIobuf::from_slice(s.as_mut_slice());
   ///
-  /// #[derive(Eq, PartialEq, Show)]
+  /// #[derive(Eq, PartialEq, Debug)]
   /// enum ParseState {
   ///   NeedMore(u16), // sum so far
   ///   Done(u16),     // final sum
@@ -606,7 +600,6 @@ impl<'a> RWIobuf<'a> {
   /// returned because bytes outside of the window would be written.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1,2,3,4 ];
@@ -675,7 +668,6 @@ impl<'a> RWIobuf<'a> {
   /// include then.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1, 2, 3, 4 ];
@@ -827,7 +819,6 @@ impl<'a> RWIobuf<'a> {
   /// include then.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf,Iobuf};
   ///
   /// let data = [ 1, 2, 3, 4 ];
@@ -915,10 +906,11 @@ impl AROIobuf {
   /// use iobuf::{AROIobuf, ROIobuf, Iobuf};
   ///
   /// let buf: ROIobuf<'static> = ROIobuf::from_str_copy("hello, world!");
-  /// let a_buf: AROIobuf = buf.atomic_read_only().unwrap();
+  /// let a_buf: AROIobuf = buf.atomic_read_only().ok().unwrap();
   /// unsafe { assert_eq!(a_buf.as_window_slice(), b"hello, world!"); }
   ///
-  /// let buf: ROIobuf<'static> = a_buf.read_only().unwrap();
+  /// let buf: ROIobuf<'static> = a_buf.read_only().ok().unwrap();
+  ///
   /// // TA-DA!
   /// unsafe { assert_eq!(buf.as_window_slice(), b"hello, world!"); }
   /// ```
@@ -940,10 +932,11 @@ impl AROIobuf {
   /// use iobuf::{AROIobuf, ROIobuf, RWIobuf, Iobuf};
   ///
   /// let buf: ROIobuf<'static> = ROIobuf::from_str_copy("hello, world!");
-  /// let a_buf: AROIobuf = buf.atomic_read_only().unwrap();
+  /// let a_buf: AROIobuf = buf.atomic_read_only().ok().unwrap();
   /// unsafe { assert_eq!(a_buf.as_window_slice(), b"hello, world!"); }
   ///
-  /// let buf: RWIobuf<'static> = a_buf.read_write().unwrap();
+  /// let buf: RWIobuf<'static> = a_buf.read_write().ok().unwrap();
+  ///
   /// // TA-DA!
   /// unsafe { assert_eq!(buf.as_window_slice(), b"hello, world!"); }
   /// ```
@@ -1583,28 +1576,28 @@ impl<'a> Iobuf for RWIobuf<'a> {
   fn hi_max(&self) -> u32 { self.raw.hi_max() }
 }
 
-impl<'a> Show for ROIobuf<'a> {
+impl<'a> Debug for ROIobuf<'a> {
   #[inline]
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "read-only")
   }
 }
 
-impl<'a> Show for RWIobuf<'a> {
+impl<'a> Debug for RWIobuf<'a> {
   #[inline]
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "read-write")
   }
 }
 
-impl Show for AROIobuf {
+impl Debug for AROIobuf {
   #[inline]
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "atomic read-only")
   }
 }
 
-impl Show for UniqueIobuf {
+impl Debug for UniqueIobuf {
   #[inline]
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     self.raw.show(f, "unique")
