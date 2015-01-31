@@ -2,7 +2,6 @@ use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use std::num::Int;
 use std::sync::Arc;
-use std::raw;
 
 use raw::{Allocator, RawIobuf};
 use iobuf::{Iobuf};
@@ -286,18 +285,6 @@ impl<'a> AppendBuf<'a> {
   pub unsafe fn as_limit_slice<'b>(&'b self) -> &'b [u8] {
     self.raw.as_limit_slice()
   }
-
-
-  /// Provides an immutable slice from len bytes from the end of the
-  /// written buffer (before the start of the window)
-  #[inline]
-  pub fn slice_from_end<'b>(&'b self, len: u32) -> &'b [u8] { unsafe {
-    mem::transmute(
-        raw::Slice {
-          data: self.raw.ptr().offset((self.raw.lo() - len) as isize) as *const u8,
-          len:  len as usize,
-    })
-  }}
 
   /// Writes the bytes at a given offset from the beginning of the window, into
   /// the supplied buffer. Either the entire buffer is copied, or an error is
