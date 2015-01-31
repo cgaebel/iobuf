@@ -38,8 +38,12 @@
 
 #![feature(slicing_syntax)]
 #![feature(unsafe_destructor)]
-#![allow(unstable)]
+#![feature(alloc)]
+#![feature(core)]
+#![feature(test)]
+
 #![deny(missing_docs)]
+#![allow(unused_features)]
 
 extern crate alloc;
 #[cfg(test)] extern crate test;
