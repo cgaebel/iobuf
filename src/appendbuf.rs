@@ -84,7 +84,6 @@ impl<'a> AppendBuf<'a> {
   ///  from: 0 to: 2  would take the first two characters of the buffer.
   ///  from: 0 to: -2 would take all but the last two characters of the buffer
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
   ///   let mut buf = AppendBuf::new(24);
@@ -149,7 +148,6 @@ impl<'a> AppendBuf<'a> {
   ///  from: 0 to: -2 would take all but the last two characters of the buffer
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
   ///   let mut buf = AppendBuf::new(24);
@@ -205,7 +203,6 @@ impl<'a> AppendBuf<'a> {
   ///  from: 0 to: -2 would take all but the last two characters of the buffer
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
   ///   let mut buf = AppendBuf::new(24);
@@ -252,7 +249,6 @@ impl<'a> AppendBuf<'a> {
   /// `poke`ing the slice returned from this function is a big no-no.
   ///
   /// ```rust
-  /// #![allow(unstable)]
   /// use iobuf::{RWIobuf, Iobuf};
   ///
   /// let mut s = [1,2,3];
