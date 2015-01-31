@@ -79,21 +79,29 @@ impl<'a> AppendBuf<'a> {
   /// len is the number of bytes back from the start of the window where the slice begins
   ///  (and also the length of the slice)
   ///
-  /// This function does not mutate the buffer, window, or limits.
-  /// It just increases the refcount.
-  ///
+  ///  If the from or to parameters are negative, then the compliment of that number is
+  ///  counted from the end of the available buffer. e.g.
+  ///  from: 0 to: 2  would take the first two characters of the buffer.
+  ///  from: 0 to: -2 would take all but the last two characters of the buffer
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
   ///   let mut buf = AppendBuf::new(24);
   ///   for i in b'A' .. b'X' + 1 {
-  ///     assert_eq!(buf.fill_be(i), Ok(()));
+  ///   buf.fill_be(i).unwrap();
   ///   }
   ///
-  ///   let begin = buf.atomic_slice_from_begin(8).ok().expect("from_begin");
-  ///   let middle = buf.atomic_slice_pos_from_end(16, 8).ok().expect("pos_from_end");
-  ///   let end = buf.atomic_slice_from_end(8).ok().expect("from_end");
-  ///   let meh = buf.atomic_slice_pos_from_begin(4, 8).ok().expect("pos_from_begin");
+  ///   let all = buf.atomic_slice_to(-1).ok().expect("all");
+  ///
+  ///   let a = unsafe { all.as_window_slice() };
+  ///
+  ///   assert_eq!(a, b"ABCDEFGHIJKLMNOPQRSTUVWX");
+  ///
+  ///   let begin = buf.atomic_slice(0, 8).ok().expect("from_begin");
+  ///   let middle = buf.atomic_slice(8, 16).ok().expect("pos_from_end");
+  ///   let end = buf.atomic_slice(-9, -1).ok().expect("from_end");
+  ///   let meh = buf.atomic_slice(4, 12).ok().expect("pos_from_begin");
   ///
   ///   let b = unsafe { begin.as_window_slice() };
   ///   let m = unsafe { middle.as_window_slice() };
@@ -105,13 +113,21 @@ impl<'a> AppendBuf<'a> {
   ///   assert_eq!(e, b"QRSTUVWX");
   ///   assert_eq!(z, b"EFGHIJKL");
   /// ```
-  ///
   #[inline]
-  pub fn atomic_slice_from_end(&self, len: u32) -> Result<AROIobuf, ()> {
+  pub fn atomic_slice(&self, from: i32, to: i32) -> Result<AROIobuf, ()> {
     unsafe {
       let mut ret = self.raw.clone_atomic();
-      if len > self.raw.lo() { return Err(()) }
-      let lim = (self.raw.lo() - len,self.raw.lo()) ;
+      let start = if from < 0 {
+          self.raw.lo() - !from as u32
+      } else {
+          self.raw.lo_min() + from as u32
+      };
+      let end = if to < 0 {
+          self.raw.lo() - !to as u32
+      } else {
+          self.raw.lo_min() + to as u32
+      };
+      let lim = (start, end);
       try!(ret.expand_limits_and_window(lim, lim));
       Ok(mem::transmute(ret))
     }
@@ -122,135 +138,152 @@ impl<'a> AppendBuf<'a> {
   /// This guarantees that the AROIobuf can be thought of as safely immutable while this
   /// buffer can continue to be `fill`ed and `poke`d. There are no operations for this buffer
   /// to reset the window to a lower position in the buffer.
-  /// pos is the offset backwards from the beginning of the window
-  /// len is the length of the slice
+  /// len is the number of bytes back from the start of the window where the slice begins
+  ///  (and also the length of the slice)
   ///
-  /// This function does not mutate the buffer, window, or limits.
-  /// It just increases the refcount.
+  ///  The slice produced begins at parameter pos and goes to the end of the buffer
+  ///
+  ///  If the from or to parameters are negative, then the compliment of that number is
+  ///  counted from the end of the available buffer. e.g.
+  ///  from: 0 to: 2  would take the first two characters of the buffer.
+  ///  from: 0 to: -2 would take all but the last two characters of the buffer
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
   ///   let mut buf = AppendBuf::new(24);
   ///   for i in b'A' .. b'X' + 1 {
-  ///     assert_eq!(buf.fill_be(i), Ok(()));
+  ///   buf.fill_be(i).unwrap();
   ///   }
   ///
-  ///   let begin = buf.atomic_slice_from_begin(8).ok().expect("from_begin");
-  ///   let middle = buf.atomic_slice_pos_from_end(16, 8).ok().expect("pos_from_end");
-  ///   let end = buf.atomic_slice_from_end(8).ok().expect("from_end");
-  ///   let meh = buf.atomic_slice_pos_from_begin(4, 8).ok().expect("pos_from_begin");
+  ///   let all = buf.atomic_slice_from(0).ok().expect("all");
   ///
-  ///   let b = unsafe { begin.as_window_slice() };
-  ///   let m = unsafe { middle.as_window_slice() };
+  ///   let a = unsafe { all.as_window_slice() };
+  ///
+  ///   assert_eq!(a, b"ABCDEFGHIJKLMNOPQRSTUVWX");
+  ///
+  ///   let end = buf.atomic_slice_from(16).ok().expect("from_begin");
+  ///   let more = buf.atomic_slice_from(-9).ok().expect("pos_from_end");
+  ///
+  ///   let m = unsafe { more.as_window_slice() };
   ///   let e = unsafe { end.as_window_slice() };
-  ///   let z = unsafe { meh.as_window_slice() };
   ///
-  ///   assert_eq!(b, b"ABCDEFGH");
-  ///   assert_eq!(m, b"IJKLMNOP");
+  ///   assert_eq!(m, b"QRSTUVWX");
   ///   assert_eq!(e, b"QRSTUVWX");
-  ///   assert_eq!(z, b"EFGHIJKL");
   /// ```
   ///
   #[inline]
-  pub fn atomic_slice_pos_from_end(&self, pos: u32, len: u32) -> Result<AROIobuf, ()> {
+  pub fn atomic_slice_from(&self, pos: i32) -> Result<AROIobuf, ()> {
     unsafe {
       let mut ret = self.raw.clone_atomic();
-      if pos > self.raw.lo() { return Err(()) }
-      let lim = (self.raw.lo() - pos, (self.raw.lo() - pos) + len);
+      let lim = if pos < 0 {
+        // overflow case should be handled by expand*
+        (self.raw.lo() - !pos as u32, self.raw.lo())
+      } else {
+        (self.raw.lo_min() + pos as u32, self.raw.lo())
+      };
       try!(ret.expand_limits_and_window(lim, lim));
       Ok(mem::transmute(ret))
     }
   }
+
 
   /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
   /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
   /// This guarantees that the AROIobuf can be thought of as safely immutable while this
   /// buffer can continue to be `fill`ed and `poke`d. There are no operations for this buffer
   /// to reset the window to a lower position in the buffer.
-  /// pos is the point from the beginning of the buffer, or lo_min.
-  /// len is the length
+  /// len is the number of bytes back from the start of the window where the slice begins
+  ///  (and also the length of the slice)
   ///
-  /// This function does not mutate the buffer, window, or limits.
-  /// It just increases the refcount.
+  ///  The slice produced begins at the beginning of the buffer until parameter pos
+  ///
+  ///  If the from or to parameters are negative, then the compliment of that number is
+  ///  counted from the end of the available buffer. e.g.
+  ///  from: 0 to: 2  would take the first two characters of the buffer.
+  ///  from: 0 to: -2 would take all but the last two characters of the buffer
   ///
   /// ```rust
+  /// #![allow(unstable)]
   /// use iobuf::{AppendBuf, Iobuf};
   ///
-  /// let mut buf = AppendBuf::new(24);
-  /// for i in b'A' .. b'X' + 1 {
-  ///   assert_eq!(buf.fill_be(i), Ok(()));
+  ///   let mut buf = AppendBuf::new(24);
+  ///   for i in b'A' .. b'X' + 1 {
+  ///   buf.fill_be(i).unwrap();
+  ///   }
+  ///
+  ///   let all = buf.atomic_slice_to(-1).ok().expect("all");
+  ///
+  ///   let a = unsafe { all.as_window_slice() };
+  ///
+  ///   assert_eq!(a, b"ABCDEFGHIJKLMNOPQRSTUVWX");
+  ///
+  ///   let begin = buf.atomic_slice_to(8).ok().expect("begin");
+  ///   let more = buf.atomic_slice_to(-9).ok().expect("more");
+  ///
+  ///   let b = unsafe { begin.as_window_slice() };
+  ///   let m = unsafe { more.as_window_slice() };
+  ///
+  ///   assert_eq!(b, b"ABCDEFGH");
+  ///   assert_eq!(m, b"ABCDEFGHIJKLMNOP");
+  /// ```
+  #[inline]
+  pub fn atomic_slice_to(&self, pos: i32) -> Result<AROIobuf, ()> {
+    unsafe {
+      let mut ret = self.raw.clone_atomic();
+      let lim = if pos < 0 {
+        // overflow case should be handled by expand*
+        (self.raw.lo_min(), self.raw.lo() - !pos as u32)
+      } else {
+        (self.raw.lo_min(), self.raw.lo_min() + pos as u32)
+      };
+      try!(ret.expand_limits_and_window(lim, lim));
+      Ok(mem::transmute(ret))
+    }
+  }
+
+
+
+  /// Reads the data in the window as a mutable slice.
+  ///
+  /// It may only be used safely if you ensure that the data in the iobuf never
+  /// interacts with the slice, as they point to the same data. `peek`ing or
+  /// `poke`ing the slice returned from this function is a big no-no.
+  ///
+  /// ```rust
+  /// #![allow(unstable)]
+  /// use iobuf::{RWIobuf, Iobuf};
+  ///
+  /// let mut s = [1,2,3];
+  ///
+  /// {
+  ///   let mut b = RWIobuf::from_slice(&mut s[]);
+  ///
+  ///   assert_eq!(b.advance(1), Ok(()));
+  ///   unsafe { b.as_mut_window_slice()[1] = 30; }
   /// }
   ///
-  /// let begin = buf.atomic_slice_from_begin(8).ok().expect("from_begin");
-  /// let middle = buf.atomic_slice_pos_from_end(16, 8).ok().expect("pos_from_end");
-  /// let end = buf.atomic_slice_from_end(8).ok().expect("from_end");
-  /// let meh = buf.atomic_slice_pos_from_begin(4, 8).ok().expect("pos_from_begin");
-  ///
-  /// let b = unsafe { begin.as_window_slice() };
-  /// let m = unsafe { middle.as_window_slice() };
-  /// let e = unsafe { end.as_window_slice() };
-  /// let z = unsafe { meh.as_window_slice() };
-  ///
-  /// assert_eq!(b, b"ABCDEFGH");
-  /// assert_eq!(m, b"IJKLMNOP");
-  /// assert_eq!(e, b"QRSTUVWX");
-  /// assert_eq!(z, b"EFGHIJKL");
+  /// let expected = [ 1,2,30 ];
+  /// assert_eq!(s, &expected[]);
   /// ```
-  ///
-  #[inline]
-  pub fn atomic_slice_from_begin(&self, len: u32) -> Result<AROIobuf, ()> {
-    unsafe {
-      let mut ret = self.raw.clone_atomic();
-      let lim = (self.raw.lo_min(), self.raw.lo_min() + len);
-      try!(ret.expand_limits_and_window(lim, lim));
-      Ok(mem::transmute(ret))
-    }
-  }
+  #[inline(always)]
+  pub fn as_mut_window_slice<'b>(&'b self) -> &'b mut [u8] { unsafe {
+    self.raw.as_mut_window_slice()
+  }}
 
-  /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
-  /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
-  /// This guarantees that the AROIobuf can be thought of as safely immutable while this
-  /// buffer can continue to be `fill`ed and `poke`d. There are no operations for this buffer
-  /// to reset the window to a lower position in the buffer.
-  /// pos is the point from the beginning of the buffer, or lo_min.
-  /// len is the length
+  /// Provides an immutable slice into the window of the buffer
   ///
-  /// This function does not mutate the buffer, window, or limits.
-  /// It just increases the refcount.
-  ///
-  /// ```rust
-  /// use iobuf::{AppendBuf, Iobuf};
-  ///
-  ///   let mut buf = AppendBuf::new(24);
-  ///   for i in b'A' .. b'X' + 1 {
-  ///   assert_eq!(buf.fill_be(i), Ok(()));
-  ///   }
-  ///
-  ///   let begin = buf.atomic_slice_from_begin(8).ok().expect("from_begin");
-  ///   let middle = buf.atomic_slice_pos_from_end(16, 8).ok().expect("pos_from_end");
-  ///   let end = buf.atomic_slice_from_end(8).ok().expect("from_end");
-  ///   let meh = buf.atomic_slice_pos_from_begin(4, 8).ok().expect("pos_from_begin");
-  ///
-  ///   let b = unsafe { begin.as_window_slice() };
-  ///   let m = unsafe { middle.as_window_slice() };
-  ///   let e = unsafe { end.as_window_slice() };
-  ///   let z = unsafe { meh.as_window_slice() };
-  ///
-  ///   assert_eq!(b, b"ABCDEFGH");
-  ///   assert_eq!(m, b"IJKLMNOP");
-  ///   assert_eq!(e, b"QRSTUVWX");
-  ///   assert_eq!(z, b"EFGHIJKL");
-  /// ```
-  ///
+  #[inline(always)]
+  pub fn as_window_slice<'b>(&'b self) -> &'b [u8] { unsafe {
+      self.raw.as_window_slice()
+  }}
+
+  /// Provides an immutable slice into the entire usable space
+  /// of the buffer
   #[inline]
-  pub fn atomic_slice_pos_from_begin(&self, pos: u32, len: u32) -> Result<AROIobuf, ()> {
-    unsafe {
-      let mut ret = self.raw.clone_atomic();
-      let lim = (self.raw.lo_min() + pos, self.raw.lo_min() + pos + len);
-      try!(ret.expand_limits_and_window(lim, lim));
-      Ok(mem::transmute(ret))
-    }
+  pub unsafe fn as_limit_slice<'b>(&'b self) -> &'b [u8] {
+    self.raw.as_limit_slice()
   }
 
   /// Writes the bytes at a given offset from the beginning of the window, into
