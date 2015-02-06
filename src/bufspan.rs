@@ -75,7 +75,7 @@ impl<Buf: Iobuf> FromIterator<Buf> for BufSpan<Buf> {
 
 impl<Buf: Iobuf> Extend<Buf> for BufSpan<Buf> {
   #[inline]
-  fn extend<I: Iterator<Item=Buf>>(&mut self, mut iterator: I) {
+  fn extend<I: Iterator<Item=Buf>>(&mut self, iterator: I) {
     for x in iterator {
       self.push(x);
     }
@@ -470,8 +470,8 @@ impl<Buf: Iobuf> Ord for BufSpan<Buf> {
 
 /// An iterator over the bytes in a `BufSpan`.
 pub type ByteIter<'a, Buf> =
-  iter::Map<&'a u8, u8,
-    iter::FlatMap<&'a Buf, &'a u8,
+  iter::Map<
+    iter::FlatMap<
       SpanIter<'a, Buf>,
       slice::Iter<'a, u8>,
       fn(&Buf) -> slice::Iter<u8>>,
