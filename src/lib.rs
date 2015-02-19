@@ -36,7 +36,6 @@
 
 #![doc(html_root_url = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/")]
 
-#![feature(slicing_syntax)]
 #![feature(unsafe_destructor)]
 #![feature(unsafe_no_drop_flag)]
 #![feature(alloc)]

@@ -23,7 +23,7 @@ use impls::{AROIobuf};
 /// and a length and return a Result<AROIobuf, ()>
 #[unsafe_no_drop_flag]
 pub struct AppendBuf<'a> {
-   raw: RawIobuf<'a>,
+  raw: RawIobuf<'a>,
 }
 
 impl<'a> AppendBuf<'a> {
@@ -117,14 +117,14 @@ impl<'a> AppendBuf<'a> {
     unsafe {
       let mut ret = self.raw.clone_atomic();
       let start = if from < 0 {
-          self.raw.lo() - !from as u32
+        self.raw.lo() - !from as u32
       } else {
-          self.raw.lo_min() + from as u32
+        self.raw.lo_min() + from as u32
       };
       let end = if to < 0 {
-          self.raw.lo() - !to as u32
+        self.raw.lo() - !to as u32
       } else {
-          self.raw.lo_min() + to as u32
+        self.raw.lo_min() + to as u32
       };
       let lim = (start, end);
       try!(ret.expand_limits_and_window(lim, lim));
@@ -186,7 +186,6 @@ impl<'a> AppendBuf<'a> {
     }
   }
 
-
   /// Creates an AROIobuf as a slice of written buffer. This is space that preceeds
   /// the window in the buffer, or, more specifically, between the lo_min and lo offsets.
   /// This guarantees that the AROIobuf can be thought of as safely immutable while this
@@ -240,8 +239,6 @@ impl<'a> AppendBuf<'a> {
     }
   }
 
-
-
   /// Reads the data in the window as a mutable slice.
   ///
   /// It may only be used safely if you ensure that the data in the iobuf never
@@ -264,16 +261,16 @@ impl<'a> AppendBuf<'a> {
   /// assert_eq!(s, &expected[]);
   /// ```
   #[inline(always)]
-  pub fn as_mut_window_slice<'b>(&'b self) -> &'b mut [u8] { unsafe {
-    self.raw.as_mut_window_slice()
-  }}
+  pub fn as_mut_window_slice<'b>(&'b self) -> &'b mut [u8] {
+    unsafe { self.raw.as_mut_window_slice() }
+  }
 
   /// Provides an immutable slice into the window of the buffer
   ///
   #[inline(always)]
-  pub fn as_window_slice<'b>(&'b self) -> &'b [u8] { unsafe {
-      self.raw.as_window_slice()
-  }}
+  pub fn as_window_slice<'b>(&'b self) -> &'b [u8] {
+    unsafe { self.raw.as_window_slice() }
+  }
 
   /// Provides an immutable slice into the entire usable space
   /// of the buffer
@@ -302,7 +299,9 @@ impl<'a> AppendBuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), expected); }
   /// ```
   #[inline(always)]
-  pub fn poke(&self, pos: u32, src: &[u8]) -> Result<(), ()> { self.raw.poke(pos, src) }
+  pub fn poke(&self, pos: u32, src: &[u8]) -> Result<(), ()> {
+    self.raw.poke(pos, src)
+  }
 
   /// Writes a big-endian primitive at a given offset from the beginning of the
   /// window.
@@ -324,7 +323,9 @@ impl<'a> AppendBuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), expected); }
   /// ```
   #[inline(always)]
-  pub fn poke_be<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> { self.raw.poke_be(pos, t) }
+  pub fn poke_be<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> {
+    self.raw.poke_be(pos, t)
+  }
 
   /// Writes a little-endian primitive at a given offset from the beginning of
   /// the window.
@@ -345,7 +346,9 @@ impl<'a> AppendBuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ]); }
   /// ```
   #[inline(always)]
-  pub fn poke_le<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> { self.raw.poke_le(pos, t) }
+  pub fn poke_le<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> {
+    self.raw.poke_le(pos, t)
+  }
 
   /// Writes bytes from the supplied buffer, starting from the front of the
   /// window. Either the entire buffer is copied, or an error is returned
@@ -370,7 +373,9 @@ impl<'a> AppendBuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), [ 1,2,3,4,1,2,3,4 ]); }
   /// ```
   #[inline(always)]
-  pub fn fill(&mut self, src: &[u8]) -> Result<(), ()> { self.raw.fill(src) }
+  pub fn fill(&mut self, src: &[u8]) -> Result<(), ()> {
+    self.raw.fill(src)
+  }
 
   /// Writes a big-endian primitive into the beginning of the window.
   ///
@@ -396,7 +401,9 @@ impl<'a> AppendBuf<'a> {
   ///                      , 0x88, 0x77 ]); }
   /// ```
   #[inline(always)]
-  pub fn fill_be<T: Int>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_be(t) }
+  pub fn fill_be<T: Int>(&mut self, t: T) -> Result<(), ()> {
+    self.raw.fill_be(t)
+  }
 
   /// Writes a little-endian primitive into the beginning of the window.
   ///
@@ -422,7 +429,9 @@ impl<'a> AppendBuf<'a> {
   ///                      , 0x77, 0x88 ]); }
   /// ```
   #[inline(always)]
-  pub fn fill_le<T: Int>(&mut self, t: T) -> Result<(), ()> { self.raw.fill_le(t) }
+  pub fn fill_le<T: Int>(&mut self, t: T) -> Result<(), ()> {
+    self.raw.fill_le(t)
+  }
 
   /// Advances the lower bound of the window by `len`. `Err(())` will be
   /// returned if you advance past the upper bound of the window.
@@ -436,7 +445,9 @@ impl<'a> AppendBuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), b"lo"); }
   /// ```
   #[inline(always)]
-  pub fn advance(&mut self, len: u32) -> Result<(), ()> { self.raw.advance(len) }
+  pub fn advance(&mut self, len: u32) -> Result<(), ()> {
+    self.raw.advance(len)
+  }
 
   /// Sets the window to the limits.
   ///
@@ -468,15 +479,21 @@ impl<'a> AppendBuf<'a> {
 
   /// Returns the capacity of the current writing window
   #[inline(always)]
-  pub fn len(&self) -> u32 { self.raw.len() }
+  pub fn len(&self) -> u32 {
+    self.raw.len()
+  }
 
   /// Returns the capacity of the entire buffer, written or not
   #[inline(always)]
-  pub fn cap(&self) -> u32 { self.raw.cap() }
+  pub fn cap(&self) -> u32 {
+    self.raw.cap()
+  }
 
   /// Returns whether or not `len() == 0`.
   #[inline(always)]
-  pub fn is_empty(&self) -> bool { self.raw.is_empty() }
+  pub fn is_empty(&self) -> bool {
+    self.raw.is_empty()
+  }
 }
 
 impl<'a> Debug for AppendBuf<'a> {
