@@ -271,7 +271,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   pub fn iter_bytes<'a>(&'a self) -> ByteIter<'a, Buf> {
     #[inline]
     fn iter_buf_<B: Iobuf>(buf: &B) -> slice::Iter<u8> {
-        unsafe { buf.as_window_slice().iter() }
+      unsafe { buf.as_window_slice().iter() }
     }
 
     #[inline]
@@ -378,7 +378,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
       Empty       => 0.cmp(&other),
       One (ref b) => b.len().cmp(&other),
       Many(ref v) => {
-        for b in v.iter() {
+        for b in v {
           let len = b.len();
           if len > other { return Ordering::Greater }
           other -= len;
