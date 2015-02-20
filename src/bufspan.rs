@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt::{self, Formatter, Debug};
 use std::intrinsics::move_val_init;
-use std::iter::{self, order, FromIterator, AdditiveIterator};
+use std::iter::{self, order, IntoIterator, FromIterator, AdditiveIterator};
 use std::mem;
 use std::num::ToPrimitive;
 use std::option;
@@ -66,7 +66,8 @@ impl<Buf: Iobuf> Debug for BufSpan<Buf> {
 
 impl<Buf: Iobuf> FromIterator<Buf> for BufSpan<Buf> {
   #[inline]
-  fn from_iter<I: Iterator<Item=Buf>>(iterator: I) -> BufSpan<Buf> {
+  fn from_iter<T>(iterator: T) -> BufSpan<Buf>
+      where T: IntoIterator<Item=Buf> {
     let mut ret = BufSpan::new();
     ret.extend(iterator);
     ret
@@ -75,7 +76,7 @@ impl<Buf: Iobuf> FromIterator<Buf> for BufSpan<Buf> {
 
 impl<Buf: Iobuf> Extend<Buf> for BufSpan<Buf> {
   #[inline]
-  fn extend<I: Iterator<Item=Buf>>(&mut self, iterator: I) {
+  fn extend<I: IntoIterator<Item=Buf>>(&mut self, iterator: I) {
     for x in iterator {
       self.push(x);
     }

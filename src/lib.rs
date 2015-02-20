@@ -36,14 +36,17 @@
 
 #![doc(html_root_url = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/")]
 
+#![deny(missing_docs)]
+#![deny(warnings)]
+
 #![feature(unsafe_destructor)]
 #![feature(unsafe_no_drop_flag)]
+
 #![feature(alloc)]
 #![feature(core)]
-#![feature(test)]
 
-#![deny(missing_docs)]
-#![allow(unused_features)]
+#![allow(unused_features)] // needed to make #![feature(test)] work.
+#![feature(test)]
 
 extern crate alloc;
 #[cfg(test)] extern crate test;

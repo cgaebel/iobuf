@@ -1,7 +1,7 @@
 use alloc::heap;
 
 use std::fmt::{self, Formatter};
-use std::marker::{NoCopy, ContravariantLifetime};
+use std::marker::{NoCopy, PhantomData};
 use std::mem;
 use std::num::Int;
 use std::ptr;
@@ -164,7 +164,7 @@ pub struct RawIobuf<'a> {
   lo:     u32,
   hi:     u32,
   hi_max: u32,
-  lifetm: ContravariantLifetime<'a>,
+  lifetm: PhantomData<&'a ()>,
   nocopy: NoCopy,
 }
 
@@ -203,7 +203,7 @@ impl<'a> RawIobuf<'a> {
         lo:     0,
         hi:     len as u32,
         hi_max: len as u32,
-        lifetm: ContravariantLifetime,
+        lifetm: PhantomData,
         nocopy: NoCopy,
       }
     }
@@ -229,7 +229,7 @@ impl<'a> RawIobuf<'a> {
       lo:     0,
       hi:     0,
       hi_max: 0,
-      lifetm: ContravariantLifetime,
+      lifetm: PhantomData,
       nocopy: NoCopy,
     }
   }
@@ -288,7 +288,7 @@ impl<'a> RawIobuf<'a> {
       lo:     self.lo,
       hi:     self.hi,
       hi_max: self.hi_max,
-      lifetm: self.lifetm,
+      lifetm: PhantomData,
       nocopy: NoCopy,
     }
   }
@@ -331,7 +331,7 @@ impl<'a> RawIobuf<'a> {
       lo:     self.lo,
       hi:     self.hi,
       hi_max: self.hi_max,
-      lifetm: self.lifetm,
+      lifetm: PhantomData,
       nocopy: NoCopy,
     }
   }
@@ -431,7 +431,7 @@ impl<'a> RawIobuf<'a> {
         lo:     0,
         hi:     len as u32,
         hi_max: len as u32,
-        lifetm: ContravariantLifetime,
+        lifetm: PhantomData,
         nocopy: NoCopy,
       }
     }

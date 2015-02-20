@@ -1624,7 +1624,7 @@ mod test {
         let lo     = c % (hi + 1);
         let lo_min = d % (lo + 1);
 
-        let mut buf = ROIobuf::from_slice_copy(data[]);
+        let mut buf = ROIobuf::from_slice_copy(&data[..]);
         buf.set_limits_and_window((lo_min, hi_max), (lo, hi)).unwrap();
 
         buf.atomic_read_only().unwrap()
