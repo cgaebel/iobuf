@@ -50,7 +50,7 @@ impl<Buf: Iobuf> Debug for BufSpan<Buf> {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     let mut first_time = true;
 
-    for b in self.iter() {
+    for b in self {
       if !first_time {
         try!(write!(f, "\n"));
       } else {
@@ -83,6 +83,34 @@ impl<Buf: Iobuf> Extend<Buf> for BufSpan<Buf> {
   }
 }
 
+impl<Buf: Iobuf> IntoIterator for BufSpan<Buf> {
+  type Item = Buf;
+  type IntoIter = SpanMoveIter<Buf>;
+
+  #[inline]
+  fn into_iter(self) -> SpanMoveIter<Buf> {
+    match self {
+      Empty   => MoveOpt(None.into_iter()),
+      One (b) => MoveOpt(Some(b).into_iter()),
+      Many(v) => MoveLot(v.into_iter()),
+    }
+  }
+}
+
+impl<'a, Buf: Iobuf> IntoIterator for &'a BufSpan<Buf> {
+  type Item = &'a Buf;
+  type IntoIter = SpanIter<'a, Buf>;
+
+  #[inline]
+  fn into_iter(self) -> SpanIter<'a, Buf> {
+    match *self {
+      Empty       => Opt(None.into_iter()),
+      One (ref b) => Opt(Some(b).into_iter()),
+      Many(ref v) => Lot(v.into_iter()),
+    }
+  }
+}
+
 impl<Buf: Iobuf> BufSpan<Buf> {
   /// Creates a new, empty `Bufspan`.
   ///
@@ -101,9 +129,10 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   ///
   /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
+  /// use std::iter::IntoIterator;
   ///
   /// let s = BufSpan::from_buf(ROIobuf::from_slice(b"hello"));
-  /// assert_eq!(s.iter().count(), 1);
+  /// assert_eq!((&s).into_iter().count(), 1);
   /// assert_eq!(s.count_bytes(), 5);
   /// ```
   #[inline]
@@ -171,6 +200,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   ///
   /// ```rust
   /// use iobuf::{BufSpan, Iobuf, ROIobuf};
+  /// use std::iter::IntoIterator;
   ///
   /// let mut s = BufSpan::new();
   ///
@@ -178,7 +208,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// s.push(ROIobuf::from_str("llo"));
   ///
   /// assert_eq!(s.count_bytes() as usize, "hello".len());
-  /// assert_eq!(s.iter().count(), 2);
+  /// assert_eq!((&s).into_iter().count(), 2);
   ///
   /// let mut b0 = ROIobuf::from_str(" world");
   /// let mut b1 = b0.clone();
@@ -192,7 +222,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// // b0 and b1 are immediately after each other, and from the same buffer,
   /// // so get merged into one Iobuf.
   /// assert_eq!(s.count_bytes() as usize, "hello world".len());
-  /// assert_eq!(s.iter().count(), 3);
+  /// assert_eq!((&s).into_iter().count(), 3);
   /// ```
   #[inline(always)]
   pub fn push(&mut self, b: Buf) {
@@ -236,26 +266,6 @@ impl<Buf: Iobuf> BufSpan<Buf> {
     }
   }
 
-  /// Returns an iterator over references to the buffers inside the `BufSpan`.
-  #[inline]
-  pub fn iter<'a>(&'a self) -> SpanIter<'a, Buf> {
-    match *self {
-      Empty       => Opt(None.into_iter()),
-      One (ref b) => Opt(Some(b).into_iter()),
-      Many(ref v) => Lot(v.as_slice().iter()),
-    }
-  }
-
-  /// Returns a moving iterator over the buffers inside the `BufSpan`.
-  #[inline]
-  pub fn into_iter(self) -> SpanMoveIter<Buf> {
-    match self {
-      Empty   => MoveOpt(None.into_iter()),
-      One (b) => MoveOpt(Some(b).into_iter()),
-      Many(v) => MoveLot(v.into_iter()),
-    }
-  }
-
   /// Returns an iterator over the bytes in the `BufSpan`.
   #[inline]
   pub fn iter_bytes<'a>(&'a self) -> ByteIter<'a, Buf> {
@@ -270,7 +280,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
     let iter_buf : fn(&Buf) -> slice::Iter<u8> = iter_buf_;
     let deref_u8 : fn(&u8) -> u8 = deref_u8_;
 
-    self.iter().flat_map(iter_buf).map(deref_u8)
+    self.into_iter().flat_map(iter_buf).map(deref_u8)
   }
 
   /// Returns `true` iff the bytes in this `BufSpan` are the same as the bytes
@@ -316,7 +326,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   }
 
   /// Counts the number of bytes this `BufSpan` is over. This is
-  /// `O(self.iter().len())`.
+  /// `O(self.into_iter().len())`.
   ///
   /// ```rust
   /// use iobuf::{BufSpan, ROIobuf};
@@ -330,7 +340,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   #[inline]
   pub fn count_bytes(&self) -> u32 {
 
-    // `self.iter().map(|b| b.len()).sum()` would be shorter, but I like to
+    // `self.into_iter().map(|b| b.len()).sum()` would be shorter, but I like to
     // specialize for the much more common case of empty or singular `BufSpan`s.
     match *self {
       Empty       => 0,
@@ -450,23 +460,23 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 }
 
 impl<Buf: Iobuf> PartialEq for BufSpan<Buf> {
-    fn eq(&self, other: &BufSpan<Buf>) -> bool {
-        self.byte_equal(other)
-    }
+  fn eq(&self, other: &BufSpan<Buf>) -> bool {
+    self.byte_equal(other)
+  }
 }
 
 impl<Buf: Iobuf> Eq for BufSpan<Buf> {}
 
 impl<Buf: Iobuf> PartialOrd for BufSpan<Buf> {
-    fn partial_cmp(&self, other: &BufSpan<Buf>) -> Option<Ordering> {
-        order::partial_cmp(self.iter_bytes(), other.iter_bytes())
-    }
+  fn partial_cmp(&self, other: &BufSpan<Buf>) -> Option<Ordering> {
+    order::partial_cmp(self.iter_bytes(), other.iter_bytes())
+  }
 }
 
 impl<Buf: Iobuf> Ord for BufSpan<Buf> {
-    fn cmp(&self, other: &BufSpan<Buf>) -> Ordering {
-        order::cmp(self.iter_bytes(), other.iter_bytes())
-    }
+  fn cmp(&self, other: &BufSpan<Buf>) -> Ordering {
+    order::cmp(self.iter_bytes(), other.iter_bytes())
+  }
 }
 
 /// An iterator over the bytes in a `BufSpan`.
