@@ -1,11 +1,14 @@
 use alloc::heap;
 
+use core::nonzero::NonZero;
+
 use std::fmt::{self, Formatter};
 use std::marker::{NoCopy, PhantomData};
 use std::mem;
 use std::num::Int;
 use std::ptr;
 use std::raw::{self, Repr};
+use std::i32;
 use std::u32;
 use std::sync::Arc;
 use std::sync::atomic::{self, AtomicUint, Ordering};
@@ -20,10 +23,10 @@ const TARGET_WORD_SIZE: usize = 32;
 /// By limiting the buffer sizes, we can bring the struct down from 40 bytes to
 /// 24 bytes -- a 40% reduction. This frees up precious cache and registers for
 /// the actual processing.
-const MAX_BUFFER_LEN: usize = 0x7FFF_FFFF - 3*TARGET_WORD_SIZE;
+const MAX_BUFFER_LEN: usize = i32::MAX as usize - ALLOCATION_HEADER_SIZE;
 
 /// The bitmask to get the "is the buffer owned" bit.
-const OWNED_MASK:  u32  = 1u32 << (u32::BITS  - 1);
+const OWNED_MASK: u32 = 1 << (u32::BITS - 1);
 
 /// Used to provide custom memory to Iobufs, instead of just using the heap.
 pub trait Allocator: Sync + Send {
@@ -35,20 +38,29 @@ pub trait Allocator: Sync + Send {
 }
 
 struct AllocationHeader {
-  allocator: *mut (),
+  allocator: Option<NonZero<*mut ()>>,
   allocation_length: usize,
   refcount: usize,
+}
+
+const ALLOCATION_HEADER_SIZE: usize = 3*TARGET_WORD_SIZE/8;
+
+// Needed because size_of isn't compile-time.
+#[test]
+fn correct_header_size() {
+  assert_eq!(ALLOCATION_HEADER_SIZE, mem::size_of::<AllocationHeader>());
 }
 
 impl AllocationHeader {
   #[inline]
   fn allocate(&self, len: usize) -> *mut u8 {
     unsafe {
-      if self.allocator.is_null() {
-        heap::allocate(len, mem::size_of::<usize>())
-      } else {
-        let allocator: &Arc<Box<Allocator>> = mem::transmute(&self.allocator);
-        allocator.allocate(len, mem::size_of::<usize>())
+      match self.allocator {
+        None => heap::allocate(len, mem::size_of::<usize>()),
+        Some(allocator) => {
+          let allocator: &Arc<Box<Allocator>> = mem::transmute(&*allocator);
+          allocator.allocate(len, mem::size_of::<usize>())
+        }
       }
     }
   }
@@ -76,10 +88,11 @@ impl AllocationHeader {
   #[inline]
   fn deallocator(&self) -> Deallocator {
     unsafe {
-      if self.allocator.is_null() {
-        Deallocator::Heap(self.allocation_length)
-      } else {
-        Deallocator::Custom(mem::transmute(self.allocator), self.allocation_length)
+      match self.allocator {
+        None =>
+          Deallocator::Heap(self.allocation_length),
+        Some(allocator) =>
+          Deallocator::Custom(mem::transmute(*allocator), self.allocation_length)
       }
     }
   }
@@ -177,7 +190,7 @@ fn check_sane_raw_size() {
 impl<'a> RawIobuf<'a> {
   pub fn new_impl(
       len:       usize,
-      allocator: *mut ()) -> RawIobuf<'static> {
+      allocator: Option<NonZero<*mut ()>>) -> RawIobuf<'static> {
     unsafe {
       if len > MAX_BUFFER_LEN {
         buffer_too_big(len);
@@ -211,13 +224,14 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub fn new(len: usize) -> RawIobuf<'static> {
-    RawIobuf::new_impl(len, ptr::null_mut())
+    RawIobuf::new_impl(len, None)
   }
 
   #[inline]
   pub fn new_with_allocator(len: usize, allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
     unsafe {
-      RawIobuf::new_impl(len, mem::transmute(allocator))
+      let allocator: *mut () = mem::transmute(allocator);
+      RawIobuf::new_impl(len, Some(NonZero::new(allocator)))
     }
   }
 

@@ -49,6 +49,8 @@
 #![feature(test)]
 
 extern crate alloc;
+extern crate core;
+
 #[cfg(test)] extern crate test;
 //#[cfg(test)] extern crate quickcheck;
 
