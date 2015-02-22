@@ -33,6 +33,9 @@
 //!
 //! To repeat: Do not omit bounds checks unless you've checked _very_ carefully
 //! that they are redundant. This can cause terrifying security issues.
+//!
+//! Fun tidbit: Data allocated by `Iobuf` is guaranteed to be aligned to 16 bytes.
+//! This may be abused to write efficient SIMD data processing code.
 
 #![doc(html_root_url = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/")]
 

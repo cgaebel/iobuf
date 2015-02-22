@@ -19,6 +19,10 @@ const TARGET_WORD_SIZE: usize = 64;
 #[cfg(target_pointer_width = "32")]
 const TARGET_WORD_SIZE: usize = 32;
 
+/// All Iobuf data is aligned to 16 bytes. This allows people to write more
+/// efficient SIMD code on Iobufs.
+const DATA_ALIGNMENT: usize = 16;
+
 /// The biggest Iobuf supported, to allow us to have a small RawIobuf struct.
 /// By limiting the buffer sizes, we can bring the struct down from 40 bytes to
 /// 24 bytes -- a 40% reduction. This frees up precious cache and registers for
@@ -41,14 +45,17 @@ struct AllocationHeader {
   allocator: Option<NonZero<*mut ()>>,
   allocation_length: usize,
   refcount: usize,
+  _pad: usize,
 }
 
-const ALLOCATION_HEADER_SIZE: usize = 3*TARGET_WORD_SIZE/8;
+const ALLOCATION_HEADER_SIZE: usize = 4*TARGET_WORD_SIZE/8;
 
 // Needed because size_of isn't compile-time.
 #[test]
 fn correct_header_size() {
   assert_eq!(ALLOCATION_HEADER_SIZE, mem::size_of::<AllocationHeader>());
+  assert!(ALLOCATION_HEADER_SIZE % DATA_ALIGNMENT == 0);
+  assert!(mem::align_of::<AllocationHeader>() <= DATA_ALIGNMENT);
 }
 
 impl AllocationHeader {
@@ -56,10 +63,10 @@ impl AllocationHeader {
   fn allocate(&self, len: usize) -> *mut u8 {
     unsafe {
       match self.allocator {
-        None => heap::allocate(len, mem::size_of::<usize>()),
+        None => heap::allocate(len, DATA_ALIGNMENT),
         Some(allocator) => {
           let allocator: &Arc<Box<Allocator>> = mem::transmute(&*allocator);
-          allocator.allocate(len, mem::size_of::<usize>())
+          allocator.allocate(len, DATA_ALIGNMENT)
         }
       }
     }
@@ -92,7 +99,7 @@ impl AllocationHeader {
         None =>
           Deallocator::Heap(self.allocation_length),
         Some(allocator) =>
-          Deallocator::Custom(mem::transmute(*allocator), self.allocation_length)
+          Deallocator::Custom(self.allocation_length, mem::transmute(*allocator))
       }
     }
   }
@@ -129,18 +136,18 @@ impl AllocationHeader {
 /// header.
 enum Deallocator {
   Heap(usize),
-  Custom(Arc<Box<Allocator>>, usize),
+  Custom(usize, Arc<Box<Allocator>>),
 }
 
 impl Deallocator {
   fn deallocate(self, ptr: *mut u8) {
     unsafe {
-      let ptr = ptr.offset(-(mem::size_of::<AllocationHeader>() as isize));
+      let ptr = ptr.offset(-(ALLOCATION_HEADER_SIZE as isize));
       match self {
         Deallocator::Heap(len) =>
-          heap::deallocate(ptr, len, mem::align_of::<usize>()),
-        Deallocator::Custom(arc, len) =>
-          arc.deallocate(ptr, len, mem::align_of::<usize>()),
+          heap::deallocate(ptr, len, DATA_ALIGNMENT),
+        Deallocator::Custom(len, arc) =>
+          arc.deallocate(ptr, len, DATA_ALIGNMENT),
       }
     }
   }
@@ -159,6 +166,16 @@ fn bad_range(pos: u64, len: u64) -> ! {
 fn buffer_too_big(actual_size: usize) -> ! {
   panic!("Tried to create an Iobuf that's too big: {} bytes. Max size = {}",
          actual_size, MAX_BUFFER_LEN)
+}
+
+#[cold]
+fn allocator_returned_null() -> ! {
+  panic!("Iobuf's allocator returned NULL. Out of memory?");
+}
+
+#[cold]
+fn improperly_aligned_data(ptr: *mut u8) -> ! {
+  panic!("{:?} is not aligned to {} bytes.", ptr, DATA_ALIGNMENT);
 }
 
 /// A `RawIobuf` is the representation of both a `RWIobuf` and a `ROIobuf`.
@@ -184,7 +201,7 @@ pub struct RawIobuf<'a> {
 // Make sure the compiler doesn't resize this to something silly.
 #[test]
 fn check_sane_raw_size() {
-    assert_eq!(mem::size_of::<RawIobuf>(), mem::size_of::<*mut u8>() + 16);
+  assert_eq!(mem::size_of::<RawIobuf>(), mem::size_of::<*mut u8>() + 16);
 }
 
 impl<'a> RawIobuf<'a> {
@@ -196,19 +213,29 @@ impl<'a> RawIobuf<'a> {
         buffer_too_big(len);
       }
 
-      let data_len = mem::size_of::<AllocationHeader>() + len;
+      let data_len = ALLOCATION_HEADER_SIZE + len;
 
       let allocation_header =
         AllocationHeader {
-          allocator: allocator,
+          allocator:         allocator,
           allocation_length: data_len,
-          refcount: 1,
+          refcount:          1,
+          _pad:              0,
         };
 
       let buf = allocation_header.allocate(data_len);
+
+      if buf.is_null() {
+        allocator_returned_null();
+      }
+
       ptr::write(buf as *mut AllocationHeader, allocation_header);
 
-      let buf: *mut u8 = buf.offset(mem::size_of::<AllocationHeader>() as isize);
+      let buf: *mut u8 = buf.offset(ALLOCATION_HEADER_SIZE as isize);
+
+      if buf as usize % DATA_ALIGNMENT != 0 {
+        improperly_aligned_data(buf);
+      }
 
       RawIobuf {
         buf:    buf,
@@ -406,7 +433,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       if self.is_owned() {
         Some(mem::transmute(
-          self.buf.offset(-(mem::size_of::<AllocationHeader>() as isize))))
+          self.buf.offset(-(ALLOCATION_HEADER_SIZE as isize))))
       } else {
         None
       }
