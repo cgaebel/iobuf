@@ -335,21 +335,19 @@ impl<'a> RawIobuf<'a> {
   }
 
   // Keep this out of line to guide inlining.
-  #[cold]
-  unsafe fn clone_from_fix_nonatomic_refcounts(&self, source: &RawIobuf<'a>) {
+  unsafe fn clone_from_fix_nonatomic_refcounts(&self, source: &Self) {
     source.nonatomic_inc_ref_count();
     self.nonatomic_dec_ref_count();
   }
 
   // Keep this out of line to guide inlining.
-  #[cold]
-  unsafe fn clone_from_fix_atomic_refcounts(&self, source: &RawIobuf<'a>) {
+  unsafe fn clone_from_fix_atomic_refcounts(&self, source: &Self) {
     source.atomic_inc_ref_count();
     self.atomic_dec_ref_count();
   }
 
   #[inline]
-  pub unsafe fn clone_from_atomic(&mut self, source: &RawIobuf<'a>) {
+  pub unsafe fn clone_from_atomic(&mut self, source: &Self) {
     if self.ptr()      != source.ptr()
     || self.is_owned() != source.is_owned() {
       self.clone_from_fix_atomic_refcounts(source);
@@ -363,7 +361,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn clone_nonatomic(&self) -> RawIobuf<'a> {
+  pub unsafe fn clone_nonatomic(&self) -> Self {
     self.nonatomic_inc_ref_count();
 
     RawIobuf {
@@ -378,7 +376,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn clone_from_nonatomic(&mut self, source: &RawIobuf<'a>) {
+  pub unsafe fn clone_from_nonatomic(&mut self, source: &Self) {
     if self.ptr()      != source.ptr()
     || self.is_owned() != source.is_owned() {
       self.clone_from_fix_nonatomic_refcounts(source);
@@ -441,7 +439,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn from_str(s: &'a str) -> RawIobuf<'a> {
+  pub fn from_str(s: &'a str) -> Self {
     RawIobuf::from_slice(s.as_bytes())
   }
 
@@ -456,7 +454,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn from_slice(s: &'a [u8]) -> RawIobuf<'a> {
+  pub fn from_slice(s: &'a [u8]) -> Self {
     unsafe {
       let s_slice: raw::Slice<u8> = mem::transmute(s);
       let ptr = s_slice.data as *mut u8;
@@ -852,7 +850,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn split_at_nonatomic(&self, pos: u32) -> Result<(RawIobuf<'a>, RawIobuf<'a>), ()> {
+  pub fn split_at_nonatomic(&self, pos: u32) -> Result<(Self, Self), ()> {
     unsafe {
       try!(self.check_range_u32(pos, 0));
       Ok(self.unsafe_split_at_nonatomic(pos))
@@ -860,7 +858,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_split_at_nonatomic(&self, pos: u32) -> (RawIobuf<'a>, RawIobuf<'a>) {
+  pub unsafe fn unsafe_split_at_nonatomic(&self, pos: u32) -> (Self, Self) {
     self.debug_check_range_u32(pos, 0);
     let mut a = (*self).clone_nonatomic();
     let mut b = (*self).clone_nonatomic();
@@ -870,7 +868,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn split_start_at_nonatomic(&mut self, pos: u32) -> Result<RawIobuf<'a>, ()> {
+  pub fn split_start_at_nonatomic(&mut self, pos: u32) -> Result<Self, ()> {
     unsafe {
       try!(self.check_range_u32(pos, 0));
       Ok(self.unsafe_split_start_at_nonatomic(pos))
@@ -878,7 +876,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_split_start_at_nonatomic(&mut self, pos: u32) -> RawIobuf<'a> {
+  pub unsafe fn unsafe_split_start_at_nonatomic(&mut self, pos: u32) -> Self {
     self.debug_check_range_u32(pos, 0);
     let mut ret = (*self).clone_nonatomic();
     ret.unsafe_resize(pos);
@@ -887,7 +885,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn split_at_atomic(&self, pos: u32) -> Result<(RawIobuf<'a>, RawIobuf<'a>), ()> {
+  pub fn split_at_atomic(&self, pos: u32) -> Result<(Self, Self), ()> {
     unsafe {
       try!(self.check_range_u32(pos, 0));
       Ok(self.unsafe_split_at_atomic(pos))
@@ -895,7 +893,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_split_at_atomic(&self, pos: u32) -> (RawIobuf<'a>, RawIobuf<'a>) {
+  pub unsafe fn unsafe_split_at_atomic(&self, pos: u32) -> (Self, Self) {
     self.debug_check_range_u32(pos, 0);
     let mut a = (*self).clone_atomic();
     let mut b = (*self).clone_atomic();
@@ -905,7 +903,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn split_start_at_atomic(&mut self, pos: u32) -> Result<RawIobuf<'a>, ()> {
+  pub fn split_start_at_atomic(&mut self, pos: u32) -> Result<Self, ()> {
     unsafe {
       try!(self.check_range_u32(pos, 0));
       Ok(self.unsafe_split_start_at_atomic(pos))
@@ -913,7 +911,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_split_start_at_atomic(&mut self, pos: u32) -> RawIobuf<'a> {
+  pub unsafe fn unsafe_split_start_at_atomic(&mut self, pos: u32) -> Self {
     self.debug_check_range_u32(pos, 0);
     let mut ret = (*self).clone_atomic();
     ret.unsafe_resize(pos);

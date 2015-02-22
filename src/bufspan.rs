@@ -66,7 +66,7 @@ impl<Buf: Iobuf> Debug for BufSpan<Buf> {
 
 impl<Buf: Iobuf> FromIterator<Buf> for BufSpan<Buf> {
   #[inline]
-  fn from_iter<T>(iterator: T) -> BufSpan<Buf>
+  fn from_iter<T>(iterator: T) -> Self
       where T: IntoIterator<Item=Buf> {
     let mut ret = BufSpan::new();
     ret.extend(iterator);
@@ -121,7 +121,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// assert!(s.is_empty());
   /// ```
   #[inline]
-  pub fn new() -> BufSpan<Buf> {
+  pub fn new() -> Self {
     BufSpan::Empty
   }
 
@@ -136,7 +136,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// assert_eq!(s.count_bytes(), 5);
   /// ```
   #[inline]
-  pub fn from_buf(b: Buf) -> BufSpan<Buf> {
+  pub fn from_buf(b: Buf) -> Self {
     if b.is_empty() { Empty } else { One(b) }
   }
 
@@ -404,7 +404,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// assert!(a.byte_equal_slice(b"hello world!!!"));
   /// ```
   #[inline]
-  pub fn append(&mut self, other: BufSpan<Buf>) {
+  pub fn append(&mut self, other: Self) {
     if self.is_empty() {
       *self = other;
     } else {
@@ -460,7 +460,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
 }
 
 impl<Buf: Iobuf> PartialEq for BufSpan<Buf> {
-  fn eq(&self, other: &BufSpan<Buf>) -> bool {
+  fn eq(&self, other: &Self) -> bool {
     self.byte_equal(other)
   }
 }
@@ -468,13 +468,13 @@ impl<Buf: Iobuf> PartialEq for BufSpan<Buf> {
 impl<Buf: Iobuf> Eq for BufSpan<Buf> {}
 
 impl<Buf: Iobuf> PartialOrd for BufSpan<Buf> {
-  fn partial_cmp(&self, other: &BufSpan<Buf>) -> Option<Ordering> {
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
     order::partial_cmp(self.iter_bytes(), other.iter_bytes())
   }
 }
 
 impl<Buf: Iobuf> Ord for BufSpan<Buf> {
-  fn cmp(&self, other: &BufSpan<Buf>) -> Ordering {
+  fn cmp(&self, other: &Self) -> Ordering {
     order::cmp(self.iter_bytes(), other.iter_bytes())
   }
 }

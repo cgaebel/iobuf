@@ -23,19 +23,19 @@ pub struct ROIobuf<'a> {
 
 #[test]
 fn check_sane_roiobuf_size() {
-    assert_eq!(mem::size_of::<ROIobuf<'static>>(), mem::size_of::<*mut u8>() + 16);
+  assert_eq!(mem::size_of::<ROIobuf>(), mem::size_of::<*mut u8>() + 16);
 }
 
 impl<'a> Clone for ROIobuf<'a> {
   #[inline(always)]
-  fn clone(&self) -> ROIobuf<'a> {
+  fn clone(&self) -> Self {
     ROIobuf {
       raw: unsafe { self.raw.clone_nonatomic() },
     }
   }
 
   #[inline(always)]
-  fn clone_from(&mut self, source: &ROIobuf<'a>) {
+  fn clone_from(&mut self, source: &Self) {
     unsafe { self.raw.clone_from_nonatomic(&source.raw) }
   }
 }
@@ -70,19 +70,19 @@ pub struct RWIobuf<'a> {
 
 #[test]
 fn check_sane_rwiobuf_size() {
-    assert_eq!(mem::size_of::<RWIobuf<'static>>(), mem::size_of::<*mut u8>() + 16);
+    assert_eq!(mem::size_of::<RWIobuf>(), mem::size_of::<*mut u8>() + 16);
 }
 
 impl<'a> Clone for RWIobuf<'a> {
   #[inline(always)]
-  fn clone(&self) -> RWIobuf<'a> {
+  fn clone(&self) -> Self {
     RWIobuf {
       raw: unsafe { self.raw.clone_nonatomic() },
     }
   }
 
   #[inline(always)]
-  fn clone_from(&mut self, source: &RWIobuf<'a>) {
+  fn clone_from(&mut self, source: &Self) {
     unsafe { self.raw.clone_from_nonatomic(&source.raw) }
   }
 }
@@ -183,10 +183,10 @@ unsafe impl Sync for AROIobuf {}
 
 impl Clone for AROIobuf {
   #[inline(always)]
-  fn clone(&self) -> AROIobuf { AROIobuf { raw: unsafe { self.raw.clone_atomic() } } }
+  fn clone(&self) -> Self { AROIobuf { raw: unsafe { self.raw.clone_atomic() } } }
 
   #[inline(always)]
-  fn clone_from(&mut self, source: &AROIobuf) { unsafe { self.raw.clone_from_atomic(&source.raw) } }
+  fn clone_from(&mut self, source: &Self) { unsafe { self.raw.clone_from_atomic(&source.raw) } }
 }
 
 impl Drop for AROIobuf {
@@ -266,7 +266,7 @@ impl<'a> ROIobuf<'a> {
   /// unsafe { assert_eq!(b.as_limit_slice(), b"hello"); }
   /// ```
   #[inline(always)]
-  pub fn from_str(s: &'a str) -> ROIobuf<'a> {
+  pub fn from_str(s: &'a str) -> Self {
     ROIobuf { raw: RawIobuf::from_str(s) }
   }
 
@@ -284,7 +284,7 @@ impl<'a> ROIobuf<'a> {
   /// unsafe { assert_eq!(b.as_limit_slice(), b"hello"); }
   /// ```
   #[inline(always)]
-  pub fn from_str_copy(s: &str) -> ROIobuf<'static> {
+  pub fn from_str_copy(s: &str) -> Self {
     ROIobuf { raw: RawIobuf::from_str_copy(s) }
   }
 
@@ -338,7 +338,7 @@ impl<'a> ROIobuf<'a> {
   /// assert_eq!(b.peek_be(1), Ok(0x0304u16)); // ...and the Iobuf!
   /// ```
   #[inline(always)]
-  pub fn from_slice(s: &'a [u8]) -> ROIobuf<'a> {
+  pub fn from_slice(s: &'a [u8]) -> Self {
     ROIobuf { raw: RawIobuf::from_slice(s) }
   }
 }
@@ -435,7 +435,7 @@ impl<'a> RWIobuf<'a> {
   /// assert_eq!(s[2], 100);
   /// ```
   #[inline(always)]
-  pub fn from_slice(s: &'a mut [u8]) -> RWIobuf<'a> {
+  pub fn from_slice(s: &'a mut [u8]) -> Self {
     RWIobuf { raw: RawIobuf::from_slice(s) }
   }
 
@@ -962,7 +962,7 @@ impl<'a> Iobuf for ROIobuf<'a> {
   }
 
   #[inline(always)]
-  fn unique(self) -> Result<UniqueIobuf, ROIobuf<'a>> {
+  fn unique(self) -> Result<UniqueIobuf, Self> {
     unsafe {
       if self.raw.is_unique_nonatomic() {
         Ok(mem::transmute(self))
@@ -973,7 +973,7 @@ impl<'a> Iobuf for ROIobuf<'a> {
   }
 
   #[inline(always)]
-  fn atomic_read_only(self) -> Result<AROIobuf, ROIobuf<'a>> {
+  fn atomic_read_only(self) -> Result<AROIobuf, Self> {
     unsafe {
       if self.raw.is_unique_nonatomic() {
         Ok(mem::transmute(self))
@@ -1065,23 +1065,23 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn unsafe_resize(&mut self, len: u32) { self.raw.unsafe_resize(len) }
 
   #[inline(always)]
-  fn split_at(&self, pos: u32) -> Result<(ROIobuf<'a>, ROIobuf<'a>), ()> {
+  fn split_at(&self, pos: u32) -> Result<(Self, Self), ()> {
     self.raw.split_at_nonatomic(pos).map(|(a, b)| (ROIobuf { raw: a }, ROIobuf { raw: b }))
   }
 
   #[inline(always)]
-  unsafe fn unsafe_split_at(&self, pos: u32) -> (ROIobuf<'a>, ROIobuf<'a>) {
+  unsafe fn unsafe_split_at(&self, pos: u32) -> (Self, Self) {
     let (a, b) = self.raw.unsafe_split_at_nonatomic(pos);
     (ROIobuf { raw: a }, ROIobuf { raw: b })
   }
 
   #[inline(always)]
-  fn split_start_at(&mut self, pos: u32) -> Result<ROIobuf<'a>, ()> {
+  fn split_start_at(&mut self, pos: u32) -> Result<Self, ()> {
     self.raw.split_start_at_nonatomic(pos).map(|b| ROIobuf { raw: b })
   }
 
   #[inline(always)]
-  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> ROIobuf<'a> {
+  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> Self {
     ROIobuf { raw: self.raw.unsafe_split_start_at_nonatomic(pos) }
   }
 
@@ -1269,27 +1269,27 @@ impl Iobuf for AROIobuf {
   unsafe fn unsafe_resize(&mut self, len: u32) { self.raw.unsafe_resize(len) }
 
   #[inline(always)]
-  fn split_at(&self, pos: u32) -> Result<(AROIobuf, AROIobuf), ()> {
+  fn split_at(&self, pos: u32) -> Result<(Self, Self), ()> {
     self.raw.split_at_atomic(pos).map(
       |(a, b)| (AROIobuf { raw: a },
                 AROIobuf { raw: b }))
   }
 
   #[inline(always)]
-  unsafe fn unsafe_split_at(&self, pos: u32) -> (AROIobuf, AROIobuf) {
+  unsafe fn unsafe_split_at(&self, pos: u32) -> (Self, Self) {
     let (a, b) = self.raw.unsafe_split_at_atomic(pos);
     (AROIobuf { raw: a },
      AROIobuf { raw: b })
   }
 
   #[inline(always)]
-  fn split_start_at(&mut self, pos: u32) -> Result<AROIobuf, ()> {
+  fn split_start_at(&mut self, pos: u32) -> Result<Self, ()> {
     self.raw.split_start_at_atomic(pos).map(
       |b| AROIobuf { raw: b })
   }
 
   #[inline(always)]
-  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> AROIobuf {
+  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> Self {
     AROIobuf { raw: self.raw.unsafe_split_start_at_atomic(pos) }
   }
 
@@ -1378,7 +1378,7 @@ impl<'a> Iobuf for RWIobuf<'a> {
   }
 
   #[inline(always)]
-  fn unique(self) -> Result<UniqueIobuf, RWIobuf<'a>> {
+  fn unique(self) -> Result<UniqueIobuf, Self> {
     unsafe {
       if self.raw.is_unique_atomic() {
         Ok(mem::transmute(self))
@@ -1389,7 +1389,7 @@ impl<'a> Iobuf for RWIobuf<'a> {
   }
 
   #[inline(always)]
-  fn atomic_read_only(self) -> Result<AROIobuf, RWIobuf<'a>> {
+  fn atomic_read_only(self) -> Result<AROIobuf, Self> {
     unsafe {
       if self.raw.is_unique_nonatomic() {
         Ok(mem::transmute(self))
@@ -1481,23 +1481,23 @@ impl<'a> Iobuf for RWIobuf<'a> {
   unsafe fn unsafe_resize(&mut self, len: u32) { self.raw.unsafe_resize(len) }
 
   #[inline(always)]
-  fn split_at(&self, pos: u32) -> Result<(RWIobuf<'a>, RWIobuf<'a>), ()> {
+  fn split_at(&self, pos: u32) -> Result<(Self, Self), ()> {
     self.raw.split_at_nonatomic(pos).map(|(a, b)| (RWIobuf { raw: a }, RWIobuf { raw: b }))
   }
 
   #[inline(always)]
-  unsafe fn unsafe_split_at(&self, pos: u32) -> (RWIobuf<'a>, RWIobuf<'a>) {
+  unsafe fn unsafe_split_at(&self, pos: u32) -> (Self, Self) {
     let (a, b) = self.raw.unsafe_split_at_nonatomic(pos);
     (RWIobuf { raw: a }, RWIobuf { raw: b })
   }
 
   #[inline(always)]
-  fn split_start_at(&mut self, pos: u32) -> Result<RWIobuf<'a>, ()> {
+  fn split_start_at(&mut self, pos: u32) -> Result<Self, ()> {
     self.raw.split_start_at_nonatomic(pos).map(|b| RWIobuf { raw: b })
   }
 
   #[inline(always)]
-  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> RWIobuf<'a> {
+  unsafe fn unsafe_split_start_at(&mut self, pos: u32) -> Self {
     RWIobuf { raw: self.raw.unsafe_split_start_at_nonatomic(pos) }
   }
 
