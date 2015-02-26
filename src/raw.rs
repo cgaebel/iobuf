@@ -481,7 +481,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let b = RawIobuf::new(s.len());
       let s = s.repr();
-      ptr::copy_nonoverlapping_memory(b.buf, s.data, s.len);
+      ptr::copy_nonoverlapping(b.buf, s.data, s.len);
       b
     }
   }
@@ -491,7 +491,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let b = RawIobuf::new_with_allocator(s.len(), allocator);
       let s = s.repr();
-      ptr::copy_nonoverlapping_memory(b.buf, s.data, s.len);
+      ptr::copy_nonoverlapping(b.buf, s.data, s.len);
       b
     }
   }
@@ -957,7 +957,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let len = self.len();
       let lo_min = self.lo_min();
-      ptr::copy_memory(
+      ptr::copy(
         self.buf.offset(lo_min as isize),
         self.buf.offset(self.lo as isize) as *const u8,
         len as usize);
@@ -1069,7 +1069,7 @@ impl<'a> RawIobuf<'a> {
 
     let dst: raw::Slice<u8> = mem::transmute(dst);
 
-    ptr::copy_nonoverlapping_memory(
+    ptr::copy_nonoverlapping(
       dst.data as *mut u8,
       self.buf.offset((self.lo + pos) as isize) as *const u8,
       len);
@@ -1083,7 +1083,7 @@ impl<'a> RawIobuf<'a> {
     let mut dst: T = mem::uninitialized();
 
     let dst_ptr = &mut dst as *mut T;
-    ptr::copy_nonoverlapping_memory(
+    ptr::copy_nonoverlapping(
       dst_ptr as *mut u8,
       self.buf.offset((self.lo + pos) as isize) as *const u8,
       len);
@@ -1098,7 +1098,7 @@ impl<'a> RawIobuf<'a> {
     let mut dst: T = mem::uninitialized();
 
     let dst_ptr = &mut dst as *mut T;
-    ptr::copy_nonoverlapping_memory(
+    ptr::copy_nonoverlapping(
       dst_ptr as *mut u8,
       self.buf.offset((self.lo + pos) as isize) as *const u8,
       len);
@@ -1112,7 +1112,7 @@ impl<'a> RawIobuf<'a> {
 
     let src: raw::Slice<u8> = mem::transmute(src);
 
-    ptr::copy_nonoverlapping_memory(
+    ptr::copy_nonoverlapping(
       self.buf.offset((self.lo + pos) as isize),
       src.data as *const u8,
       len);
@@ -1127,7 +1127,7 @@ impl<'a> RawIobuf<'a> {
 
     let tp = &t as *const T;
 
-    ptr::copy_nonoverlapping_memory(
+    ptr::copy_nonoverlapping(
       self.buf.offset((self.lo + pos) as isize),
       tp as *const u8,
       len);
@@ -1140,7 +1140,7 @@ impl<'a> RawIobuf<'a> {
 
     t = t.to_le();
 
-    ptr::copy_nonoverlapping_memory(
+    ptr::copy_nonoverlapping(
       self.buf.offset((self.lo + pos) as isize),
       &t as *const T as *const u8,
       len);
