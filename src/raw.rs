@@ -501,8 +501,10 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let mut b = RawIobuf::from_slice_copy(self.as_limit_slice());
 
-      b.lo = self.lo;
-      b.hi = self.hi;
+      let lo_min = self.lo_min();
+
+      b.lo = self.lo - lo_min;
+      b.hi = self.hi - lo_min;
 
       b
     }
@@ -513,8 +515,10 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let mut b = RawIobuf::from_slice_copy_with_allocator(self.as_limit_slice(), allocator);
 
-      b.lo = self.lo;
-      b.hi = self.hi;
+      let lo_min = self.lo_min();
+
+      b.lo = self.lo - lo_min;
+      b.hi = self.hi - lo_min;
 
       b
     }

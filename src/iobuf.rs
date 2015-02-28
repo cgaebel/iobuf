@@ -34,10 +34,11 @@ pub trait Iobuf: Clone + Debug {
   /// let mut s = [ 1, 2 ];
   ///
   /// let mut b = RWIobuf::from_slice(&mut s);
+  /// assert_eq!(b.sub_from(1), Ok(()));
   /// let mut c = b.deep_clone();
   ///
   /// assert_eq!(b.poke_be(0, 0u8), Ok(()));
-  /// assert_eq!(c.peek_be::<u8>(0), Ok(1u8));
+  /// assert_eq!(c.peek_be::<u8>(0), Ok(2u8));
   /// ```
   fn deep_clone(&self) -> RWIobuf<'static>;
 
@@ -77,9 +78,6 @@ pub trait Iobuf: Clone + Debug {
   /// and upgrades it to an `AROIobuf` which can be sent over channels and
   /// `Arc`ed with impunity. This is extremely useful in situations where Iobufs
   /// are created and written in one thread, and consumed in another.
-  ///
-  /// Only Iobufs which were originally allocated on the heap (for example, with
-  /// a `_copy` constructor or `RWIobuf::new`) may be converted to an `AROIobuf`.
   ///
   /// Returns `Err` if the buffer is not the last to reference the underlying
   /// data. If this case is hit, the buffer passed by value is returned by value.
