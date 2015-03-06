@@ -11,7 +11,7 @@ use std::raw::{self, Repr};
 use std::i32;
 use std::u32;
 use std::sync::Arc;
-use std::sync::atomic::{self, AtomicUint, Ordering};
+use std::sync::atomic::{self, AtomicUsize, Ordering};
 
 #[cfg(target_pointer_width = "64")]
 const TARGET_WORD_SIZE: usize = 64;
@@ -78,7 +78,7 @@ impl AllocationHeader {
   }
 
   #[inline]
-  unsafe fn atomic_refcount<'a>(&'a self) -> &'a AtomicUint {
+  unsafe fn atomic_refcount<'a>(&'a self) -> &'a AtomicUsize {
     mem::transmute(&self.refcount)
   }
 
