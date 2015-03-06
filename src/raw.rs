@@ -48,9 +48,9 @@ struct AllocationHeader {
   _pad: usize,
 }
 
+// Needed because size_of isn't compile-time.
 const ALLOCATION_HEADER_SIZE: usize = 4*TARGET_WORD_SIZE/8;
 
-// Needed because size_of isn't compile-time.
 #[test]
 fn correct_header_size() {
   assert_eq!(ALLOCATION_HEADER_SIZE, mem::size_of::<AllocationHeader>());
@@ -176,6 +176,11 @@ fn allocator_returned_null() -> ! {
 #[cold]
 fn improperly_aligned_data(ptr: *mut u8) -> ! {
   panic!("{:?} is not aligned to {} bytes.", ptr, DATA_ALIGNMENT);
+}
+
+#[inline(always)]
+fn err_if(cond: bool) -> Result<(), ()> {
+  if cond { Err(()) } else { Ok(()) }
 }
 
 /// A `RawIobuf` is the representation of both a `RWIobuf` and a `ROIobuf`.
@@ -578,11 +583,8 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub fn check_range(&self, pos: u64, len: u64) -> Result<(), ()> {
-    if pos + len <= self.len() as u64 {
-      Ok(())
-    } else {
-      Err(())
-    }
+    try!(err_if(pos + len > self.len() as u64));
+    Ok(())
   }
 
   #[inline]
@@ -598,7 +600,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn check_range_u32_fail(&self, pos: u32, len: u32) {
     match self.check_range_u32(pos, len) {
-      Ok(()) => {},
+      Ok(())  => {},
       Err(()) => bad_range(pos as u64, len as u64),
     }
   }
@@ -721,16 +723,19 @@ impl<'a> RawIobuf<'a> {
     let (new_lo_min, new_hi_max) = limits;
     let (new_lo, new_hi) = window;
     let lo_min = self.lo_min();
-    if new_hi_max < new_lo_min  { return Err(()); }
-    if new_hi     < new_lo      { return Err(()); }
-    if new_lo_min < lo_min      { return Err(()); }
-    if new_hi_max > self.hi_max { return Err(()); }
-    if new_lo     < self.lo     { return Err(()); }
-    if new_hi     > self.hi     { return Err(()); }
+
+    try!(err_if(new_hi_max < new_lo_min));
+    try!(err_if(new_hi     < new_lo));
+    try!(err_if(new_lo_min < lo_min));
+    try!(err_if(new_hi_max > self.hi_max));
+    try!(err_if(new_lo     < self.lo));
+    try!(err_if(new_hi     > self.hi));
+
     self.set_lo_min(new_lo_min);
     self.lo     = new_lo;
     self.hi     = new_hi;
     self.hi_max = new_hi_max;
+
     Ok(())
   }
 
@@ -740,17 +745,18 @@ impl<'a> RawIobuf<'a> {
     let (new_lo_min, new_hi_max) = limits;
     let (new_lo, new_hi) = window;
     let lo_min = self.lo_min();
-    if new_hi_max < new_lo_min  { return Err(()); }
-    if new_hi     < new_lo      { return Err(()); }
-    if new_lo_min < lo_min      { return Err(()); }
-    if new_hi_max > self.hi_max { return Err(()); }
+
+    try!(err_if(new_hi_max < new_lo_min));
+    try!(err_if(new_hi     < new_lo));
+    try!(err_if(new_lo_min < lo_min));
+    try!(err_if(new_hi_max > self.hi_max));
+
     self.set_lo_min(new_lo_min);
     self.lo     = new_lo;
     self.hi     = new_hi;
     self.hi_max = new_hi_max;
     Ok(())
   }
-
 
   #[inline]
   pub fn len(&self) -> u32 {
@@ -796,11 +802,9 @@ impl<'a> RawIobuf<'a> {
       let hi_max = self.hi_max as u64;
       let new_hi = hi + len    as u64;
 
-      if new_hi > hi_max {
-        Err(())
-      } else {
-        Ok(self.unsafe_extend(len))
-      }
+      try!(err_if(new_hi > hi_max));
+
+      Ok(self.unsafe_extend(len))
     }
   }
 
@@ -830,19 +834,16 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn extend_with<'b>(&mut self, other: &RawIobuf<'b>) -> Result<(), ()> {
     unsafe {
-      if self.is_extended_by(other) {
-        self.unsafe_extend(other.len());
-        Ok(())
-      } else {
-        Err(())
-      }
+      try!(err_if(!self.is_extended_by(other)));
+      self.unsafe_extend(other.len());
+      Ok(())
     }
   }
 
   #[inline]
   pub fn resize(&mut self, len: u32) -> Result<(), ()> {
     let new_hi = self.lo as u64 + len as u64;
-    if new_hi > self.hi_max as u64 { return Err(()) }
+    try!(err_if(new_hi > self.hi_max as u64));
     self.hi = new_hi as u32;
     Ok(())
   }
