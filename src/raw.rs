@@ -38,7 +38,7 @@ pub trait Allocator: Sync + Send {
   fn allocate(&self, len: usize, align: usize) -> *mut u8;
 
   /// Deallocates memory allocated by `allocate`.
-  fn deallocate(&self, ptr: *mut u8, len: usize, align: usize);
+  fn deallocate(&self, ptr: NonZero<*mut u8>, len: usize, align: usize);
 }
 
 struct AllocationHeader {
@@ -95,11 +95,13 @@ impl AllocationHeader {
   #[inline]
   fn deallocator(&self) -> Deallocator {
     unsafe {
-      match self.allocator {
-        None =>
-          Deallocator::Heap(self.allocation_length),
-        Some(allocator) =>
-          Deallocator::Custom(self.allocation_length, mem::transmute(*allocator))
+      Deallocator {
+        allocation_length: self.allocation_length,
+        allocator:
+          match self.allocator {
+            None => None,
+            Some(allocator) => mem::transmute(*allocator),
+          },
       }
     }
   }
@@ -107,11 +109,8 @@ impl AllocationHeader {
   #[inline]
   unsafe fn dec_ref_count_nonatomic(&mut self) -> Result<(), ()> {
     self.refcount -= 1;
-    if self.refcount == 0 {
-      Err(())
-    } else {
-      Ok(())
-    }
+    try!(err_if(self.refcount == 0));
+    Ok(())
   }
 
   #[inline]
@@ -127,27 +126,27 @@ impl AllocationHeader {
 
   // Keep this out of line to allow inlining of the drop glue.
   #[cold]
-  unsafe fn deallocate(&self, buf: *mut u8) {
+  unsafe fn deallocate(&self, buf: NonZero<*mut u8>) {
     self.deallocator().deallocate(buf)
   }
 }
 
 /// Each leaf of this enum is tagged with the allocation length listed in the
 /// header.
-enum Deallocator {
-  Heap(usize),
-  Custom(usize, Arc<Box<Allocator>>),
+struct Deallocator {
+  allocation_length: usize,
+  allocator: Option<Arc<Box<Allocator>>>,
 }
 
 impl Deallocator {
-  fn deallocate(self, ptr: *mut u8) {
+  fn deallocate(self, ptr: NonZero<*mut u8>) {
     unsafe {
       let ptr = ptr.offset(-(ALLOCATION_HEADER_SIZE as isize));
-      match self {
-        Deallocator::Heap(len) =>
-          heap::deallocate(ptr, len, DATA_ALIGNMENT),
-        Deallocator::Custom(len, arc) =>
-          arc.deallocate(ptr, len, DATA_ALIGNMENT),
+      match self.allocator {
+        None =>
+          heap::deallocate(ptr, self.allocation_length, DATA_ALIGNMENT),
+        Some(alloc) =>
+          alloc.deallocate(NonZero::new(ptr), self.allocation_length, DATA_ALIGNMENT),
       }
     }
   }
@@ -190,7 +189,7 @@ pub struct RawIobuf<'a> {
   // If the buf was allocated by us (i.e. the owned bit is set), the bytes
   // immediately preceding represent the allocation header. See the `header`
   // function.
-  buf:    *mut u8,
+  buf:    NonZero<*mut u8>,
   // If the highest bit of this is set, `buf` is owned and the data before the
   // pointeer is valid. If it is not set, then the buffer wasn't allocated by us:
   // it's owned by someone else. Therefore, there's no header, and no need to
@@ -243,7 +242,7 @@ impl<'a> RawIobuf<'a> {
       }
 
       RawIobuf {
-        buf:    buf,
+        buf:    NonZero::new(buf),
         lo_min_and_owned_bit: OWNED_MASK,
         lo:     0,
         hi:     len as u32,
@@ -270,7 +269,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn empty() -> RawIobuf<'static> {
     RawIobuf {
-      buf:    ptr::null_mut(),
+      buf:    unsafe { NonZero::new(heap::EMPTY as *mut u8) },
       lo_min_and_owned_bit: 0,
       lo:     0,
       hi:     0,
@@ -470,7 +469,7 @@ impl<'a> RawIobuf<'a> {
       }
 
       RawIobuf {
-        buf:    ptr,
+        buf:    NonZero::new(ptr),
         lo_min_and_owned_bit: 0,
         lo:     0,
         hi:     len as u32,
@@ -486,7 +485,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let b = RawIobuf::new(s.len());
       let s = s.repr();
-      ptr::copy_nonoverlapping(b.buf, s.data, s.len);
+      ptr::copy_nonoverlapping(*b.buf, s.data, s.len);
       b
     }
   }
@@ -496,7 +495,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let b = RawIobuf::new_with_allocator(s.len(), allocator);
       let s = s.repr();
-      ptr::copy_nonoverlapping(b.buf, s.data, s.len);
+      ptr::copy_nonoverlapping(*b.buf, s.data, s.len);
       b
     }
   }
@@ -599,17 +598,15 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub fn check_range_u32_fail(&self, pos: u32, len: u32) {
-    match self.check_range_u32(pos, len) {
-      Ok(())  => {},
-      Err(()) => bad_range(pos as u64, len as u64),
+    if self.check_range_u32(pos, len).is_err() {
+      bad_range(pos as u64, len as u64);
     }
   }
 
   #[inline]
   pub fn check_range_usize_fail(&self, pos: u32, len: usize) {
-    match self.check_range_usize(pos, len) {
-      Ok(())  => {},
-      Err(()) => bad_range(pos as u64, len as u64),
+    if self.check_range_usize(pos, len).is_err() {
+      bad_range(pos as u64, len as u64);
     }
   }
 
@@ -654,9 +651,8 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn unsafe_sub_window(&mut self, pos: u32, len: u32) {
     self.debug_check_range_u32(pos, len);
-    self.unsafe_resize(pos);
-    self.flip_hi();
-    self.unsafe_resize(len);
+    self.unsafe_sub_window_from(pos);
+    self.unsafe_sub_window_to(len);
   }
 
   #[inline]
@@ -755,6 +751,7 @@ impl<'a> RawIobuf<'a> {
     self.lo     = new_lo;
     self.hi     = new_hi;
     self.hi_max = new_hi_max;
+
     Ok(())
   }
 
@@ -1200,7 +1197,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline(always)]
-  pub fn ptr(&self) -> *mut u8 {
+  pub fn ptr(&self) -> NonZero<*mut u8> {
     self.buf
   }
 
@@ -1385,8 +1382,8 @@ fn test_allocator() {
       unsafe { ::alloc::heap::allocate(size, align) }
     }
 
-    fn deallocate(&self, ptr: *mut u8, len: usize, align: usize) {
-      unsafe { ::alloc::heap::deallocate(ptr, len, align) }
+    fn deallocate(&self, ptr: NonZero<*mut u8>, len: usize, align: usize) {
+      unsafe { ::alloc::heap::deallocate(*ptr, len, align) }
     }
   }
 

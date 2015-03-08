@@ -1,3 +1,5 @@
+use core::nonzero::NonZero;
+
 use std::fmt::Debug;
 use std::num::Int;
 use std::sync::Arc;
@@ -1067,7 +1069,7 @@ pub trait Iobuf: Clone + Debug {
 
   /// Gets a pointer to the start of the internal backing buffer. This is
   /// extremely low level, and it is not recommended you use this interface.
-  fn ptr(&self) -> *mut u8;
+  fn ptr(&self) -> NonZero<*mut u8>;
 
   /// Returns `true` if the Iobuf points to owned memory (i.e. has to do a
   /// refcount modification on `clone` or `drop`) or borrowed memory.
