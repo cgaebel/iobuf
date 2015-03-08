@@ -23,10 +23,11 @@ any arbitrary subrange of the limits.
 Iobufs are cheap to `clone`, since the buffers are refcounted. Use this to
 construct multiple views into the same data.
 
-This a pretty much a direct port of Jane Street Core's
-[Iobuf](https://github.com/janestreet/core/blob/master/lib/iobuf.mli) module.
+This started out as a direct port of Jane Street Core's
+[Iobuf](https://github.com/janestreet/core/blob/master/lib/iobuf.mli) module,
+but has evolved into much more.
 
 Documentation
---------------
+-------------
 
 See the very thorough [API Docs](http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/).
