@@ -1348,7 +1348,7 @@ fn over_resize() {
 }
 
 #[test]
-#[should_fail]
+#[should_panic]
 fn create_huge_iobuf() {
   use impls::RWIobuf;
   RWIobuf::new(0x8000_0000);
