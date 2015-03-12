@@ -304,7 +304,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn byte_equal<Buf2: Iobuf>(&self, other: &BufSpan<Buf2>) -> bool {
-    self.count_bytes_cmp(other.count_bytes() as usize) == Ordering::Equal
+    self.count_bytes_cmp(other.count_bytes()) == Ordering::Equal
     && self.iter_bytes().zip(other.iter_bytes()).all(|(a, b)| a == b)
   }
 
@@ -321,7 +321,13 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn byte_equal_slice(&self, other: &[u8]) -> bool {
-    self.count_bytes_cmp(other.len()) == Ordering::Equal
+    let other_len =
+      match other.len().to_u32() {
+        None        => return false,
+        Some(other) => other,
+      };
+
+    self.count_bytes_cmp(other_len) == Ordering::Equal
     && self.iter_bytes().zip(other.iter()).all(|(a, &b)| a == b)
   }
 
@@ -367,13 +373,7 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// assert_eq!(a.count_bytes_cmp(9001), Ordering::Less);
   /// ```
   #[inline]
-  pub fn count_bytes_cmp(&self, other: usize) -> Ordering {
-    let mut other =
-      match other.to_u32() {
-        None        => return Ordering::Less,
-        Some(other) => other,
-      };
-
+  pub fn count_bytes_cmp(&self, mut other: u32) -> Ordering {
     match *self {
       Empty       => 0.cmp(&other),
       One (ref b) => b.len().cmp(&other),
@@ -431,7 +431,13 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn starts_with(&self, other: &[u8]) -> bool {
-    if self.count_bytes_cmp(other.len()) == Ordering::Less { return false }
+    let other_len =
+      match other.len().to_u32() {
+        None        => return false,
+        Some(other) => other,
+      };
+
+    if self.count_bytes_cmp(other_len) == Ordering::Less { return false }
     self.iter_bytes().zip(other.iter()).all(|(a, b)| a == *b)
   }
 
@@ -454,7 +460,13 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline]
   pub fn ends_with(&self, other: &[u8]) -> bool {
-    if self.count_bytes_cmp(other.len()) == Ordering::Less { return false }
+    let other_len =
+      match other.len().to_u32() {
+        None        => return false,
+        Some(other) => other,
+      };
+
+    if self.count_bytes_cmp(other_len) == Ordering::Less { return false }
     self.iter_bytes().rev().zip(other.iter().rev()).all(|(a, b)| a == *b)
   }
 }
