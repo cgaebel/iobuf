@@ -882,7 +882,6 @@ mod bench {
   use super::super::iobuf::Iobuf;
   use super::super::impls::{ROIobuf, RWIobuf};
   use super::BufSpan;
-  use std::iter::range;
 
   #[bench]
   fn create_roiobuf(b: &mut Bencher) {
@@ -926,7 +925,7 @@ mod bench {
     b.iter(|| {
       let source = RWIobuf::new(1024);
       let mut i = 0u32;
-      for _ in range(0u32, 1000) {
+      for _ in 32..1000 {
         unsafe { source.unsafe_poke_be(i, b'a'); }
         i += 1;
       }
@@ -934,7 +933,7 @@ mod bench {
 
       let mut dst = BufSpan::new();
 
-      for _ in range(0u32, 1000) {
+      for _ in 0..1000 {
         unsafe {
           let (start, end) = source.unsafe_split_at(1);
           dst.push(start);
@@ -951,7 +950,7 @@ mod bench {
     b.iter(|| {
       let source = RWIobuf::new(1024);
       let mut i = 0u32;
-      for _ in range(0u32, 1000) {
+      for _ in 0..1000 {
         unsafe { source.unsafe_poke_be(i, b'a'); }
         i += 1;
       }
@@ -959,7 +958,7 @@ mod bench {
 
       let mut dst = BufSpan::new();
 
-      for _ in range(0u32, 1000) {
+      for _ in 0..1000 {
         unsafe {
           let start = source.unsafe_split_start_at(1);
           dst.push(start);
@@ -974,13 +973,13 @@ mod bench {
   fn extend_1k_iobuf_2(b: &mut Bencher) {
     let source = RWIobuf::new(1024);
     let mut i = 0u32;
-    for _ in range(0u32, 500) {
+    for _ in 0..500 {
       unsafe { source.unsafe_poke_be(i, b'a'); }
       i += 1;
     }
 
     i = 500;
-    for _ in range(500u32, 1000) {
+    for _ in 500..1000 {
       unsafe { source.unsafe_poke_be(i, b'b'); }
       i += 1;
     }
@@ -992,7 +991,7 @@ mod bench {
       let mut dst_b = BufSpan::new();
       let mut other = BufSpan::new();
 
-      for _ in range(0u32, 1000) {
+      for _ in 0..1000 {
         unsafe {
           let first_letter = source.unsafe_split_start_at(1);
 
@@ -1012,13 +1011,13 @@ mod bench {
   fn extend_1k_iobuf_3(b: &mut Bencher) {
     let source = RWIobuf::new(1024);
     let mut i = 0u32;
-    for _ in range(0u32, 500) {
+    for _ in 0..500 {
       unsafe { source.unsafe_poke_be(i, b'a'); }
       i += 1;
     }
 
     let mut i = 500;
-    for _ in range(500u32, 1000) {
+    for _ in 500..1000 {
       unsafe { source.unsafe_poke_be(i, b'b'); }
       i += 1;
     }
@@ -1030,7 +1029,7 @@ mod bench {
       let mut dst_b = BufSpan::new();
       let mut other = BufSpan::new();
 
-      for _ in range(0u32, 1000) {
+      for _ in 0..1000 {
         unsafe {
           let first_letter = source.unsafe_split_start_at(1);
 
