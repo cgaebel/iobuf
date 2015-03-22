@@ -153,7 +153,7 @@ impl<'a> Drop for RWIobuf<'a> {
 ///
 /// let mut tasks = vec!();
 ///
-/// for i in range(0u32, 4) {
+/// for i in 0..4 {
 ///   // This clone modifies the AROIobuf's atomic refcount.
 ///   let mut b = shared_b.clone();
 ///   tasks.push(Future::spawn(move || {
