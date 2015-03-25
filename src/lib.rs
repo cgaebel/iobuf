@@ -48,7 +48,7 @@
 #![feature(alloc)]
 #![feature(core)]
 
-#![allow(unused_features)] // needed to make #![feature(test)] work.
+#![allow(unused_features)] // needed to make #![feature(test)]
 #![feature(test)]
 
 extern crate alloc;

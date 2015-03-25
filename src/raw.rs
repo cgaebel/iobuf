@@ -1308,24 +1308,22 @@ fn peek_le() {
 fn poke_be() {
   use iobuf::Iobuf;
   use impls::RWIobuf;
-  use std::slice::AsSlice;
 
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_be(0, 0x01020304u32), Ok(()));
   let expected = [ 1,2,3,4 ];
-  unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
+  unsafe { assert_eq!(b.as_window_slice(), &expected[..]); }
 }
 
 #[test]
 fn poke_le() {
   use iobuf::Iobuf;
   use impls::RWIobuf;
-  use std::slice::AsSlice;
 
   let b = RWIobuf::new(4);
   assert_eq!(b.poke_le(0, 0x01020304u32), Ok(()));
   let expected = [ 4,3,2,1 ];
-  unsafe { assert_eq!(b.as_window_slice(), expected.as_slice()); }
+  unsafe { assert_eq!(b.as_window_slice(), &expected[..]); }
 }
 
 

@@ -106,6 +106,7 @@ impl<'a> Drop for RWIobuf<'a> {
 /// 0xFF, and consuming/validating these numbers in parallel in 4 other threads:
 ///
 /// ```rust
+/// #![feature(std_misc)]
 /// use iobuf::{RWIobuf, AROIobuf, Iobuf};
 /// use std::sync::Future;
 ///
