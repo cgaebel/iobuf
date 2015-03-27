@@ -547,7 +547,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn as_raw_limit_slice(&self) -> raw::Slice<u8> {
     raw::Slice {
-      data: self.buf.offset(self.lo_min() as isize) as *const u8,
+      data: self.buf.offset(self.lo_min() as isize),
       len:  self.cap() as usize,
     }
   }
@@ -565,7 +565,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn as_raw_window_slice(&self) -> raw::Slice<u8> {
     raw::Slice {
-      data: self.buf.offset(self.lo as isize) as *const u8,
+      data: self.buf.offset(self.lo as isize),
       len:  self.len() as usize,
     }
   }
@@ -961,7 +961,7 @@ impl<'a> RawIobuf<'a> {
       let lo_min = self.lo_min();
       ptr::copy(
         self.buf.offset(lo_min as isize),
-        self.buf.offset(self.lo as isize) as *const u8,
+        self.buf.offset(self.lo as isize),
         len as usize);
       self.lo = lo_min + len;
       self.hi = self.hi_max;
@@ -1073,37 +1073,43 @@ impl<'a> RawIobuf<'a> {
 
     ptr::copy_nonoverlapping(
       dst.data as *mut u8,
-      self.buf.offset((self.lo + pos) as isize) as *const u8,
+      self.buf.offset((self.lo + pos) as isize),
       len);
   }
 
   #[inline]
+  #[allow(trivial_casts)] // rustc is dumb
   pub unsafe fn unsafe_peek_be<T: Int>(&self, pos: u32) -> T {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
     let mut dst: T = mem::uninitialized();
 
-    let dst_ptr = &mut dst as *mut T;
-    ptr::copy_nonoverlapping(
-      dst_ptr as *mut u8,
-      self.buf.offset((self.lo + pos) as isize) as *const u8,
-      len);
+    {
+      let dst_ptr = &mut dst;
+      ptr::copy_nonoverlapping(
+        dst_ptr as *mut T as *mut u8,
+        self.buf.offset((self.lo + pos) as isize),
+        len);
+    }
     Int::from_be(dst)
   }
 
   #[inline]
+  #[allow(trivial_casts)]
   pub unsafe fn unsafe_peek_le<T: Int>(&self, pos: u32) -> T {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
     let mut dst: T = mem::uninitialized();
 
-    let dst_ptr = &mut dst as *mut T;
-    ptr::copy_nonoverlapping(
-      dst_ptr as *mut u8,
-      self.buf.offset((self.lo + pos) as isize) as *const u8,
-      len);
+    {
+      let dst_ptr = &mut dst;
+      ptr::copy_nonoverlapping(
+        dst_ptr as *mut T as *mut u8,
+        self.buf.offset((self.lo + pos) as isize),
+        len);
+    }
     Int::from_le(dst)
   }
 
@@ -1116,26 +1122,28 @@ impl<'a> RawIobuf<'a> {
 
     ptr::copy_nonoverlapping(
       self.buf.offset((self.lo + pos) as isize),
-      src.data as *const u8,
+      src.data,
       len);
   }
 
   #[inline]
+  #[allow(trivial_casts)] // rustc is dumb
   pub unsafe fn unsafe_poke_be<T: Int>(&self, pos: u32, mut t: T) {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
     t = t.to_be();
 
-    let tp = &t as *const T;
+    let tp = &t;
 
     ptr::copy_nonoverlapping(
       self.buf.offset((self.lo + pos) as isize),
-      tp as *const u8,
+      tp as *const T as *const u8,
       len);
   }
 
   #[inline]
+  #[allow(trivial_casts)] // rustc is dumb
   pub unsafe fn unsafe_poke_le<T: Int>(&self, pos: u32, mut t: T) {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
@@ -1385,5 +1393,5 @@ fn test_allocator() {
     }
   }
 
-  RWIobuf::new_with_allocator(1000, Arc::new(Box::new(MyAllocator) as Box<Allocator>));
+  RWIobuf::new_with_allocator(1000, Arc::new(Box::new(MyAllocator)));
 }

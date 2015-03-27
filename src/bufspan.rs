@@ -273,8 +273,8 @@ fn cmp_buf_vec<Buf: Iobuf>(b: &Buf, v: &[Buf]) -> Ordering {
   for x in v {
     let x = unsafe { x.as_window_slice() };
 
-    if b.len() >= x.len() as usize {
-      let (start, new_b) = b.split_at(x.len() as usize);
+    if b.len() >= x.len() {
+      let (start, new_b) = b.split_at(x.len());
 
       match order::cmp(start.into_iter(), x.into_iter()) {
         Ordering::Equal => { b = new_b; }
