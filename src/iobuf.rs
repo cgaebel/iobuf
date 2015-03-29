@@ -917,7 +917,7 @@ pub trait Iobuf: Clone + Debug {
   ///
   /// let mut b = ROIobuf::from_str("hello");
   ///
-  /// assert_eq!(b.check_range_usize(1u32, 5u), Err(()));
+  /// assert_eq!(b.check_range_usize(1u32, 5usize), Err(()));
   /// ```
   fn check_range_usize(&self, pos: u32, len: usize) -> Result<(), ()>;
 

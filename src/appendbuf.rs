@@ -251,14 +251,14 @@ impl<'a> AppendBuf<'a> {
   /// let mut s = [1,2,3];
   ///
   /// {
-  ///   let mut b = RWIobuf::from_slice(&mut s[]);
+  ///   let mut b = RWIobuf::from_slice(&mut s[..]);
   ///
   ///   assert_eq!(b.advance(1), Ok(()));
   ///   unsafe { b.as_mut_window_slice()[1] = 30; }
   /// }
   ///
   /// let expected = [ 1,2,30 ];
-  /// assert_eq!(s, &expected[]);
+  /// assert_eq!(s, &expected[..]);
   /// ```
   #[inline(always)]
   pub fn as_mut_window_slice<'b>(&'b self) -> &'b mut [u8] {
