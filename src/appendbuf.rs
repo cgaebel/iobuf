@@ -26,6 +26,8 @@ pub struct AppendBuf<'a> {
   raw: RawIobuf<'a>,
 }
 
+unsafe impl<'a> Send for AppendBuf<'a> {}
+
 impl<'a> AppendBuf<'a> {
   /// Constructs a trivially empty Iobuf, limits and window are 0, and there's
   /// an empty backing buffer. This will not allocate.
