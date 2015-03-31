@@ -390,7 +390,7 @@ pub trait Iobuf: Clone + Debug {
   ///     let mut sum = 0u16;
   ///
   ///     for i in (0 .. num_shorts as u32).map(|x| x * short_size) {
-  ///       sum += b.unsafe_peek_be(i);
+  ///       sum += b.unsafe_peek_be::<u16>(i);
   ///     }
   ///
   ///     b.unsafe_advance(num_bytes);
@@ -424,7 +424,7 @@ pub trait Iobuf: Clone + Debug {
   ///     let mut sum = 0u16;
   ///
   ///     for _ in (0 .. num_shorts) {
-  ///       sum += b.unsafe_consume_be();
+  ///       sum += b.unsafe_consume_be::<u16>();
   ///     }
   ///
   ///     Ok(sum)

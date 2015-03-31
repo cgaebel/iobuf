@@ -582,7 +582,7 @@ impl<'a> RWIobuf<'a> {
   ///         b.compact();
   ///         return Ok(ParseState::NeedMore(sum));
   ///       }
-  ///       sum += b.unsafe_consume_be();
+  ///       sum += b.unsafe_consume_be::<u16>();
   ///     }
   ///   }
   ///
