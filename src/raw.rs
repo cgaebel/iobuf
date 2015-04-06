@@ -5,7 +5,6 @@ use core::nonzero::NonZero;
 use std::fmt::{self, Formatter};
 use std::marker::{NoCopy, PhantomData};
 use std::mem;
-use std::num::Int;
 use std::ptr;
 use std::raw::{self, Repr};
 use std::i32;
@@ -56,6 +55,82 @@ fn correct_header_size() {
   assert_eq!(ALLOCATION_HEADER_SIZE, mem::size_of::<AllocationHeader>());
   assert!(ALLOCATION_HEADER_SIZE % DATA_ALIGNMENT == 0);
   assert!(mem::align_of::<AllocationHeader>() <= DATA_ALIGNMENT);
+}
+
+/// Rust has the wrong parameter order.
+/// > http://internals.rust-lang.org/t/memcpy-is-backwards/1797
+#[inline(always)]
+unsafe fn memcpy<T>(dst: *mut T, src: *const T, n: usize) {
+  ptr::copy_nonoverlapping(src, dst, n)
+}
+
+/// Rust has the wrong parameter order.
+/// > http://internals.rust-lang.org/t/memcpy-is-backwards/1797
+#[inline(always)]
+unsafe fn memmove<T>(dst: *mut T, src: *const T, n: usize) {
+  ptr::copy(src, dst, n)
+}
+
+/// 8-64 bit integer types. Not floating point.
+///
+/// This used to be in the standard library, but was pulled out into an external
+/// library that adds support for arbitrary-sized integers, rationals, complex
+/// numbers, and this trait. It also has dependencies on rustc-serialize and rand,
+/// which is totally unnecessary. Therefore, I've pulled the trait's features
+/// that I need into here.
+pub trait IntLike {}
+
+impl IntLike for i8    {}
+impl IntLike for i16   {}
+impl IntLike for i32   {}
+impl IntLike for i64   {}
+impl IntLike for isize {}
+impl IntLike for u8    {}
+impl IntLike for u16   {}
+impl IntLike for u32   {}
+impl IntLike for u64   {}
+impl IntLike for usize {}
+
+#[inline(always)]
+unsafe fn from_be<T: IntLike>(x: T) -> T {
+  match mem::size_of::<T>() {
+    1  => mem::transmute_copy(&u8::from_be(mem::transmute_copy(&x))),
+    2 => mem::transmute_copy(&u16::from_be(mem::transmute_copy(&x))),
+    4 => mem::transmute_copy(&u32::from_be(mem::transmute_copy(&x))),
+    8 => mem::transmute_copy(&u64::from_be(mem::transmute_copy(&x))),
+    n  => bad_int_like(n),
+  }
+}
+
+#[inline(always)]
+unsafe fn from_le<T: IntLike>(x: T) -> T {
+  match mem::size_of::<T>() {
+    1  => mem::transmute_copy(&u8::from_le(mem::transmute_copy(&x))),
+    2 => mem::transmute_copy(&u16::from_le(mem::transmute_copy(&x))),
+    4 => mem::transmute_copy(&u32::from_le(mem::transmute_copy(&x))),
+    8 => mem::transmute_copy(&u64::from_le(mem::transmute_copy(&x))),
+    n  => bad_int_like(n),
+  }
+}
+
+unsafe fn to_be<T: IntLike>(x: T) -> T {
+  match mem::size_of::<T>() {
+    1  => mem::transmute_copy(&u8::to_be(mem::transmute_copy(&x))),
+    2 => mem::transmute_copy(&u16::to_be(mem::transmute_copy(&x))),
+    4 => mem::transmute_copy(&u32::to_be(mem::transmute_copy(&x))),
+    8 => mem::transmute_copy(&u64::to_be(mem::transmute_copy(&x))),
+    n  => bad_int_like(n),
+  }
+}
+
+unsafe fn to_le<T: IntLike>(x: T) -> T {
+  match mem::size_of::<T>() {
+    1  => mem::transmute_copy(&u8::to_le(mem::transmute_copy(&x))),
+    2 => mem::transmute_copy(&u16::to_le(mem::transmute_copy(&x))),
+    4 => mem::transmute_copy(&u32::to_le(mem::transmute_copy(&x))),
+    8 => mem::transmute_copy(&u64::to_le(mem::transmute_copy(&x))),
+    n  => bad_int_like(n),
+  }
 }
 
 impl AllocationHeader {
@@ -159,6 +234,12 @@ impl Deallocator {
 #[cold]
 fn bad_range(pos: u64, len: u64) -> ! {
   panic!("Iobuf got invalid range: pos={}, len={}", pos, len)
+}
+
+#[cold]
+fn bad_int_like(n: usize) -> ! {
+  panic!("Tried to serialize an integer of size {} into an Iobuf.
+          Iobufs only support power of two sizes of 8-64 bytes, inclusive.", n)
 }
 
 #[cold]
@@ -485,7 +566,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let b = RawIobuf::new(s.len());
       let s = s.repr();
-      ptr::copy_nonoverlapping(*b.buf, s.data, s.len);
+      memcpy(*b.buf, s.data, s.len);
       b
     }
   }
@@ -495,7 +576,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let b = RawIobuf::new_with_allocator(s.len(), allocator);
       let s = s.repr();
-      ptr::copy_nonoverlapping(*b.buf, s.data, s.len);
+      memcpy(*b.buf, s.data, s.len);
       b
     }
   }
@@ -959,7 +1040,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let len = self.len();
       let lo_min = self.lo_min();
-      ptr::copy(
+      memmove(
         self.buf.offset(lo_min as isize),
         self.buf.offset(self.lo as isize),
         len as usize);
@@ -977,7 +1058,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn peek_be<T: Int>(&self, pos: u32) -> Result<T, ()> {
+  pub fn peek_be<T: IntLike>(&self, pos: u32) -> Result<T, ()> {
     unsafe {
       try!(self.check_range_u32(pos, mem::size_of::<T>() as u32));
       Ok(self.unsafe_peek_be::<T>(pos))
@@ -985,7 +1066,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn peek_le<T: Int>(&self, pos: u32) -> Result<T, ()> {
+  pub fn peek_le<T: IntLike>(&self, pos: u32) -> Result<T, ()> {
     unsafe {
       try!(self.check_range_u32(pos, mem::size_of::<T>() as u32));
       Ok(self.unsafe_peek_le::<T>(pos))
@@ -1001,7 +1082,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn poke_be<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> {
+  pub fn poke_be<T: IntLike>(&self, pos: u32, t: T) -> Result<(), ()> {
     unsafe {
       try!(self.check_range_u32(pos, mem::size_of::<T>() as u32));
       Ok(self.unsafe_poke_be(pos, t))
@@ -1009,7 +1090,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn poke_le<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> {
+  pub fn poke_le<T: IntLike>(&self, pos: u32, t: T) -> Result<(), ()> {
     unsafe {
       try!(self.check_range_u32(pos, mem::size_of::<T>() as u32));
       Ok(self.unsafe_poke_le(pos, t))
@@ -1025,7 +1106,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn fill_be<T: Int>(&mut self, t: T) -> Result<(), ()> {
+  pub fn fill_be<T: IntLike>(&mut self, t: T) -> Result<(), ()> {
     unsafe {
       try!(self.check_range_u32(0, mem::size_of::<T>() as u32));
       Ok(self.unsafe_fill_be(t))
@@ -1033,7 +1114,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn fill_le<T: Int>(&mut self, t: T) -> Result<(), ()> {
+  pub fn fill_le<T: IntLike>(&mut self, t: T) -> Result<(), ()> {
     unsafe {
       try!(self.check_range_u32(0, mem::size_of::<T>() as u32));
       Ok(self.unsafe_fill_le(t)) // Ok, unsafe fillet? om nom.
@@ -1049,7 +1130,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn consume_le<T: Int>(&mut self) -> Result<T, ()> {
+  pub fn consume_le<T: IntLike>(&mut self) -> Result<T, ()> {
     unsafe {
       try!(self.check_range_u32(0, mem::size_of::<T>() as u32));
       Ok(self.unsafe_consume_le())
@@ -1057,7 +1138,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub fn consume_be<T: Int>(&mut self) -> Result<T, ()> {
+  pub fn consume_be<T: IntLike>(&mut self) -> Result<T, ()> {
     unsafe {
       try!(self.check_range_u32(0, mem::size_of::<T>() as u32));
       Ok(self.unsafe_consume_be())
@@ -1071,7 +1152,7 @@ impl<'a> RawIobuf<'a> {
 
     let dst: raw::Slice<u8> = mem::transmute(dst);
 
-    ptr::copy_nonoverlapping(
+    memcpy(
       dst.data as *mut u8,
       self.buf.offset((self.lo + pos) as isize),
       len);
@@ -1079,7 +1160,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   #[allow(trivial_casts)] // rustc is dumb
-  pub unsafe fn unsafe_peek_be<T: Int>(&self, pos: u32) -> T {
+  pub unsafe fn unsafe_peek_be<T: IntLike>(&self, pos: u32) -> T {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
@@ -1087,17 +1168,17 @@ impl<'a> RawIobuf<'a> {
 
     {
       let dst_ptr = &mut dst;
-      ptr::copy_nonoverlapping(
+      memcpy(
         dst_ptr as *mut T as *mut u8,
         self.buf.offset((self.lo + pos) as isize),
         len);
     }
-    Int::from_be(dst)
+    from_be(dst)
   }
 
   #[inline]
   #[allow(trivial_casts)]
-  pub unsafe fn unsafe_peek_le<T: Int>(&self, pos: u32) -> T {
+  pub unsafe fn unsafe_peek_le<T: IntLike>(&self, pos: u32) -> T {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
@@ -1105,12 +1186,12 @@ impl<'a> RawIobuf<'a> {
 
     {
       let dst_ptr = &mut dst;
-      ptr::copy_nonoverlapping(
+      memcpy(
         dst_ptr as *mut T as *mut u8,
         self.buf.offset((self.lo + pos) as isize),
         len);
     }
-    Int::from_le(dst)
+    from_le(dst)
   }
 
   #[inline]
@@ -1120,7 +1201,7 @@ impl<'a> RawIobuf<'a> {
 
     let src: raw::Slice<u8> = mem::transmute(src);
 
-    ptr::copy_nonoverlapping(
+    memcpy(
       self.buf.offset((self.lo + pos) as isize),
       src.data,
       len);
@@ -1128,15 +1209,15 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   #[allow(trivial_casts)] // rustc is dumb
-  pub unsafe fn unsafe_poke_be<T: Int>(&self, pos: u32, mut t: T) {
+  pub unsafe fn unsafe_poke_be<T: IntLike>(&self, pos: u32, mut t: T) {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
-    t = t.to_be();
+    t = to_be(t);
 
     let tp = &t;
 
-    ptr::copy_nonoverlapping(
+    memcpy(
       self.buf.offset((self.lo + pos) as isize),
       tp as *const T as *const u8,
       len);
@@ -1144,13 +1225,13 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   #[allow(trivial_casts)] // rustc is dumb
-  pub unsafe fn unsafe_poke_le<T: Int>(&self, pos: u32, mut t: T) {
+  pub unsafe fn unsafe_poke_le<T: IntLike>(&self, pos: u32, mut t: T) {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
-    t = t.to_le();
+    t = to_le(t);
 
-    ptr::copy_nonoverlapping(
+    memcpy(
       self.buf.offset((self.lo + pos) as isize),
       &t as *const T as *const u8,
       len);
@@ -1164,7 +1245,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_fill_be<T: Int>(&mut self, t: T) {
+  pub unsafe fn unsafe_fill_be<T: IntLike>(&mut self, t: T) {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(0, bytes);
     self.unsafe_poke_be(0, t);
@@ -1172,7 +1253,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_fill_le<T: Int>(&mut self, t: T) {
+  pub unsafe fn unsafe_fill_le<T: IntLike>(&mut self, t: T) {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(0, bytes);
     self.unsafe_poke_le(0, t);
@@ -1187,7 +1268,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_consume_le<T: Int>(&mut self) -> T {
+  pub unsafe fn unsafe_consume_le<T: IntLike>(&mut self) -> T {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(0, bytes);
     let ret = self.unsafe_peek_le::<T>(0);
@@ -1196,7 +1277,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_consume_be<T: Int>(&mut self) -> T {
+  pub unsafe fn unsafe_consume_be<T: IntLike>(&mut self) -> T {
     let bytes = mem::size_of::<T>() as u32;
     self.debug_check_range_u32(0, bytes);
     let ret = self.unsafe_peek_be::<T>(0);

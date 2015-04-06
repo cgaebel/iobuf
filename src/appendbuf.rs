@@ -1,11 +1,10 @@
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
-use std::num::Int;
 use std::sync::Arc;
 
-use raw::{Allocator, RawIobuf};
-use iobuf::{Iobuf};
-use impls::{AROIobuf};
+use raw::{Allocator, RawIobuf, IntLike};
+use iobuf::Iobuf;
+use impls::AROIobuf;
 
 /// Append-Only Input Buffer
 ///
@@ -325,7 +324,7 @@ impl<'a> AppendBuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), expected); }
   /// ```
   #[inline(always)]
-  pub fn poke_be<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> {
+  pub fn poke_be<T: IntLike>(&self, pos: u32, t: T) -> Result<(), ()> {
     self.raw.poke_be(pos, t)
   }
 
@@ -348,7 +347,7 @@ impl<'a> AppendBuf<'a> {
   /// unsafe { assert_eq!(b.as_window_slice(), [ 4, 5, 5, 9, 8, 7, 6 ]); }
   /// ```
   #[inline(always)]
-  pub fn poke_le<T: Int>(&self, pos: u32, t: T) -> Result<(), ()> {
+  pub fn poke_le<T: IntLike>(&self, pos: u32, t: T) -> Result<(), ()> {
     self.raw.poke_le(pos, t)
   }
 
@@ -403,7 +402,7 @@ impl<'a> AppendBuf<'a> {
   ///                      , 0x88, 0x77 ]); }
   /// ```
   #[inline(always)]
-  pub fn fill_be<T: Int>(&mut self, t: T) -> Result<(), ()> {
+  pub fn fill_be<T: IntLike>(&mut self, t: T) -> Result<(), ()> {
     self.raw.fill_be(t)
   }
 
@@ -431,7 +430,7 @@ impl<'a> AppendBuf<'a> {
   ///                      , 0x77, 0x88 ]); }
   /// ```
   #[inline(always)]
-  pub fn fill_le<T: Int>(&mut self, t: T) -> Result<(), ()> {
+  pub fn fill_le<T: IntLike>(&mut self, t: T) -> Result<(), ()> {
     self.raw.fill_le(t)
   }
 

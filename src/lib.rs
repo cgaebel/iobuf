@@ -57,7 +57,7 @@ extern crate core;
 #[cfg(test)] extern crate test;
 //#[cfg(test)] extern crate quickcheck;
 
-pub use raw::Allocator;
+pub use raw::{Allocator, IntLike};
 pub use iobuf::Iobuf;
 pub use impls::{RWIobuf, ROIobuf, AROIobuf, UniqueIobuf};
 pub use ringbuf::IORingbuf;
