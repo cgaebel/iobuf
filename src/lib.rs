@@ -42,14 +42,12 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-#![feature(unsafe_destructor)]
 #![feature(unsafe_no_drop_flag)]
 
 #![feature(alloc)]
 #![feature(core)]
 
-#![allow(unused_features)] // needed to make #![feature(test)]
-#![feature(test)]
+#![cfg_attr(test, feature(test))]
 
 extern crate alloc;
 extern crate core;

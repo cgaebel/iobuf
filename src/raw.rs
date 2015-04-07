@@ -147,22 +147,22 @@ impl AllocationHeader {
     }
   }
 
-  #[inline]
+  #[inline(always)]
   unsafe fn nonatomic_refcount(&self) -> usize {
     self.refcount
   }
 
-  #[inline]
+  #[inline(always)]
   unsafe fn atomic_refcount<'a>(&'a self) -> &'a AtomicUsize {
     mem::transmute(&self.refcount)
   }
 
-  #[inline]
+  #[inline(always)]
   unsafe fn inc_ref_count_atomic(&mut self) {
     self.atomic_refcount().fetch_add(1, Ordering::Relaxed);
   }
 
-  #[inline]
+  #[inline(always)]
   unsafe fn inc_ref_count_nonatomic(&mut self) {
     self.refcount += 1;
   }
@@ -182,10 +182,11 @@ impl AllocationHeader {
   }
 
   #[inline]
+  #[must_use]
   unsafe fn dec_ref_count_nonatomic(&mut self) -> Result<(), ()> {
+    debug_assert!(self.refcount != 0);
     self.refcount -= 1;
-    try!(err_if(self.refcount == 0));
-    Ok(())
+    err_if(self.refcount == 0)
   }
 
   #[inline]
@@ -216,7 +217,7 @@ struct Deallocator {
 impl Deallocator {
   fn deallocate(self, ptr: NonZero<*mut u8>) {
     unsafe {
-      let ptr = ptr.offset(-(ALLOCATION_HEADER_SIZE as isize));
+      let ptr: *mut u8 = ptr.offset(-(ALLOCATION_HEADER_SIZE as isize));
       match self.allocator {
         None =>
           heap::deallocate(ptr, self.allocation_length, DATA_ALIGNMENT),
@@ -663,8 +664,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub fn check_range(&self, pos: u64, len: u64) -> Result<(), ()> {
-    try!(err_if(pos + len > self.len() as u64));
-    Ok(())
+    err_if(pos + len > self.len() as u64)
   }
 
   #[inline]
@@ -943,11 +943,10 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn unsafe_split_at_nonatomic(&self, pos: u32) -> (Self, Self) {
     self.debug_check_range_u32(pos, 0);
-    let mut a = (*self).clone_nonatomic();
-    let mut b = (*self).clone_nonatomic();
-    a.unsafe_resize(pos);
-    b.unsafe_advance(pos);
-    (a, b)
+    let mut ret = ((*self).clone_nonatomic(), (*self).clone_nonatomic());
+    ret.0.unsafe_resize(pos);
+    ret.1.unsafe_advance(pos);
+    ret
   }
 
   #[inline]
@@ -978,11 +977,10 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub unsafe fn unsafe_split_at_atomic(&self, pos: u32) -> (Self, Self) {
     self.debug_check_range_u32(pos, 0);
-    let mut a = (*self).clone_atomic();
-    let mut b = (*self).clone_atomic();
-    a.unsafe_resize(pos);
-    b.unsafe_advance(pos);
-    (a, b)
+    let mut ret = ((*self).clone_atomic(), (*self).clone_atomic());
+    ret.0.unsafe_resize(pos);
+    ret.1.unsafe_advance(pos);
+    ret
   }
 
   #[inline]

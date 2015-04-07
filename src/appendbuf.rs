@@ -275,7 +275,7 @@ impl<'a> AppendBuf<'a> {
 
   /// Provides an immutable slice into the entire usable space
   /// of the buffer
-  #[inline]
+  #[inline(always)]
   pub unsafe fn as_limit_slice<'b>(&'b self) -> &'b [u8] {
     self.raw.as_limit_slice()
   }
@@ -504,7 +504,6 @@ impl<'a> Debug for AppendBuf<'a> {
   }
 }
 
-#[unsafe_destructor]
 impl<'a> Drop for AppendBuf<'a> {
   #[inline(always)]
   fn drop(&mut self) {

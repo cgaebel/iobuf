@@ -40,7 +40,6 @@ impl<'a> Clone for ROIobuf<'a> {
   }
 }
 
-#[unsafe_destructor]
 impl<'a> Drop for ROIobuf<'a> {
   #[inline(always)]
   fn drop(&mut self) { unsafe { self.raw.drop_nonatomic() } }
@@ -70,7 +69,7 @@ pub struct RWIobuf<'a> {
 
 #[test]
 fn check_sane_rwiobuf_size() {
-    assert_eq!(mem::size_of::<RWIobuf>(), mem::size_of::<*mut u8>() + 16);
+  assert_eq!(mem::size_of::<RWIobuf>(), mem::size_of::<*mut u8>() + 16);
 }
 
 impl<'a> Clone for RWIobuf<'a> {
@@ -87,7 +86,6 @@ impl<'a> Clone for RWIobuf<'a> {
   }
 }
 
-#[unsafe_destructor]
 impl<'a> Drop for RWIobuf<'a> {
   #[inline(always)]
   fn drop(&mut self) { unsafe { self.raw.drop_nonatomic() } }
