@@ -94,7 +94,7 @@ impl IntLike for usize {}
 #[inline(always)]
 unsafe fn from_be<T: IntLike>(x: T) -> T {
   match mem::size_of::<T>() {
-    1  => mem::transmute_copy(&u8::from_be(mem::transmute_copy(&x))),
+    1 => mem::transmute_copy(&u8::from_be(mem::transmute_copy(&x))),
     2 => mem::transmute_copy(&u16::from_be(mem::transmute_copy(&x))),
     4 => mem::transmute_copy(&u32::from_be(mem::transmute_copy(&x))),
     8 => mem::transmute_copy(&u64::from_be(mem::transmute_copy(&x))),
@@ -105,31 +105,33 @@ unsafe fn from_be<T: IntLike>(x: T) -> T {
 #[inline(always)]
 unsafe fn from_le<T: IntLike>(x: T) -> T {
   match mem::size_of::<T>() {
-    1  => mem::transmute_copy(&u8::from_le(mem::transmute_copy(&x))),
+    1 => mem::transmute_copy(&u8::from_le(mem::transmute_copy(&x))),
     2 => mem::transmute_copy(&u16::from_le(mem::transmute_copy(&x))),
     4 => mem::transmute_copy(&u32::from_le(mem::transmute_copy(&x))),
     8 => mem::transmute_copy(&u64::from_le(mem::transmute_copy(&x))),
-    n  => bad_int_like(n),
+    n => bad_int_like(n),
   }
 }
 
+#[inline(always)]
 unsafe fn to_be<T: IntLike>(x: T) -> T {
   match mem::size_of::<T>() {
-    1  => mem::transmute_copy(&u8::to_be(mem::transmute_copy(&x))),
+    1 => mem::transmute_copy(&u8::to_be(mem::transmute_copy(&x))),
     2 => mem::transmute_copy(&u16::to_be(mem::transmute_copy(&x))),
     4 => mem::transmute_copy(&u32::to_be(mem::transmute_copy(&x))),
     8 => mem::transmute_copy(&u64::to_be(mem::transmute_copy(&x))),
-    n  => bad_int_like(n),
+    n => bad_int_like(n),
   }
 }
 
+#[inline(always)]
 unsafe fn to_le<T: IntLike>(x: T) -> T {
   match mem::size_of::<T>() {
-    1  => mem::transmute_copy(&u8::to_le(mem::transmute_copy(&x))),
+    1 => mem::transmute_copy(&u8::to_le(mem::transmute_copy(&x))),
     2 => mem::transmute_copy(&u16::to_le(mem::transmute_copy(&x))),
     4 => mem::transmute_copy(&u32::to_le(mem::transmute_copy(&x))),
     8 => mem::transmute_copy(&u64::to_le(mem::transmute_copy(&x))),
-    n  => bad_int_like(n),
+    n => bad_int_like(n),
   }
 }
 
