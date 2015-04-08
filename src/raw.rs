@@ -915,8 +915,7 @@ impl<'a> RawIobuf<'a> {
   pub fn extend_with<'b>(&mut self, other: &RawIobuf<'b>) -> Result<(), ()> {
     unsafe {
       try!(err_if(!self.is_extended_by(other)));
-      self.unsafe_extend(other.len());
-      Ok(())
+      Ok(self.unsafe_extend(other.len()))
     }
   }
 
