@@ -98,7 +98,7 @@ unsafe fn from_be<T: IntLike>(x: T) -> T {
     2 => mem::transmute_copy(&u16::from_be(mem::transmute_copy(&x))),
     4 => mem::transmute_copy(&u32::from_be(mem::transmute_copy(&x))),
     8 => mem::transmute_copy(&u64::from_be(mem::transmute_copy(&x))),
-    n  => bad_int_like(n),
+    n => bad_int_like(n),
   }
 }
 
