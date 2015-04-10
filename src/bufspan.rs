@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt::{self, Formatter, Debug};
 use std::intrinsics::{assume, move_val_init};
-use std::iter::{self, order, IntoIterator, FromIterator, AdditiveIterator};
+use std::iter::{self, order, IntoIterator, FromIterator};
 use std::mem;
 use std::option;
 use std::slice;
