@@ -422,7 +422,7 @@ pub trait Iobuf: Clone + Debug {
   ///
   ///     let mut sum = 0u16;
   ///
-  ///     for _ in (0 .. num_shorts) {
+  ///     for _ in 0..num_shorts {
   ///       sum += b.unsafe_consume_be::<u16>();
   ///     }
   ///
@@ -884,17 +884,17 @@ pub trait Iobuf: Clone + Debug {
   /// let mut b = ROIobuf::from_slice(&data);
   ///
   /// fn parse<B: Iobuf>(b: &mut B) -> Result<usize, ()> {
-  ///   let mut sum = 0us;
+  ///   let mut sum = 0;
   ///
   ///   let num_buffers: u8 = try!(b.consume_be());
   ///
-  ///   for _ in (0 .. num_buffers) {
+  ///   for _ in 0..num_buffers {
   ///     let len: u8 = try!(b.consume_be());
   ///
   ///     unsafe {
   ///       try!(b.check_range(0, len as u32));
   ///
-  ///       for _ in (0 .. len) {
+  ///       for _ in 0..len {
   ///         sum += b.unsafe_consume_be::<u8>() as usize;
   ///       }
   ///     }
