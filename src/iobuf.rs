@@ -3,8 +3,9 @@ use core::nonzero::NonZero;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use raw::{Allocator, RawIobuf, IntLike};
+use raw::{Allocator, RawIobuf};
 use impls::{AROIobuf, RWIobuf, UniqueIobuf};
+use intlike::IntLike;
 
 /// Input/Output Buffer
 ///

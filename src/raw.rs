@@ -12,6 +12,8 @@ use std::u32;
 use std::sync::Arc;
 use std::sync::atomic::{self, AtomicUsize, Ordering};
 
+use intlike::{IntLike, from_be, from_le, to_be, to_le};
+
 #[cfg(target_pointer_width = "64")]
 const TARGET_WORD_SIZE: usize = 64;
 
@@ -69,70 +71,6 @@ unsafe fn memcpy<T>(dst: *mut T, src: *const T, n: usize) {
 #[inline(always)]
 unsafe fn memmove<T>(dst: *mut T, src: *const T, n: usize) {
   ptr::copy(src, dst, n)
-}
-
-/// 8-64 bit integer types. Not floating point.
-///
-/// This used to be in the standard library, but was pulled out into an external
-/// library that adds support for arbitrary-sized integers, rationals, complex
-/// numbers, and this trait. It also has dependencies on rustc-serialize and rand,
-/// which is totally unnecessary. Therefore, I've pulled the trait's features
-/// that I need into here.
-pub trait IntLike {}
-
-impl IntLike for i8    {}
-impl IntLike for i16   {}
-impl IntLike for i32   {}
-impl IntLike for i64   {}
-impl IntLike for isize {}
-impl IntLike for u8    {}
-impl IntLike for u16   {}
-impl IntLike for u32   {}
-impl IntLike for u64   {}
-impl IntLike for usize {}
-
-#[inline(always)]
-unsafe fn from_be<T: IntLike>(x: T) -> T {
-  match mem::size_of::<T>() {
-    1 => mem::transmute_copy(&u8::from_be(mem::transmute_copy(&x))),
-    2 => mem::transmute_copy(&u16::from_be(mem::transmute_copy(&x))),
-    4 => mem::transmute_copy(&u32::from_be(mem::transmute_copy(&x))),
-    8 => mem::transmute_copy(&u64::from_be(mem::transmute_copy(&x))),
-    n => bad_int_like(n),
-  }
-}
-
-#[inline(always)]
-unsafe fn from_le<T: IntLike>(x: T) -> T {
-  match mem::size_of::<T>() {
-    1 => mem::transmute_copy(&u8::from_le(mem::transmute_copy(&x))),
-    2 => mem::transmute_copy(&u16::from_le(mem::transmute_copy(&x))),
-    4 => mem::transmute_copy(&u32::from_le(mem::transmute_copy(&x))),
-    8 => mem::transmute_copy(&u64::from_le(mem::transmute_copy(&x))),
-    n => bad_int_like(n),
-  }
-}
-
-#[inline(always)]
-unsafe fn to_be<T: IntLike>(x: T) -> T {
-  match mem::size_of::<T>() {
-    1 => mem::transmute_copy(&u8::to_be(mem::transmute_copy(&x))),
-    2 => mem::transmute_copy(&u16::to_be(mem::transmute_copy(&x))),
-    4 => mem::transmute_copy(&u32::to_be(mem::transmute_copy(&x))),
-    8 => mem::transmute_copy(&u64::to_be(mem::transmute_copy(&x))),
-    n => bad_int_like(n),
-  }
-}
-
-#[inline(always)]
-unsafe fn to_le<T: IntLike>(x: T) -> T {
-  match mem::size_of::<T>() {
-    1 => mem::transmute_copy(&u8::to_le(mem::transmute_copy(&x))),
-    2 => mem::transmute_copy(&u16::to_le(mem::transmute_copy(&x))),
-    4 => mem::transmute_copy(&u32::to_le(mem::transmute_copy(&x))),
-    8 => mem::transmute_copy(&u64::to_le(mem::transmute_copy(&x))),
-    n => bad_int_like(n),
-  }
 }
 
 impl AllocationHeader {
@@ -237,12 +175,6 @@ impl Deallocator {
 #[cold]
 fn bad_range(pos: u64, len: u64) -> ! {
   panic!("Iobuf got invalid range: pos={}, len={}", pos, len)
-}
-
-#[cold]
-fn bad_int_like(n: usize) -> ! {
-  panic!("Tried to serialize an integer of size {} into an Iobuf.
-          Iobufs only support power of two sizes of 8-64 bytes, inclusive.", n)
 }
 
 #[cold]
@@ -1158,38 +1090,32 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  #[allow(trivial_casts)] // rustc is dumb
   pub unsafe fn unsafe_peek_be<T: IntLike>(&self, pos: u32) -> T {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
     let mut dst: T = mem::uninitialized();
 
-    {
-      let dst_ptr = &mut dst;
-      memcpy(
-        dst_ptr as *mut T as *mut u8,
-        self.buf.offset((self.lo + pos) as isize),
-        len);
-    }
+    memcpy(
+      &mut dst as *mut T as *mut u8,
+      self.buf.offset((self.lo + pos) as isize),
+      len);
+
     from_be(dst)
   }
 
   #[inline]
-  #[allow(trivial_casts)]
   pub unsafe fn unsafe_peek_le<T: IntLike>(&self, pos: u32) -> T {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
     let mut dst: T = mem::uninitialized();
 
-    {
-      let dst_ptr = &mut dst;
-      memcpy(
-        dst_ptr as *mut T as *mut u8,
-        self.buf.offset((self.lo + pos) as isize),
-        len);
-    }
+    memcpy(
+      &mut dst as *mut T as *mut u8,
+      self.buf.offset((self.lo + pos) as isize),
+      len);
+
     from_le(dst)
   }
 
@@ -1207,23 +1133,19 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  #[allow(trivial_casts)] // rustc is dumb
   pub unsafe fn unsafe_poke_be<T: IntLike>(&self, pos: u32, mut t: T) {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
     t = to_be(t);
 
-    let tp = &t;
-
     memcpy(
       self.buf.offset((self.lo + pos) as isize),
-      tp as *const T as *const u8,
+      &t as *const T as *const u8,
       len);
   }
 
   #[inline]
-  #[allow(trivial_casts)] // rustc is dumb
   pub unsafe fn unsafe_poke_le<T: IntLike>(&self, pos: u32, mut t: T) {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);

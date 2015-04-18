@@ -4,7 +4,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use std::sync::Arc;
 
-use raw::{IntLike, Allocator, RawIobuf};
+use raw::{Allocator, RawIobuf};
+use intlike::IntLike;
 use iobuf::Iobuf;
 
 /// Read-Only Iobuf

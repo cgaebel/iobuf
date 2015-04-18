@@ -2,9 +2,10 @@ use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use std::sync::Arc;
 
-use raw::{Allocator, RawIobuf, IntLike};
-use iobuf::Iobuf;
+use raw::{Allocator, RawIobuf};
 use impls::AROIobuf;
+use intlike::IntLike;
+use iobuf::Iobuf;
 
 /// Append-Only Input Buffer
 ///
