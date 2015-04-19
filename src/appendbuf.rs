@@ -496,6 +496,13 @@ impl<'a> AppendBuf<'a> {
   pub fn is_empty(&self) -> bool {
     self.raw.is_empty()
   }
+
+  /// Checks internal state of the AppendBuf, to ensure that internal invariants
+  /// are satisified. Returns `Err(msg)` if any invariant isn't satisfied.
+  pub fn invariant(&self) -> Result<(), Box<String>> {
+    // TODO: AppendBuf-specific invariants.
+    self.raw.invariant()
+  }
 }
 
 impl<'a> Debug for AppendBuf<'a> {

@@ -1064,6 +1064,10 @@ pub trait Iobuf: Clone + Debug {
   /// ```
   unsafe fn unsafe_consume_le<T: IntLike>(&mut self) -> T;
 
+  /// Checks internal state of the iobuf, to ensure that internal invariants are
+  /// satisified. Returns `Err(msg)` if any invariant isn't satisfied.
+  fn invariant(&self) -> Result<(), Box<String>>;
+
   /// For internal use only.
   unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b>;
 
@@ -1090,5 +1094,4 @@ pub trait Iobuf: Clone + Debug {
   /// Returns an index into the buffer returned by `ptr` that represents the
   /// exclusive upper bound of the limits.
   fn hi_max(&self) -> u32;
-
 }

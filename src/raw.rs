@@ -218,7 +218,7 @@ pub struct RawIobuf<'a> {
   nocopy: NoCopy,
 }
 
-// Make sure the compiler doesn't resize this to something silly.
+/// Make sure the compiler doesn't resize this to something silly.
 #[test]
 fn check_sane_raw_size() {
   assert_eq!(mem::size_of::<RawIobuf>(), mem::size_of::<*mut u8>() + 16);
@@ -279,6 +279,48 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       let allocator: *mut () = mem::transmute(allocator);
       RawIobuf::new_impl(len, Some(NonZero::new(allocator)))
+    }
+  }
+
+  /// Checks a single invariant condition, returning a boxed (for size savings)
+  /// error in the case of failure, with a descriptive message.
+  fn inv_check(&self, is_valid: bool, msg: &str) -> Result<(), Box<String>> {
+    if is_valid {
+      Ok(())
+    } else {
+      Err(Box::new(format!("{}: Iobuf {{ buf: {:?}, owned: {}, lo_min: {}, lo: {}, hi: {}, hi_max: {} }}",
+        msg,
+        *self.buf, self.is_owned(), self.lo_min(), self.lo(), self.hi(), self.hi_max())))
+    }
+  }
+
+  pub fn invariant(&self) -> Result<(), Box<String>> {
+    try!(self.inv_check(self.lo_min() <= self.hi_max(),
+      "The end of the limits must be after the start of the limits"));
+
+    try!(self.inv_check(self.lo() <= self.hi(),
+      "The end of the window must be after the start of the window"));
+
+    try!(self.inv_check(self.lo_min() <= self.lo(),
+      "The start of the window must be after the start of the limits"));
+
+    try!(self.inv_check(self.hi() <= self.hi_max(),
+      "The end of the limits must be after the end of the window"));
+
+    Ok(())
+  }
+
+  #[cfg(not(debug))]
+  #[inline(always)]
+  fn debug_check_invariants<T>(&self, t: T) -> T {
+    t
+  }
+
+  #[cfg(debug)]
+  fn debug_check_invariants<T>(&self, t: T) -> T {
+    match self.invariant() {
+      Ok(())   => t,
+      Err(msg) => panic!(&*msg)
     }
   }
 
@@ -378,6 +420,8 @@ impl<'a> RawIobuf<'a> {
     self.lo     = source.lo;
     self.hi     = source.hi;
     self.hi_max = source.hi_max;
+
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -407,6 +451,8 @@ impl<'a> RawIobuf<'a> {
     self.lo     = source.lo;
     self.hi     = source.hi;
     self.hi_max = source.hi_max;
+
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -439,6 +485,8 @@ impl<'a> RawIobuf<'a> {
     }
     self.lo_min_and_owned_bit &= OWNED_MASK;
     self.lo_min_and_owned_bit |= new_value;
+
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -747,7 +795,7 @@ impl<'a> RawIobuf<'a> {
     self.hi     = new_hi;
     self.hi_max = new_hi_max;
 
-    Ok(())
+    Ok(self.debug_check_invariants(()))
   }
 
   /// Both the limits and the window are [lo, hi).
@@ -767,7 +815,7 @@ impl<'a> RawIobuf<'a> {
     self.hi     = new_hi;
     self.hi_max = new_hi_max;
 
-    Ok(())
+    Ok(self.debug_check_invariants(()))
   }
 
   #[inline]
@@ -790,6 +838,7 @@ impl<'a> RawIobuf<'a> {
     let lo = self.lo;
     self.set_lo_min(lo);
     self.hi_max = self.hi;
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -805,6 +854,7 @@ impl<'a> RawIobuf<'a> {
   pub unsafe fn unsafe_advance(&mut self, len: u32) {
     self.debug_check_range_u32(0, len);
     self.lo += len;
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -832,6 +882,8 @@ impl<'a> RawIobuf<'a> {
       }
     }
     self.hi += len;
+
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -856,13 +908,14 @@ impl<'a> RawIobuf<'a> {
     let new_hi = self.lo as u64 + len as u64;
     try!(err_if(new_hi > self.hi_max as u64));
     self.hi = new_hi as u32;
-    Ok(())
+    Ok(self.debug_check_invariants(()))
   }
 
   #[inline]
   pub unsafe fn unsafe_resize(&mut self, len: u32) {
     self.debug_check_range_u32(0, len);
     self.hi = self.lo + len;
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -936,24 +989,28 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn rewind(&mut self) {
     self.lo = self.lo_min();
+    self.debug_check_invariants(())
   }
 
   #[inline]
   pub fn reset(&mut self) {
     self.lo = self.lo_min();
     self.hi = self.hi_max;
+    self.debug_check_invariants(())
   }
 
   #[inline]
   pub fn flip_lo(&mut self) {
     self.hi = self.lo;
     self.lo = self.lo_min();
+    self.debug_check_invariants(())
   }
 
   #[inline]
   pub fn flip_hi(&mut self) {
     self.lo = self.hi;
     self.hi = self.hi_max;
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -969,14 +1026,18 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn compact(&mut self) {
     unsafe {
-      let len = self.len();
+      let len    = self.len();
       let lo_min = self.lo_min();
+
       memmove(
         self.buf.offset(lo_min as isize),
         self.buf.offset(self.lo as isize),
         len as usize);
+
       self.lo = lo_min + len;
       self.hi = self.hi_max;
+
+      self.debug_check_invariants(())
     }
   }
 
@@ -1153,6 +1214,7 @@ impl<'a> RawIobuf<'a> {
     self.debug_check_range_usize(0, src.len());
     self.unsafe_poke(0, src);
     self.lo += src.len() as u32;
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -1161,6 +1223,7 @@ impl<'a> RawIobuf<'a> {
     self.debug_check_range_u32(0, bytes);
     self.unsafe_poke_be(0, t);
     self.lo += bytes;
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -1169,6 +1232,7 @@ impl<'a> RawIobuf<'a> {
     self.debug_check_range_u32(0, bytes);
     self.unsafe_poke_le(0, t);
     self.lo += bytes;
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -1176,6 +1240,7 @@ impl<'a> RawIobuf<'a> {
     self.debug_check_range_usize(0, dst.len());
     self.unsafe_peek(0, dst);
     self.lo += dst.len() as u32;
+    self.debug_check_invariants(())
   }
 
   #[inline]
@@ -1184,7 +1249,7 @@ impl<'a> RawIobuf<'a> {
     self.debug_check_range_u32(0, bytes);
     let ret = self.unsafe_peek_le::<T>(0);
     self.lo += bytes;
-    ret
+    self.debug_check_invariants(ret)
   }
 
   #[inline]
@@ -1193,7 +1258,7 @@ impl<'a> RawIobuf<'a> {
     self.debug_check_range_u32(0, bytes);
     let ret = self.unsafe_peek_be::<T>(0);
     self.lo += bytes;
-    ret
+    self.debug_check_invariants(ret)
   }
 
   #[inline(always)]

@@ -1147,6 +1147,9 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
 
   #[inline(always)]
+  fn invariant(&self) -> Result<(), Box<String>> { self.raw.invariant() }
+
+  #[inline(always)]
   fn ptr(&self) -> NonZero<*mut u8> { self.raw.ptr() }
   #[inline(always)]
   fn is_owned(&self) -> bool { self.raw.is_owned() }
@@ -1355,6 +1358,9 @@ impl Iobuf for AROIobuf {
   unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
 
   #[inline(always)]
+  fn invariant(&self) -> Result<(), Box<String>> { self.raw.invariant() }
+
+  #[inline(always)]
   fn ptr(&self) -> NonZero<*mut u8> { self.raw.ptr() }
   #[inline(always)]
   fn is_owned(&self) -> bool { self.raw.is_owned() }
@@ -1561,6 +1567,9 @@ impl<'a> Iobuf for RWIobuf<'a> {
 
   #[inline(always)]
   unsafe fn as_raw<'b>(&'b self) -> &'b RawIobuf<'b> { mem::transmute(&self.raw) }
+
+  #[inline(always)]
+  fn invariant(&self) -> Result<(), Box<String>> { self.raw.invariant() }
 
   #[inline(always)]
   fn ptr(&self) -> NonZero<*mut u8> { self.raw.ptr() }
