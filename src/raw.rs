@@ -1090,7 +1090,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_peek_be<T: IntLike>(&self, pos: u32) -> T {
+  unsafe fn unsafe_peek_raw<T: IntLike>(&self, pos: u32) -> T {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
 
@@ -1101,22 +1101,17 @@ impl<'a> RawIobuf<'a> {
       self.buf.offset((self.lo + pos) as isize),
       len);
 
-    from_be(dst)
+    dst
+  }
+
+  #[inline]
+  pub unsafe fn unsafe_peek_be<T: IntLike>(&self, pos: u32) -> T {
+    from_be(self.unsafe_peek_raw(pos))
   }
 
   #[inline]
   pub unsafe fn unsafe_peek_le<T: IntLike>(&self, pos: u32) -> T {
-    let len = mem::size_of::<T>();
-    self.debug_check_range_usize(pos, len);
-
-    let mut dst: T = mem::uninitialized();
-
-    memcpy(
-      &mut dst as *mut T as *mut u8,
-      self.buf.offset((self.lo + pos) as isize),
-      len);
-
-    from_le(dst)
+    from_le(self.unsafe_peek_raw(pos))
   }
 
   #[inline]
@@ -1133,11 +1128,9 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_poke_be<T: IntLike>(&self, pos: u32, mut t: T) {
+  unsafe fn unsafe_poke_raw<T: IntLike>(&self, pos: u32, t: T) {
     let len = mem::size_of::<T>();
     self.debug_check_range_usize(pos, len);
-
-    t = to_be(t);
 
     memcpy(
       self.buf.offset((self.lo + pos) as isize),
@@ -1146,16 +1139,13 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn unsafe_poke_le<T: IntLike>(&self, pos: u32, mut t: T) {
-    let len = mem::size_of::<T>();
-    self.debug_check_range_usize(pos, len);
+  pub unsafe fn unsafe_poke_be<T: IntLike>(&self, pos: u32, t: T) {
+    self.unsafe_poke_raw(pos, to_be(t))
+  }
 
-    t = to_le(t);
-
-    memcpy(
-      self.buf.offset((self.lo + pos) as isize),
-      &t as *const T as *const u8,
-      len);
+  #[inline]
+  pub unsafe fn unsafe_poke_le<T: IntLike>(&self, pos: u32, t: T) {
+    self.unsafe_poke_raw(pos, to_le(t))
   }
 
   #[inline]
@@ -1226,6 +1216,7 @@ impl<'a> RawIobuf<'a> {
     self.hi_max
   }
 
+  #[cold]
   fn show_hex(&self, f: &mut Formatter, half_line: &[u8])
       -> fmt::Result {
     for &x in half_line.iter() {
@@ -1234,6 +1225,7 @@ impl<'a> RawIobuf<'a> {
     Ok(())
   }
 
+  #[cold]
   fn show_ascii(&self, f: &mut Formatter, half_line: &[u8])
       -> fmt::Result {
     for &x in half_line.iter() {
@@ -1243,6 +1235,7 @@ impl<'a> RawIobuf<'a> {
     Ok(())
   }
 
+  #[cold]
   fn show_line(&self, f: &mut Formatter, line_number: usize, chunk: &[u8])
       -> fmt::Result {
 
@@ -1278,6 +1271,7 @@ impl<'a> RawIobuf<'a> {
     write!(f, "\n")
   }
 
+  #[cold]
   pub fn show(&self, f: &mut Formatter, ty: &str) -> fmt::Result {
     try!(write!(f, "{} IObuf, limits=[{},{}), bounds=[{},{})\n",
                 ty, self.lo_min(), self.hi_max, self.lo, self.hi));
