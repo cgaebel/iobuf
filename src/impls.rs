@@ -1144,7 +1144,7 @@ impl<'a> Iobuf for ROIobuf<'a> {
   unsafe fn unsafe_consume_le<T: IntLike>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
-  unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
+  unsafe fn as_raw<'b>(&'b self) -> &'b RawIobuf<'b> { mem::transmute(&self.raw) }
 
   #[inline(always)]
   fn invariant(&self) -> Result<(), Box<String>> { self.raw.invariant() }
@@ -1355,7 +1355,7 @@ impl Iobuf for AROIobuf {
   unsafe fn unsafe_consume_le<T: IntLike>(&mut self) -> T { self.raw.unsafe_consume_le::<T>() }
 
   #[inline(always)]
-  unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b> { mem::transmute(&self.raw) }
+  unsafe fn as_raw<'b>(&'b self) -> &'b RawIobuf<'b> { mem::transmute(&self.raw) }
 
   #[inline(always)]
   fn invariant(&self) -> Result<(), Box<String>> { self.raw.invariant() }

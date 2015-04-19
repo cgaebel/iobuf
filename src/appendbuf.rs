@@ -90,7 +90,7 @@ impl<'a> AppendBuf<'a> {
   ///
   ///   let mut buf = AppendBuf::new(24);
   ///   for i in b'A' .. b'X' + 1 {
-  ///   buf.fill_be(i).unwrap();
+  ///     buf.fill_be(i).unwrap();
   ///   }
   ///
   ///   let all = buf.atomic_slice_to(-1).ok().expect("all");
@@ -154,7 +154,7 @@ impl<'a> AppendBuf<'a> {
   ///
   ///   let mut buf = AppendBuf::new(24);
   ///   for i in b'A' .. b'X' + 1 {
-  ///   buf.fill_be(i).unwrap();
+  ///     buf.fill_be(i).unwrap();
   ///   }
   ///
   ///   let all = buf.atomic_slice_from(0).ok().expect("all");
@@ -208,7 +208,7 @@ impl<'a> AppendBuf<'a> {
   ///
   ///   let mut buf = AppendBuf::new(24);
   ///   for i in b'A' .. b'X' + 1 {
-  ///   buf.fill_be(i).unwrap();
+  ///     buf.fill_be(i).unwrap();
   ///   }
   ///
   ///   let all = buf.atomic_slice_to(-1).ok().expect("all");
@@ -500,8 +500,14 @@ impl<'a> AppendBuf<'a> {
   /// Checks internal state of the AppendBuf, to ensure that internal invariants
   /// are satisified. Returns `Err(msg)` if any invariant isn't satisfied.
   pub fn invariant(&self) -> Result<(), Box<String>> {
-    // TODO: AppendBuf-specific invariants.
+    // TODO: AppendBuf-specific invariants:
+    //   try!(self.raw.inv_check(x < y, "x must be less than y"));
     self.raw.invariant()
+  }
+
+  /// For internal use only.
+  pub unsafe fn as_raw<'b>(&'b self) -> &'b RawIobuf<'b> {
+    &self.raw
   }
 }
 

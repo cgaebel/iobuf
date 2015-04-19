@@ -1069,7 +1069,7 @@ pub trait Iobuf: Clone + Debug {
   fn invariant(&self) -> Result<(), Box<String>>;
 
   /// For internal use only.
-  unsafe fn as_raw<'b>(&'b self) -> &RawIobuf<'b>;
+  unsafe fn as_raw<'b>(&'b self) -> &'b RawIobuf<'b>;
 
   /// Gets a pointer to the start of the internal backing buffer. This is
   /// extremely low level, and it is not recommended you use this interface.

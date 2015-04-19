@@ -59,6 +59,12 @@ fn correct_header_size() {
   assert!(mem::align_of::<AllocationHeader>() <= DATA_ALIGNMENT);
 }
 
+#[test]
+fn result_of_boxed_string() {
+  assert_eq!(mem::size_of::<Result<(), Box<String>>>(),
+             mem::size_of::<           Box<String> >());
+}
+
 /// Rust has the wrong parameter order.
 /// > http://internals.rust-lang.org/t/memcpy-is-backwards/1797
 #[inline(always)]
@@ -282,15 +288,21 @@ impl<'a> RawIobuf<'a> {
     }
   }
 
+  #[cold]
+  fn inv_fail(&self, msg: &str) -> Box<String> {
+    Box::new(format!("{}: Iobuf {{ buf: {:?}, owned: {}, lo_min: {}, lo: {}, hi: {}, hi_max: {} }}",
+      msg,
+      *self.buf, self.is_owned(), self.lo_min(), self.lo(), self.hi(), self.hi_max()))
+  }
+
   /// Checks a single invariant condition, returning a boxed (for size savings)
   /// error in the case of failure, with a descriptive message.
-  fn inv_check(&self, is_valid: bool, msg: &str) -> Result<(), Box<String>> {
+  #[inline]
+  pub fn inv_check(&self, is_valid: bool, msg: &str) -> Result<(), Box<String>> {
     if is_valid {
       Ok(())
     } else {
-      Err(Box::new(format!("{}: Iobuf {{ buf: {:?}, owned: {}, lo_min: {}, lo: {}, hi: {}, hi_max: {} }}",
-        msg,
-        *self.buf, self.is_owned(), self.lo_min(), self.lo(), self.hi(), self.hi_max())))
+      Err(self.inv_fail(msg))
     }
   }
 
