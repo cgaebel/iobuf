@@ -42,6 +42,7 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
+#![feature(filling_drop)]
 #![feature(unsafe_no_drop_flag)]
 
 #![feature(alloc)]
