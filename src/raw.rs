@@ -542,16 +542,14 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn from_slice(s: &'a [u8]) -> Self {
     unsafe {
-      let s_slice: raw::Slice<u8> = mem::transmute(s);
-      let ptr = s_slice.data as *mut u8;
-      let len = s_slice.len;
+      let len = s.repr().len;
 
       if len > MAX_BUFFER_LEN {
         buffer_too_big(len);
       }
 
       RawIobuf {
-        buf:    NonZero::new(ptr),
+        buf:    NonZero::new(s.repr().data as *mut u8),
         lo_min_and_owned_bit: 0,
         lo:     0,
         hi:     len as u32,
@@ -575,8 +573,8 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
     unsafe {
-      let b = RawIobuf::new_with_allocator(s.len(), allocator);
       let s = s.repr();
+      let b = RawIobuf::new_with_allocator(s.len, allocator);
       memcpy(*b.buf, s.data, s.len);
       b
     }
@@ -923,10 +921,10 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub fn resize(&mut self, len: u32) -> Result<(), ()> {
-    let new_hi = self.lo as u64 + len as u64;
-    try!(err_if(new_hi > self.hi_max as u64));
-    self.hi = new_hi as u32;
-    Ok(self.debug_check_invariants(()))
+    unsafe {
+      try!(self.check_range_u32(0, len));
+      Ok(self.unsafe_resize(len))
+    }
   }
 
   #[inline]

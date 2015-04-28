@@ -15,4 +15,6 @@ script:
   - cargo doc --verbose
 after_script:
   - cp -R target/doc doc
-  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
+  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN > rustci.sh
+  - cat rustci.sh
+  - sh rustci.sh
