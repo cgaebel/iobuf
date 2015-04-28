@@ -15,7 +15,6 @@ script:
   - cargo bench --verbose
   - cargo doc --verbose
 after_script:
-  - cp -R target/doc doc
   - |
         [ $TRAVIS_BRANCH = master ] &&
         [ $TRAVIS_PULL_REQUEST = false ] &&
