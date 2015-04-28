@@ -4,9 +4,9 @@ name = "iobuf"
 version = "5.5.1"
 authors = ["Clark Gaebel <cg.wowus.cg@gmail.com>"]
 
-documentation = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/"
-homepage = "https://github.com/cgaebel/iobuf"
-repository = "https://github.com/cgaebel/iobuf"
+documentation = "https://cgaebel.github.io/iobuf"
+homepage      = "https://github.com/cgaebel/iobuf"
+repository    = "https://github.com/cgaebel/iobuf"
 
 readme = "README.md"
 

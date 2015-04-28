@@ -30,5 +30,4 @@ but has evolved into much more.
 Documentation
 -------------
 
-See the very thorough [API Docs](http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/).
-
+See the very thorough [API Docs](https://cgaebel.github.io/iobuf/).
