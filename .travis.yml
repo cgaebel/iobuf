@@ -6,7 +6,7 @@ os:
   - linux
 env:
     global:
-      - secure: g+2mPY1flmXP8foHSpPZzFxWPXmsgklatafe1W5Au3CqBLfeNLz2Vo1Hwee36BgK60SG+J3r6IiLlIHh5DdUreG+bkGM+VTBQ0VCoDcnN71ccOEWYAacKAUcjO5vs+D9Qvz0g16+POJhBRkDcxno0Op3Y/MZBK2S0/tLv+DzkS4=
+      - secure: bTFyenYvLoiAUnDMABIIMv4djoXZfFsANl4NyWQmvHxTLwu9wtbkxbBfRScMU/5khE3yGBoEB9CR8Pghc9h99RNyKaR8NzFxpe95o4TcpPv4eIHECbtlk2DdmFcBPTDlFAJ46nqUj+QUUFztbe0ZjLA/8BL9APHWGBX56zNHgIk=
 script:
   - cargo build --verbose
   - cargo build --release --verbose
