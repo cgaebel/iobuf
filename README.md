@@ -3,6 +3,8 @@ Iobuf
 
 A contiguous region of bytes, useful for I/O operations.
 
+[![crates.io](https://img.shields.io/crates/v/iobuf.svg)](https://crates.io/crates/iobuf/)
+
 [![Build Status](https://travis-ci.org/cgaebel/iobuf.svg?branch=master)](https://travis-ci.org/cgaebel/iobuf)
 
 An Iobuf consists of:
