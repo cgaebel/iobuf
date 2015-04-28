@@ -1,12 +1,13 @@
+env:
+  global:
+    - secure: bTFyenYvLoiAUnDMABIIMv4djoXZfFsANl4NyWQmvHxTLwu9wtbkxbBfRScMU/5khE3yGBoEB9CR8Pghc9h99RNyKaR8NzFxpe95o4TcpPv4eIHECbtlk2DdmFcBPTDlFAJ46nqUj+QUUFztbe0ZjLA/8BL9APHWGBX56zNHgIk=
+
 language: rust
 sudo: false
 version:
   - nightly
 os:
   - linux
-env:
-    global:
-      - secure: bTFyenYvLoiAUnDMABIIMv4djoXZfFsANl4NyWQmvHxTLwu9wtbkxbBfRScMU/5khE3yGBoEB9CR8Pghc9h99RNyKaR8NzFxpe95o4TcpPv4eIHECbtlk2DdmFcBPTDlFAJ46nqUj+QUUFztbe0ZjLA/8BL9APHWGBX56zNHgIk=
 script:
   - cargo build --verbose
   - cargo build --release --verbose
@@ -15,6 +16,6 @@ script:
   - cargo doc --verbose
 after_script:
   - cp -R target/doc doc
-  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN > rustci.sh
+  - curl "http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN" > rustci.sh
   - cat rustci.sh
   - sh rustci.sh
