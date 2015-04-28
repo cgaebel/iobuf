@@ -16,6 +16,10 @@ script:
   - cargo doc --verbose
 after_script:
   - cp -R target/doc doc
-  - curl "http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN" > rustci.sh
-  - cat rustci.sh
-  - sh rustci.sh
+  - |
+        [ $TRAVIS_BRANCH = master ] &&
+        [ $TRAVIS_PULL_REQUEST = false ] &&
+        echo '<meta http-equiv=refresh content=0;url=iobuf/index.html>' > target/doc/index.html &&
+        git clone https://github.com/davisp/ghp-import &&
+        ./ghp-import/ghp-import -n target/doc &&
+        git push -fq https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
