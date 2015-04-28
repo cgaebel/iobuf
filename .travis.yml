@@ -1,6 +1,6 @@
 env:
   global:
-    - secure: bTFyenYvLoiAUnDMABIIMv4djoXZfFsANl4NyWQmvHxTLwu9wtbkxbBfRScMU/5khE3yGBoEB9CR8Pghc9h99RNyKaR8NzFxpe95o4TcpPv4eIHECbtlk2DdmFcBPTDlFAJ46nqUj+QUUFztbe0ZjLA/8BL9APHWGBX56zNHgIk=
+    - secure: "pym76eDbQVA4/Os8HXuNjQa5SSsKLLhweXInZk2A0VlOXJGTE2YtAyDbU1/d+fxQS6RQ4MQYBlCQ0EWdlpoEVYGIBBewuxzFpIO3pmfeOwz6wOsrmgI7CDemxOUfS59xWRvMicRFn6V5U6Dqfuw+JkE9Lfg/kaxvdnvF7g2VQzE="
 
 language: rust
 sudo: false
