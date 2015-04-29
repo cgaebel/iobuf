@@ -194,7 +194,6 @@ impl Drop for AROIobuf {
   fn drop(&mut self) { unsafe { self.raw.drop_atomic() } }
 }
 
-
 /// A unique, immutable Iobuf.
 ///
 /// If the refcount on an Iobuf is `1`, it can be made unique with `.unique()`.
