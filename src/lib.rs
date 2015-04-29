@@ -36,9 +36,6 @@
 //!
 //! Fun tidbit: Data allocated by `Iobuf` is guaranteed to be aligned to 16 bytes.
 //! This may be abused to write efficient SIMD data processing code.
-
-#![doc(html_root_url = "http://www.rust-ci.org/cgaebel/iobuf/doc/iobuf/")]
-
 #![deny(missing_docs)]
 #![deny(warnings)]
 

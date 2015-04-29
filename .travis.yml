@@ -1,13 +1,12 @@
-env:
-  global:
-    - secure: "pym76eDbQVA4/Os8HXuNjQa5SSsKLLhweXInZk2A0VlOXJGTE2YtAyDbU1/d+fxQS6RQ4MQYBlCQ0EWdlpoEVYGIBBewuxzFpIO3pmfeOwz6wOsrmgI7CDemxOUfS59xWRvMicRFn6V5U6Dqfuw+JkE9Lfg/kaxvdnvF7g2VQzE="
-
 language: rust
 sudo: false
 version:
   - nightly
 os:
   - linux
+env:
+  global:
+    - secure: "pym76eDbQVA4/Os8HXuNjQa5SSsKLLhweXInZk2A0VlOXJGTE2YtAyDbU1/d+fxQS6RQ4MQYBlCQ0EWdlpoEVYGIBBewuxzFpIO3pmfeOwz6wOsrmgI7CDemxOUfS59xWRvMicRFn6V5U6Dqfuw+JkE9Lfg/kaxvdnvF7g2VQzE="
 script:
   - cargo build --verbose
   - cargo build --release --verbose
