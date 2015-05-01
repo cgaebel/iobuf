@@ -1,5 +1,5 @@
 use std::fmt::{self, Debug, Formatter};
-use std::mem;
+use std::{mem, io};
 use std::sync::Arc;
 
 use raw::{Allocator, RawIobuf};
@@ -524,3 +524,17 @@ impl<'a> Drop for AppendBuf<'a> {
     unsafe { self.raw.drop_atomic() }
   }
 }
+
+impl<'a> io::Write for AppendBuf<'a> {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let readamount = buf.len();
+        self.fill(buf)
+            .map(|()| readamount)
+            .map_err(|()| io::Error::new(io::ErrorKind::Other, "No space in AppendBuf"))
+    }
+
+    #[inline(always)]
+    fn flush(&mut self) -> io::Result<()> { Ok(()) }
+}
+
