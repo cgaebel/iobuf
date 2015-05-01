@@ -1,7 +1,7 @@
 use core::nonzero::NonZero;
 
 use std::fmt::{self, Debug, Formatter};
-use std::mem;
+use std::{io, mem};
 use std::sync::Arc;
 
 use raw::{Allocator, RawIobuf};
@@ -90,6 +90,19 @@ impl<'a> Clone for RWIobuf<'a> {
 impl<'a> Drop for RWIobuf<'a> {
   #[inline(always)]
   fn drop(&mut self) { unsafe { self.raw.drop_nonatomic() } }
+}
+
+impl<'a> io::Write for RWIobuf<'a> {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let readamount = buf.len();
+        self.fill(buf)
+            .map(|()| readamount)
+            .map_err(|()| io::Error::new(io::ErrorKind::Other, "No space in AppendBuf"))
+    }
+
+    #[inline(always)]
+    fn flush(&mut self) -> io::Result<()> { Ok(()) }
 }
 
 /// Atomic Read-Only Iobuf
