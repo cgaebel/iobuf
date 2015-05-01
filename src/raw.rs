@@ -3,6 +3,7 @@ use alloc::heap;
 use core::nonzero::NonZero;
 
 use std::fmt::{self, Formatter};
+use std::io;
 use std::marker::{NoCopy, PhantomData};
 use std::mem;
 use std::ptr;
@@ -197,6 +198,11 @@ fn allocator_returned_null() -> ! {
 #[cold]
 fn improperly_aligned_data(ptr: *mut u8) -> ! {
   panic!("{:?} is not aligned to {} bytes.", ptr, DATA_ALIGNMENT);
+}
+
+#[cold]
+pub fn write_failed() -> io::Result<usize> {
+  Err(io::Error::new(io::ErrorKind::Other, "No space left in iobuf."))
 }
 
 #[inline(always)]

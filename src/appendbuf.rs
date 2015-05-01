@@ -2,7 +2,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::{mem, io};
 use std::sync::Arc;
 
-use raw::{Allocator, RawIobuf};
+use raw::{Allocator, RawIobuf, write_failed};
 use impls::AROIobuf;
 use intlike::IntLike;
 use iobuf::Iobuf;
@@ -526,15 +526,14 @@ impl<'a> Drop for AppendBuf<'a> {
 }
 
 impl<'a> io::Write for AppendBuf<'a> {
-    #[inline]
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let readamount = buf.len();
-        self.fill(buf)
-            .map(|()| readamount)
-            .map_err(|()| io::Error::new(io::ErrorKind::Other, "No space in AppendBuf"))
+  #[inline]
+  fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+    match self.fill(buf) {
+      Ok(())  => Ok(buf.len()),
+      Err(()) => write_failed(),
     }
+  }
 
-    #[inline(always)]
-    fn flush(&mut self) -> io::Result<()> { Ok(()) }
+  #[inline(always)]
+  fn flush(&mut self) -> io::Result<()> { Ok(()) }
 }
-
