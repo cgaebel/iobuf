@@ -514,43 +514,36 @@ impl<Buf: Iobuf> BufSpan<Buf> {
   /// ```
   #[inline(always)]
   pub fn push(&mut self, b: Buf) {
-    match self.try_to_extend(b) {
-      None    => {},
-      Some(b) => self.slow_push(b),
+    if let Some(b) = self.try_to_extend(b) {
+      self.slow_push(b);
     }
   }
 
   /// The slow path during a push. This is only taken if a `BufSpan` must span
   /// multiple backing buffers.
-  #[cold]
   fn slow_push(&mut self, b: Buf) {
-    match *self {
-      Empty  => unreachable!(),
-      One(_) => {},
-      Many(ref mut v) => unsafe {
+    if let Many(ref mut v) = *self {
+      unsafe {
         let last_pos = v.len() - 1;
-        match v.get_unchecked_mut(last_pos).extend_with(&b) {
-          Ok (()) => {},
-          Err(()) => v.push(b),
+        if let Err(()) = v.get_unchecked_mut(last_pos).extend_with(&b) {
+          v.push(b);
         }
-        return;
       }
-    }
-
-    // Need to upgrade from a `One` into a `Many`. This requires replacement.
-    let this = mem::replace(self, Empty);
-    // We know that we're empty, therefore no drop glue needs to be run.
-    unsafe {
-      move_val_init(self,
-        match this {
-          One(b0) => {
+    } else {
+      // Need to upgrade from a `One` into a `Many`. This requires replacement.
+      let this = mem::replace(self, Empty);
+      // We know that we're empty, therefore no drop glue needs to be run.
+      unsafe {
+        move_val_init(self,
+          if let One(b0) = this {
             let mut v = Vec::with_capacity(2);
             v.push(b0);
             v.push(b);
             Many(v)
-          },
-          _ => unreachable!(),
-        })
+          } else {
+            unreachable!()
+          })
+      }
     }
   }
 
