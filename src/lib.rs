@@ -42,6 +42,13 @@
 #![feature(filling_drop)]
 #![feature(plugin)]
 #![feature(unsafe_no_drop_flag)]
+#![feature(core_intrinsics)]
+#![feature(iter_order)]
+#![feature(nonzero)]
+#![feature(raw)]
+#![feature(heap_api)]
+#![feature(iter_arith)]
+#![feature(num_bits_bytes)]
 
 #![feature(alloc)]
 #![feature(core)]

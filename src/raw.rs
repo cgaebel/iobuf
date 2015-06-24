@@ -4,7 +4,7 @@ use core::nonzero::NonZero;
 
 use std::fmt::{self, Formatter};
 use std::io;
-use std::marker::{NoCopy, PhantomData};
+use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
 use std::raw::{self, Repr};
@@ -227,7 +227,6 @@ pub struct RawIobuf<'a> {
   hi:     u32,
   hi_max: u32,
   lifetm: PhantomData<&'a ()>,
-  nocopy: NoCopy,
 }
 
 /// Make sure the compiler doesn't resize this to something silly.
@@ -276,7 +275,6 @@ impl<'a> RawIobuf<'a> {
         hi:     len as u32,
         hi_max: len as u32,
         lifetm: PhantomData,
-        nocopy: NoCopy,
       }
     }
   }
@@ -351,7 +349,6 @@ impl<'a> RawIobuf<'a> {
       hi:     0,
       hi_max: 0,
       lifetm: PhantomData,
-      nocopy: NoCopy,
     }
   }
 
@@ -410,7 +407,6 @@ impl<'a> RawIobuf<'a> {
       hi:     self.hi,
       hi_max: self.hi_max,
       lifetm: PhantomData,
-      nocopy: NoCopy,
     }
   }
 
@@ -453,7 +449,6 @@ impl<'a> RawIobuf<'a> {
       hi:     self.hi,
       hi_max: self.hi_max,
       lifetm: PhantomData,
-      nocopy: NoCopy,
     }
   }
 
@@ -561,7 +556,6 @@ impl<'a> RawIobuf<'a> {
         hi:     len as u32,
         hi_max: len as u32,
         lifetm: PhantomData,
-        nocopy: NoCopy,
       }
     }
   }
