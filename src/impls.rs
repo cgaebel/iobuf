@@ -117,7 +117,7 @@ impl<'a> io::Write for RWIobuf<'a> {
 /// 0xFF, and consuming/validating these numbers in parallel in 4 other threads:
 ///
 /// ```rust
-/// #![feature(std_misc)]
+/// #![feature(std_misc, future)]
 /// use iobuf::{RWIobuf, AROIobuf, Iobuf};
 /// use std::sync::Future;
 ///
