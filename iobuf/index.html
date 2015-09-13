@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `iobuf` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, iobuf">
+
+    <title>iobuf - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'></p><script>window.sidebarCurrent = {name: 'iobuf', ty: 'mod', relpath: '../'};</script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>iobuf</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-0' class='srclink' href='../src/iobuf/lib.rs.html#1-78' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>A contiguous region of bytes, useful for I/O operations.</p>
+
+<p>An Iobuf consists of:</p>
+
+<ul>
+<li>a buffer</li>
+<li>limits   (a subrange of the buffer)</li>
+<li>a window (a subrange of the limits)</li>
+</ul>
+
+<p>All iobuf operations are restricted to operate within the limits. Initially,
+the window of an Iobuf is identical to the limits. If you have an <code>&amp;mut</code> to
+an Iobuf, you may change the window and limits. If you only have a <code>&amp;</code>, you
+may not. Similarly, if you have a <code>RWIobuf</code>, you may modify the data in the
+buffer. If you have a <code>ROIobuf</code>, you may not.</p>
+
+<p>The limits can be <code>narrow</code>ed, but never widened. The window may be set to
+any arbitrary subrange of the limits.</p>
+
+<p>Iobufs are cheap to <code>clone</code>, since the buffers are refcounted. Use this to
+construct multiple views into the same data.</p>
+
+<p>To keep the struct small (24 bytes!), the maximum size of an Iobuf is 2 GB.
+Please let me know if you need more than this. I have never before seen a
+use case for Iobufs larger than 2 GB, and it gives us a 40% smaller struct
+compared to supporting INT64_MAX bytes. The improved size allows much better
+register/cache usage and faster moves, both of which are critical for
+performance.</p>
+
+<p>Although this library is designed for efficiency, and hence gives you lots
+of ways to omit bounds checks, that does not mean it&#39;s recommended you do.
+They merely provide a way for you to manually bounds check a whole bunch
+of data at once (with <code>check_range</code>), and then <code>peek</code> or <code>poke</code> out the data
+you want. See the documentation for <code>check_range</code> for an example.</p>
+
+<p>To repeat: Do not omit bounds checks unless you&#39;ve checked <em>very</em> carefully
+that they are redundant. This can cause terrifying security issues.</p>
+
+<p>Fun tidbit: Data allocated by <code>Iobuf</code> is guaranteed to be aligned to 16 bytes.
+This may be abused to write efficient SIMD data processing code.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.AROIobuf.html'
+                               title='iobuf::AROIobuf'>AROIobuf</a></td>
+                        <td class='docblock short'>
+                             <p>Atomic Read-Only Iobuf</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.AppendBuf.html'
+                               title='iobuf::AppendBuf'>AppendBuf</a></td>
+                        <td class='docblock short'>
+                             <p>Append-Only Input Buffer</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.IORingbuf.html'
+                               title='iobuf::IORingbuf'>IORingbuf</a></td>
+                        <td class='docblock short'>
+                             <p>A ring buffer implemented with <code>Iobuf</code>s.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ROIobuf.html'
+                               title='iobuf::ROIobuf'>ROIobuf</a></td>
+                        <td class='docblock short'>
+                             <p>Read-Only Iobuf</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.RWIobuf.html'
+                               title='iobuf::RWIobuf'>RWIobuf</a></td>
+                        <td class='docblock short'>
+                             <p>Read-Write Iobuf</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.UniqueIobuf.html'
+                               title='iobuf::UniqueIobuf'>UniqueIobuf</a></td>
+                        <td class='docblock short'>
+                             <p>A unique, immutable Iobuf.</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.BufSpan.html'
+                               title='iobuf::BufSpan'>BufSpan</a></td>
+                        <td class='docblock short'>
+                             <p>A span over potentially many Iobufs. This is useful as a &quot;string&quot; type where
+the contents of the string can come from multiple IObufs, and you want to
+avoid copying the buffer contents unnecessarily.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.SpanIter.html'
+                               title='iobuf::SpanIter'>SpanIter</a></td>
+                        <td class='docblock short'>
+                             <p>An iterator over references to buffers inside a <code>BufSpan</code>.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.SpanMoveIter.html'
+                               title='iobuf::SpanMoveIter'>SpanMoveIter</a></td>
+                        <td class='docblock short'>
+                             <p>A moving iterator over buffers inside a <code>BufSpan</code>.</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.Allocator.html'
+                               title='iobuf::Allocator'>Allocator</a></td>
+                        <td class='docblock short'>
+                             <p>Used to provide custom memory to Iobufs, instead of just using the heap.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.IntLike.html'
+                               title='iobuf::IntLike'>IntLike</a></td>
+                        <td class='docblock short'>
+                             <p>8-64 bit integer types. Not floating point.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.Iobuf.html'
+                               title='iobuf::Iobuf'>Iobuf</a></td>
+                        <td class='docblock short'>
+                             <p>Input/Output Buffer</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='type' href='type.ByteIter.html'
+                               title='iobuf::ByteIter'>ByteIter</a></td>
+                        <td class='docblock short'>
+                             <p>An iterator over the bytes in a <code>BufSpan</code>.</p>
+
+                        </td>
+                    </tr>
+                </table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "iobuf";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>

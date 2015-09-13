@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Iobuf` trait in crate `iobuf`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Iobuf">
+
+    <title>iobuf::Iobuf - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>iobuf</a></p><script>window.sidebarCurrent = {name: 'Iobuf', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content trait">
+<h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>iobuf</a>::<wbr><a class='trait' href=''>Iobuf</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-6102' class='srclink' href='../src/iobuf/iobuf.rs.html#29-1097' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait Iobuf: <a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> {
+    fn <a href='#tymethod.deep_clone' class='fnname'>deep_clone</a>(&amp;self) -&gt; <a class='struct' href='../iobuf/struct.RWIobuf.html' title='iobuf::RWIobuf'>RWIobuf</a>&lt;'static&gt;;
+    fn <a href='#tymethod.deep_clone_with_allocator' class='fnname'>deep_clone_with_allocator</a>(&amp;self, allocator: <a class='struct' href='https://doc.rust-lang.org/nightly/alloc/arc/struct.Arc.html' title='alloc::arc::Arc'>Arc</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../iobuf/trait.Allocator.html' title='iobuf::Allocator'>Allocator</a>&gt;&gt;) -&gt; <a class='struct' href='../iobuf/struct.RWIobuf.html' title='iobuf::RWIobuf'>RWIobuf</a>&lt;'static&gt;;
+    fn <a href='#tymethod.unique' class='fnname'>unique</a>(self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../iobuf/struct.UniqueIobuf.html' title='iobuf::UniqueIobuf'>UniqueIobuf</a>, Self&gt;;
+    fn <a href='#tymethod.atomic_read_only' class='fnname'>atomic_read_only</a>(self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../iobuf/struct.AROIobuf.html' title='iobuf::AROIobuf'>AROIobuf</a>, Self&gt;;
+    fn <a href='#tymethod.len' class='fnname'>len</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>;
+    fn <a href='#tymethod.cap' class='fnname'>cap</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>;
+    fn <a href='#tymethod.is_empty' class='fnname'>is_empty</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>;
+    unsafe fn <a href='#tymethod.as_window_slice' class='fnname'>as_window_slice</a>&lt;'b&gt;(&amp;'b self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;'b [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>;
+    unsafe fn <a href='#tymethod.as_limit_slice' class='fnname'>as_limit_slice</a>&lt;'b&gt;(&amp;'b self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;'b [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>;
+    fn <a href='#tymethod.sub_window' class='fnname'>sub_window</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.sub_window_from' class='fnname'>sub_window_from</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.sub_window_to' class='fnname'>sub_window_to</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    unsafe fn <a href='#tymethod.unsafe_sub_window' class='fnname'>unsafe_sub_window</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    unsafe fn <a href='#tymethod.unsafe_sub_window_from' class='fnname'>unsafe_sub_window_from</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    unsafe fn <a href='#tymethod.unsafe_sub_window_to' class='fnname'>unsafe_sub_window_to</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    fn <a href='#tymethod.sub' class='fnname'>sub</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.sub_from' class='fnname'>sub_from</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.sub_to' class='fnname'>sub_to</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    unsafe fn <a href='#tymethod.unsafe_sub' class='fnname'>unsafe_sub</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    unsafe fn <a href='#tymethod.unsafe_sub_from' class='fnname'>unsafe_sub_from</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    unsafe fn <a href='#tymethod.unsafe_sub_to' class='fnname'>unsafe_sub_to</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    fn <a href='#tymethod.set_limits_and_window' class='fnname'>set_limits_and_window</a>(&amp;mut self, limits: <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</a>, window: <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.narrow' class='fnname'>narrow</a>(&amp;mut self);
+    fn <a href='#tymethod.advance' class='fnname'>advance</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    unsafe fn <a href='#tymethod.unsafe_advance' class='fnname'>unsafe_advance</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    fn <a href='#tymethod.extend' class='fnname'>extend</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    unsafe fn <a href='#tymethod.unsafe_extend' class='fnname'>unsafe_extend</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    fn <a href='#tymethod.is_extended_by' class='fnname'>is_extended_by</a>&lt;Buf: <a class='trait' href='../iobuf/trait.Iobuf.html' title='iobuf::Iobuf'>Iobuf</a>&gt;(&amp;self, other: &amp;Buf) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>;
+    fn <a href='#tymethod.extend_with' class='fnname'>extend_with</a>&lt;Buf: <a class='trait' href='../iobuf/trait.Iobuf.html' title='iobuf::Iobuf'>Iobuf</a>&gt;(&amp;mut self, other: &amp;Buf) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.resize' class='fnname'>resize</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    unsafe fn <a href='#tymethod.unsafe_resize' class='fnname'>unsafe_resize</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    fn <a href='#tymethod.split_at' class='fnname'>split_at</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(Self, Self)</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    unsafe fn <a href='#tymethod.unsafe_split_at' class='fnname'>unsafe_split_at</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(Self, Self)</a>;
+    fn <a href='#tymethod.split_start_at' class='fnname'>split_start_at</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;Self, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    unsafe fn <a href='#tymethod.unsafe_split_start_at' class='fnname'>unsafe_split_start_at</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; Self;
+    fn <a href='#tymethod.rewind' class='fnname'>rewind</a>(&amp;mut self);
+    fn <a href='#tymethod.reset' class='fnname'>reset</a>(&amp;mut self);
+    fn <a href='#tymethod.flip_lo' class='fnname'>flip_lo</a>(&amp;mut self);
+    fn <a href='#tymethod.flip_hi' class='fnname'>flip_hi</a>(&amp;mut self);
+    fn <a href='#tymethod.lo_space' class='fnname'>lo_space</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>;
+    fn <a href='#tymethod.hi_space' class='fnname'>hi_space</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>;
+    fn <a href='#tymethod.peek' class='fnname'>peek</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, dst: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;mut [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.peek_be' class='fnname'>peek_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;T, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.peek_le' class='fnname'>peek_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;T, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.consume' class='fnname'>consume</a>(&amp;mut self, dst: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;mut [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.consume_be' class='fnname'>consume_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;T, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.consume_le' class='fnname'>consume_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;T, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.check_range' class='fnname'>check_range</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.check_range_usize' class='fnname'>check_range_usize</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;;
+    fn <a href='#tymethod.check_range_fail' class='fnname'>check_range_fail</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>);
+    fn <a href='#tymethod.check_range_usize_fail' class='fnname'>check_range_usize_fail</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>);
+    unsafe fn <a href='#tymethod.unsafe_peek' class='fnname'>unsafe_peek</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, dst: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;mut [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>);
+    unsafe fn <a href='#tymethod.unsafe_peek_be' class='fnname'>unsafe_peek_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; T;
+    unsafe fn <a href='#tymethod.unsafe_peek_le' class='fnname'>unsafe_peek_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; T;
+    unsafe fn <a href='#tymethod.unsafe_consume' class='fnname'>unsafe_consume</a>(&amp;mut self, dst: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;mut [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>);
+    unsafe fn <a href='#tymethod.unsafe_consume_be' class='fnname'>unsafe_consume_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self) -&gt; T;
+    unsafe fn <a href='#tymethod.unsafe_consume_le' class='fnname'>unsafe_consume_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self) -&gt; T;
+    fn <a href='#tymethod.invariant' class='fnname'>invariant</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a class='struct' href='https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/collections/string/struct.String.html' title='collections::string::String'>String</a>&gt;&gt;;
+    unsafe fn <a href='#tymethod.as_raw' class='fnname'>as_raw</a>&lt;'b&gt;(&amp;'b self) -&gt; &amp;'b RawIobuf&lt;'b&gt;;
+    fn <a href='#tymethod.ptr' class='fnname'>ptr</a>(&amp;self) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/core/nonzero/struct.NonZero.html' title='core::nonzero::NonZero'>NonZero</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut <a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a></a>&gt;;
+    fn <a href='#tymethod.is_owned' class='fnname'>is_owned</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>;
+    fn <a href='#tymethod.lo_min' class='fnname'>lo_min</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>;
+    fn <a href='#tymethod.lo' class='fnname'>lo</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>;
+    fn <a href='#tymethod.hi' class='fnname'>hi</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>;
+    fn <a href='#tymethod.hi_max' class='fnname'>hi_max</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>;
+}</pre><div class='docblock'><p>Input/Output Buffer</p>
+
+<p>Have your functions take a generic IObuf when they don&#39;t modify the buffer
+contents. This allows them to be used with both <code>ROIobuf</code>s and <code>RWIobuf</code>s.</p>
+
+<p><code>peek</code> accesses a value at a position relative to the start of the
+window without advancing, and is meant to be used with <code>try!</code>. Its dual,
+<code>poke</code>, is only implemented for <code>RWIobuf</code>, since it needs to write into the
+buffer.</p>
+
+<p><code>consume</code> accesses a value at the beginning of the window, and advances the
+window to no longer cover include it. Its dual, <code>fill</code>, is only implemented
+for <code>RWIobuf</code>, since it needs to write into the buffer.</p>
+
+<p>A suffix <code>_be</code> means the data will be read big-endian. A suffix <code>_le</code> means
+the data will be read little-endian.</p>
+
+<p>The <code>unsafe_</code> prefix means the function omits bounds checks. Misuse can
+easily cause security issues. Be careful!</p>
+</div>
+            <h2 id='required-methods'>Required Methods</h2>
+            <div class='methods'>
+        <h3 id='tymethod.deep_clone' class='method stab '><code>fn <a href='#tymethod.deep_clone' class='fnname'>deep_clone</a>(&amp;self) -&gt; <a class='struct' href='../iobuf/struct.RWIobuf.html' title='iobuf::RWIobuf'>RWIobuf</a>&lt;'static&gt;</code></h3><div class='docblock'><p>Copies the data byte-by-byte in the Iobuf into a new, writeable Iobuf.
+The new Iobuf and the old Iobuf will not share storage.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>s</span> <span class='op'>=</span> [ <span class='number'>1</span>, <span class='number'>2</span> ];
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>s</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub_from</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>b</span>.<span class='ident'>deep_clone</span>();
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke_be</span>(<span class='number'>0</span>, <span class='number'>0u8</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>c</span>.<span class='ident'>peek_be</span>::<span class='op'>&lt;</span><span class='ident'>u8</span><span class='op'>&gt;</span>(<span class='number'>0</span>), <span class='prelude-val'>Ok</span>(<span class='number'>2u8</span>));</pre>
+</div><h3 id='tymethod.deep_clone_with_allocator' class='method stab '><code>fn <a href='#tymethod.deep_clone_with_allocator' class='fnname'>deep_clone_with_allocator</a>(&amp;self, allocator: <a class='struct' href='https://doc.rust-lang.org/nightly/alloc/arc/struct.Arc.html' title='alloc::arc::Arc'>Arc</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../iobuf/trait.Allocator.html' title='iobuf::Allocator'>Allocator</a>&gt;&gt;) -&gt; <a class='struct' href='../iobuf/struct.RWIobuf.html' title='iobuf::RWIobuf'>RWIobuf</a>&lt;'static&gt;</code></h3><div class='docblock'><p>Copies the data byte-by-byte in the Iobuf into a new, writable Iobuf.
+The new Iobuf will have storage allocated out of <code>allocator</code>, and will not
+share the buffer with the original Iobuf.</p>
+</div><h3 id='tymethod.unique' class='method stab '><code>fn <a href='#tymethod.unique' class='fnname'>unique</a>(self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../iobuf/struct.UniqueIobuf.html' title='iobuf::UniqueIobuf'>UniqueIobuf</a>, Self&gt;</code></h3><div class='docblock'><p>Returns <code>Ok</code> if the Iobuf is the last to reference the underlying data,
+and converts it to a <code>UniqueIobuf</code> for sending to another task. This can
+also be used to safely convert from a <code>ROIobuf</code> to a <code>RWIobuf</code>, and to
+downgrade atomically refcounted Iobufs to non-atomically refcounted ones.</p>
+
+<p>Only Iobufs which were originally allocated on the heap (for example, with
+a <code>_copy</code> constructor or <code>RWIobuf::new</code>) may be converted to a
+<code>UniqueIobuf</code>.</p>
+
+<p>Returns <code>Err</code> if the buffer is not the last to reference the underlying
+data. If this case is hit, the buffer passed by value is returned by value.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>from_str_copy</span>(<span class='string'>&quot;hello, world&quot;</span>);
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>unique</span>().<span class='ident'>is_ok</span>());
+
+<span class='kw'>let</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>from_str_copy</span>(<span class='string'>&quot;hi&quot;</span>);
+<span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>b</span>.<span class='ident'>clone</span>();
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>unique</span>().<span class='ident'>is_err</span>());
+<span class='kw'>let</span> <span class='ident'>d</span> <span class='op'>=</span> <span class='ident'>c</span>.<span class='ident'>clone</span>();
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>d</span>.<span class='ident'>unique</span>().<span class='ident'>is_err</span>());
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>c</span>.<span class='ident'>unique</span>().<span class='ident'>is_ok</span>());</pre>
+</div><h3 id='tymethod.atomic_read_only' class='method stab '><code>fn <a href='#tymethod.atomic_read_only' class='fnname'>atomic_read_only</a>(self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../iobuf/struct.AROIobuf.html' title='iobuf::AROIobuf'>AROIobuf</a>, Self&gt;</code></h3><div class='docblock'><p>Returns <code>Ok</code> if the Iobuf is the last to reference the underlying data,
+and upgrades it to an <code>AROIobuf</code> which can be sent over channels and
+<code>Arc</code>ed with impunity. This is extremely useful in situations where Iobufs
+are created and written in one thread, and consumed in another.</p>
+
+<p>Returns <code>Err</code> if the buffer is not the last to reference the underlying
+data. If this case is hit, the buffer passed by value is returned by value.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>from_str_copy</span>(<span class='string'>&quot;hello, world&quot;</span>);
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>atomic_read_only</span>().<span class='ident'>is_ok</span>());
+
+<span class='kw'>let</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>from_str_copy</span>(<span class='string'>&quot;hi&quot;</span>);
+<span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>b</span>.<span class='ident'>clone</span>();
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>atomic_read_only</span>().<span class='ident'>is_err</span>());
+<span class='kw'>let</span> <span class='ident'>d</span> <span class='op'>=</span> <span class='ident'>c</span>.<span class='ident'>clone</span>();
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>d</span>.<span class='ident'>atomic_read_only</span>().<span class='ident'>is_err</span>());
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>c</span>.<span class='ident'>atomic_read_only</span>().<span class='ident'>is_ok</span>());</pre>
+</div><h3 id='tymethod.len' class='method stab '><code>fn <a href='#tymethod.len' class='fnname'>len</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h3><div class='docblock'><p>Returns the size of the window.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;Hello&quot;</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>len</span>(), <span class='number'>5</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>len</span>(), <span class='number'>3</span>);</pre>
+</div><h3 id='tymethod.cap' class='method stab '><code>fn <a href='#tymethod.cap' class='fnname'>cap</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h3><div class='docblock'><p>Returns the size of the limits. The capacity of an iobuf can be reduced
+via <code>narrow</code>.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;Hello&quot;</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>cap</span>(), <span class='number'>5</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>cap</span>(), <span class='number'>5</span>);
+
+<span class='ident'>b</span>.<span class='ident'>narrow</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>cap</span>(), <span class='number'>3</span>);</pre>
+</div><h3 id='tymethod.is_empty' class='method stab '><code>fn <a href='#tymethod.is_empty' class='fnname'>is_empty</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h3><div class='docblock'><p><code>true</code> if <code>len() == 0</code>.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;&quot;</span>).<span class='ident'>is_empty</span>());
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='op'>!</span><span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;a&quot;</span>).<span class='ident'>is_empty</span>());</pre>
+</div><h3 id='tymethod.as_window_slice' class='method stab '><code>unsafe fn <a href='#tymethod.as_window_slice' class='fnname'>as_window_slice</a>&lt;'b&gt;(&amp;'b self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;'b [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a></code></h3><div class='docblock'><p>Reads the data in the window as an immutable slice. Note that <code>Peek</code>s
+and <code>Poke</code>s into the iobuf will change the contents of the slice, even
+though it advertises itself as immutable. Therefore, this function is
+<code>unsafe</code>.</p>
+
+<p>To use this function safely, you must manually ensure that the slice never
+interacts with the same Iobuf. If you take a slice of an Iobuf, you can
+immediately poke it into itself. This is unsafe, and undefined. However,
+it can be safely poked into a <em>different</em> iobuf without issue.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>unsafe</span> {
+  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hello&quot;</span>);
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;llo&quot;</span>);
+}</pre>
+</div><h3 id='tymethod.as_limit_slice' class='method stab '><code>unsafe fn <a href='#tymethod.as_limit_slice' class='fnname'>as_limit_slice</a>&lt;'b&gt;(&amp;'b self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;'b [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a></code></h3><div class='docblock'><p>Reads the data in the limits as an immutable slice. Note that <code>Peek</code>s
+and <code>Poke</code>s into the iobuf will change the contents of the slice, even
+though it advertises itself as immutable. Therefore, this function is
+<code>unsafe</code>.</p>
+
+<p>To use this function safely, you must manually ensure that the slice never
+interacts with the same Iobuf. If you take a slice of an Iobuf, you can
+immediately poke it into itself. This is unsafe, and undefined. However,
+it can be safely poked into a <em>different</em> iobuf without issue.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>unsafe</span> {
+  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_limit_slice</span>(), <span class='string'>b&quot;hello&quot;</span>);
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_limit_slice</span>(), <span class='string'>b&quot;hello&quot;</span>);
+  <span class='ident'>b</span>.<span class='ident'>narrow</span>();
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_limit_slice</span>(), <span class='string'>b&quot;llo&quot;</span>);
+}</pre>
+</div><h3 id='tymethod.sub_window' class='method stab '><code>fn <a href='#tymethod.sub_window' class='fnname'>sub_window</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Changes the Iobuf&#39;s bounds to the subrange specified by <code>pos</code> and <code>len</code>,
+which must lie within the current window.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub_window</span>(<span class='number'>1</span>, <span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;ell&quot;</span>) };
+<span class='comment'>// The limits are unchanged. If you just want them to match the bounds, use</span>
+<span class='comment'>// `sub` and friends.</span>
+<span class='ident'>b</span>.<span class='ident'>reset</span>();
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hello&quot;</span>) };</pre>
+
+<p>If your position and length do not lie in the current window, you will get
+an error.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub_window</span>(<span class='number'>0</span>, <span class='number'>5</span>), <span class='prelude-val'>Err</span>(())); <span class='comment'>// boom</span></pre>
+
+<p>If you want to slice from the start, use <code>sub_to</code>:</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub_window_to</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hel&quot;</span>) };</pre>
+
+<p>If you want to slice to the end, use <code>sub_from</code>:</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub_window_from</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;llo&quot;</span>) };</pre>
+</div><h3 id='tymethod.sub_window_from' class='method stab '><code>fn <a href='#tymethod.sub_window_from' class='fnname'>sub_window_from</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Changes the Iobuf&#39;s bounds to start at <code>pos</code>, and go to the end of the
+current window.</p>
+</div><h3 id='tymethod.sub_window_to' class='method stab '><code>fn <a href='#tymethod.sub_window_to' class='fnname'>sub_window_to</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Changes the Iobuf&#39;s bounds to extend for only <code>len</code> bytes.</p>
+
+<p>This is the same as <code>resize</code>, but might make more semantic sense at the
+call site depending on context.</p>
+</div><h3 id='tymethod.unsafe_sub_window' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_sub_window' class='fnname'>unsafe_sub_window</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>The same as <code>sub_window</code>, but no bounds checks are performed. You should
+probably just use <code>sub_window</code>.</p>
+</div><h3 id='tymethod.unsafe_sub_window_from' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_sub_window_from' class='fnname'>unsafe_sub_window_from</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>The same as <code>sub_window_from</code>, but no bounds checks are performed. You
+should probably just use <code>sub_window_from</code>.</p>
+</div><h3 id='tymethod.unsafe_sub_window_to' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_sub_window_to' class='fnname'>unsafe_sub_window_to</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>The same as <code>sub_window_to</code>, but no bounds checks are performed. You
+should probably just use <code>sub_window_to</code>.</p>
+</div><h3 id='tymethod.sub' class='method stab '><code>fn <a href='#tymethod.sub' class='fnname'>sub</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Changes the Iobuf&#39;s limits and bounds to the subrange specified by
+<code>pos</code> and <code>len</code>, which must lie within the current window.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub</span>(<span class='number'>1</span>, <span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;ell&quot;</span>) };
+
+<span class='comment'>// The limits are changed, too! If you just want to change the bounds, use</span>
+<span class='comment'>// `sub_window` and friends.</span>
+<span class='ident'>b</span>.<span class='ident'>reset</span>();
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;ell&quot;</span>) };</pre>
+
+<p>If your position and length do not lie in the current window, you will get
+an error.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub</span>(<span class='number'>0</span>, <span class='number'>5</span>), <span class='prelude-val'>Err</span>(())); <span class='comment'>// boom</span></pre>
+
+<p>If you want to slice from the start, use <code>sub_to</code>:</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub_to</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hel&quot;</span>) };</pre>
+
+<p>If you want to slice to the end, use <code>sub_from</code>:</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub_from</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;llo&quot;</span>) };</pre>
+</div><h3 id='tymethod.sub_from' class='method stab '><code>fn <a href='#tymethod.sub_from' class='fnname'>sub_from</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Changes the Iobuf&#39;s limits and bounds to start from <code>pos</code> and extend to
+the end of the current window.</p>
+</div><h3 id='tymethod.sub_to' class='method stab '><code>fn <a href='#tymethod.sub_to' class='fnname'>sub_to</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Changes the Iobuf&#39;s limits and bounds to start at the beginning of the
+current window, and extend for <code>len</code> bytes.</p>
+</div><h3 id='tymethod.unsafe_sub' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_sub' class='fnname'>unsafe_sub</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>The same as <code>sub</code>, but no bounds checks are performed. You should probably
+just use <code>sub</code>.</p>
+</div><h3 id='tymethod.unsafe_sub_from' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_sub_from' class='fnname'>unsafe_sub_from</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>The same as <code>sub_from</code>, but no bounds checks are performed. You should
+probably just use <code>sub_from</code>.</p>
+</div><h3 id='tymethod.unsafe_sub_to' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_sub_to' class='fnname'>unsafe_sub_to</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>The same as <code>sub_to</code>, but no bounds checks are performed. You should
+probably just use <code>sub_to</code>.</p>
+</div><h3 id='tymethod.set_limits_and_window' class='method stab '><code>fn <a href='#tymethod.set_limits_and_window' class='fnname'>set_limits_and_window</a>(&amp;mut self, limits: <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</a>, window: <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Overrides the existing limits and window of the Iobuf, returning <code>Err(())</code>
+if attempting to widen either of them.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>set_limits_and_window</span>((<span class='number'>1</span>, <span class='number'>3</span>), (<span class='number'>2</span>, <span class='number'>3</span>)), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>cap</span>(), <span class='number'>2</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>len</span>(), <span class='number'>1</span>);
+<span class='comment'>// trying to shrink the limits...</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>set_limits_and_window</span>((<span class='number'>1</span>, <span class='number'>4</span>), (<span class='number'>2</span>, <span class='number'>2</span>)), <span class='prelude-val'>Err</span>(()));
+<span class='comment'>// trying to shrink the window...</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>set_limits_and_window</span>((<span class='number'>1</span>, <span class='number'>3</span>), (<span class='number'>2</span>, <span class='number'>4</span>)), <span class='prelude-val'>Err</span>(()));</pre>
+</div><h3 id='tymethod.narrow' class='method stab '><code>fn <a href='#tymethod.narrow' class='fnname'>narrow</a>(&amp;mut self)</code></h3><div class='docblock'><p>Sets the limits to the current window.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='ident'>b</span>.<span class='ident'>narrow</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>cap</span>(), <span class='number'>3</span>);</pre>
+</div><h3 id='tymethod.advance' class='method stab '><code>fn <a href='#tymethod.advance' class='fnname'>advance</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Advances the lower bound of the window by <code>len</code>. <code>Err(())</code> will be
+returned if you advance past the upper bound of the window.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>3</span>), <span class='prelude-val'>Err</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;lo&quot;</span>); }</pre>
+</div><h3 id='tymethod.unsafe_advance' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_advance' class='fnname'>unsafe_advance</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>Advances the lower bound of the window by <code>len</code>. No bounds checking will
+be performed.</p>
+
+<p>A common pattern with <code>unsafe_advance</code> is to consolidate multiple bounds
+checks into one. In this example, O(n) bounds checks are consolidated into
+O(1) bounds checks:</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>result</span>::<span class='prelude-ty'>Result</span>::{<span class='self'>self</span>,<span class='prelude-val'>Ok</span>};
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [<span class='number'>2</span>, <span class='number'>0x12</span>, <span class='number'>0x34</span>, <span class='number'>0x56</span>, <span class='number'>0x78</span>];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='kw'>fn</span> <span class='ident'>parse</span><span class='op'>&lt;</span><span class='ident'>B</span>: <span class='ident'>Iobuf</span><span class='op'>&gt;</span>(<span class='ident'>b</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>B</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>u16</span>, ()<span class='op'>&gt;</span> {
+  <span class='kw'>let</span> <span class='ident'>num_shorts</span>: <span class='ident'>u8</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>());
+  <span class='kw'>let</span> <span class='ident'>short_size</span> <span class='op'>=</span> <span class='ident'>mem</span>::<span class='ident'>size_of</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>() <span class='kw'>as</span> <span class='ident'>u32</span>;
+  <span class='kw'>let</span> <span class='ident'>num_bytes</span> <span class='op'>=</span> <span class='ident'>num_shorts</span> <span class='kw'>as</span> <span class='ident'>u32</span> <span class='op'>*</span> <span class='ident'>short_size</span>;
+
+  <span class='kw'>unsafe</span> {
+    <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range</span>(<span class='number'>0</span>, <span class='ident'>num_bytes</span>));
+
+    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>sum</span> <span class='op'>=</span> <span class='number'>0u16</span>;
+
+    <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> (<span class='number'>0</span> .. <span class='ident'>num_shorts</span> <span class='kw'>as</span> <span class='ident'>u32</span>).<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span> <span class='op'>*</span> <span class='ident'>short_size</span>) {
+      <span class='ident'>sum</span> <span class='op'>+=</span> <span class='ident'>b</span>.<span class='ident'>unsafe_peek_be</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>(<span class='ident'>i</span>);
+    }
+
+    <span class='ident'>b</span>.<span class='ident'>unsafe_advance</span>(<span class='ident'>num_bytes</span>);
+
+    <span class='prelude-val'>Ok</span>(<span class='ident'>sum</span>)
+  }
+}
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>parse</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>b</span>), <span class='prelude-val'>Ok</span>(<span class='number'>0x1234</span> <span class='op'>+</span> <span class='number'>0x5678</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>len</span>(), <span class='number'>0</span>);</pre>
+
+<p>Alternatively, you could use <code>unsafe_consume</code> in a similar, arguably
+clearer way:</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>result</span>::<span class='prelude-ty'>Result</span>::{<span class='self'>self</span>,<span class='prelude-val'>Ok</span>};
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [<span class='number'>2</span>, <span class='number'>0x12</span>, <span class='number'>0x34</span>, <span class='number'>0x56</span>, <span class='number'>0x78</span>];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='kw'>fn</span> <span class='ident'>parse</span><span class='op'>&lt;</span><span class='ident'>B</span>: <span class='ident'>Iobuf</span><span class='op'>&gt;</span>(<span class='ident'>b</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>B</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>u16</span>, ()<span class='op'>&gt;</span> {
+  <span class='kw'>let</span> <span class='ident'>num_shorts</span>: <span class='ident'>u8</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>());
+  <span class='kw'>let</span> <span class='ident'>short_size</span> <span class='op'>=</span> <span class='ident'>mem</span>::<span class='ident'>size_of</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>() <span class='kw'>as</span> <span class='ident'>u32</span>;
+  <span class='kw'>let</span> <span class='ident'>num_bytes</span> <span class='op'>=</span> <span class='ident'>num_shorts</span> <span class='kw'>as</span> <span class='ident'>u32</span> <span class='op'>*</span> <span class='ident'>short_size</span>;
+
+  <span class='kw'>unsafe</span> {
+    <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range</span>(<span class='number'>0</span>, <span class='ident'>num_bytes</span>));
+
+    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>sum</span> <span class='op'>=</span> <span class='number'>0u16</span>;
+
+    <span class='kw'>for</span> _ <span class='kw'>in</span> <span class='number'>0</span>..<span class='ident'>num_shorts</span> {
+      <span class='ident'>sum</span> <span class='op'>+=</span> <span class='ident'>b</span>.<span class='ident'>unsafe_consume_be</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>();
+    }
+
+    <span class='prelude-val'>Ok</span>(<span class='ident'>sum</span>)
+  }
+}
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>parse</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>b</span>), <span class='prelude-val'>Ok</span>(<span class='number'>0x1234</span> <span class='op'>+</span> <span class='number'>0x5678</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>len</span>(), <span class='number'>0</span>);</pre>
+</div><h3 id='tymethod.extend' class='method stab '><code>fn <a href='#tymethod.extend' class='fnname'>extend</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Advances the upper bound of the window by <code>len</code>. <code>Err(())</code> will be
+returned if you advance past the upper limit.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>extend</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hel&quot;</span>); }
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>extend</span>(<span class='number'>3</span>), <span class='prelude-val'>Err</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hel&quot;</span>); }</pre>
+</div><h3 id='tymethod.unsafe_extend' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_extend' class='fnname'>unsafe_extend</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>Advances the upper bound of the window by <code>len</code>. No bounds checking will
+be performed.</p>
+</div><h3 id='tymethod.is_extended_by' class='method stab '><code>fn <a href='#tymethod.is_extended_by' class='fnname'>is_extended_by</a>&lt;Buf: <a class='trait' href='../iobuf/trait.Iobuf.html' title='iobuf::Iobuf'>Iobuf</a>&gt;(&amp;self, other: &amp;Buf) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h3><div class='docblock'><p>Returns <code>true</code> if the <code>other</code> Iobuf&#39;s window is the region directly after
+our window. This does not inspect the buffer -- it only compares raw
+pointers.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str_copy</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>a</span>.<span class='ident'>clone</span>();
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>a</span>.<span class='ident'>clone</span>();
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>d</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str_copy</span>(<span class='string'>&quot;hello&quot;</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>.<span class='ident'>sub_window_to</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='comment'>// b actually IS an extension of a.</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub_window_from</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>.<span class='ident'>is_extended_by</span>(<span class='kw-2'>&amp;</span><span class='ident'>b</span>), <span class='boolval'>true</span>);
+
+<span class='comment'>// a == &quot;he&quot;, b == &quot;lo&quot;, it&#39;s missing the &quot;l&quot;, therefore not an extension.</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>c</span>.<span class='ident'>sub_window_from</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>is_extended_by</span>(<span class='kw-2'>&amp;</span><span class='ident'>a</span>), <span class='boolval'>false</span>);
+
+<span class='comment'>// Different allocations =&gt; not an extension.</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>d</span>.<span class='ident'>sub_window_from</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>.<span class='ident'>is_extended_by</span>(<span class='kw-2'>&amp;</span><span class='ident'>d</span>), <span class='boolval'>false</span>);</pre>
+</div><h3 id='tymethod.extend_with' class='method stab '><code>fn <a href='#tymethod.extend_with' class='fnname'>extend_with</a>&lt;Buf: <a class='trait' href='../iobuf/trait.Iobuf.html' title='iobuf::Iobuf'>Iobuf</a>&gt;(&amp;mut self, other: &amp;Buf) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Attempts to extend an Iobuf with the contents of another Iobuf. If this
+Iobuf&#39;s window is not the region directly before the other Iobuf&#39;s window,
+no extension will be performed and <code>Err(())</code> will be returned. If the
+operation was successful, <code>Ok(())</code> will be returned.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str_copy</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>a</span>.<span class='ident'>clone</span>();
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>a</span>.<span class='ident'>clone</span>();
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>d</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str_copy</span>(<span class='string'>&quot;hello&quot;</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>.<span class='ident'>sub_window_to</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='comment'>// Different allocations =&gt; not an extension.</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>d</span>.<span class='ident'>sub_window_from</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>.<span class='ident'>extend_with</span>(<span class='kw-2'>&amp;</span><span class='ident'>d</span>), <span class='prelude-val'>Err</span>(()));
+
+<span class='comment'>// b actually IS an extension of a.</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>sub_window_from</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>.<span class='ident'>extend_with</span>(<span class='kw-2'>&amp;</span><span class='ident'>b</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> {
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hello&quot;</span>);
+}
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>.<span class='ident'>sub_window_to</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='comment'>// a == &quot;he&quot;, b == &quot;lo&quot;, it&#39;s missing the &quot;l&quot;, therefore not an extension.</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>c</span>.<span class='ident'>sub_window_from</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>extend_with</span>(<span class='kw-2'>&amp;</span><span class='ident'>a</span>), <span class='prelude-val'>Err</span>(()));</pre>
+</div><h3 id='tymethod.resize' class='method stab '><code>fn <a href='#tymethod.resize' class='fnname'>resize</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Sets the length of the window, provided it does not exceed the limits.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_be</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(<span class='string'>b&#39;l&#39;</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='kw'>unsafe</span> { <span class='ident'>b</span>.<span class='ident'>as_window_slice</span>() }, <span class='string'>b&quot;hel&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_be</span>::<span class='op'>&lt;</span><span class='ident'>u8</span><span class='op'>&gt;</span>(<span class='number'>3</span>), <span class='prelude-val'>Err</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>5</span>), <span class='prelude-val'>Err</span>(()));</pre>
+</div><h3 id='tymethod.unsafe_resize' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_resize' class='fnname'>unsafe_resize</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>Sets the length of the window. No bounds checking will be performed.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+
+<span class='kw'>unsafe</span> {
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range</span>(<span class='number'>1</span>, <span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_be</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(<span class='string'>b&#39;e&#39;</span>));
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_be</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(<span class='string'>b&#39;l&#39;</span>));
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_be</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(<span class='string'>b&#39;l&#39;</span>));
+  <span class='ident'>b</span>.<span class='ident'>unsafe_resize</span>(<span class='number'>4</span>); <span class='comment'>// safe, since we already checked it.</span>
+}</pre>
+</div><h3 id='tymethod.split_at' class='method stab '><code>fn <a href='#tymethod.split_at' class='fnname'>split_at</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(Self, Self)</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Splits an Iobuf around an index.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;helloworld&quot;</span>);
+
+<span class='kw'>match</span> <span class='ident'>b</span>.<span class='ident'>split_at</span>(<span class='number'>5</span>) {
+  <span class='prelude-val'>Err</span>(())    <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;This won&#39;t happen.&quot;</span>),
+  <span class='prelude-val'>Ok</span>((<span class='ident'>c</span>, <span class='ident'>d</span>)) <span class='op'>=&gt;</span> <span class='kw'>unsafe</span> {
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>c</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hello&quot;</span>);
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>d</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;world&quot;</span>);
+  }
+}
+
+<span class='kw'>match</span> <span class='ident'>b</span>.<span class='ident'>split_at</span>(<span class='number'>0</span>) {
+  <span class='prelude-val'>Err</span>(())    <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;This won&#39;t happen, either.&quot;</span>),
+  <span class='prelude-val'>Ok</span>((<span class='ident'>c</span>, <span class='ident'>d</span>)) <span class='op'>=&gt;</span> <span class='kw'>unsafe</span> {
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>c</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;&quot;</span>);
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>d</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;helloworld&quot;</span>);
+  }
+}
+
+<span class='kw'>match</span> <span class='ident'>b</span>.<span class='ident'>split_at</span>(<span class='number'>10000</span>) {
+  <span class='prelude-val'>Ok</span>(_)   <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;This won&#39;t happen!&quot;</span>),
+  <span class='prelude-val'>Err</span>(()) <span class='op'>=&gt;</span> <span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;helloworld&quot;</span>); },
+}</pre>
+</div><h3 id='tymethod.unsafe_split_at' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_split_at' class='fnname'>unsafe_split_at</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(Self, Self)</a></code></h3><div class='docblock'><p>Like <code>split_at</code>, but does not perform bounds checking.</p>
+</div><h3 id='tymethod.split_start_at' class='method stab '><code>fn <a href='#tymethod.split_start_at' class='fnname'>split_start_at</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;Self, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Splits out the start of an Iobuf at an index.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;helloworld&quot;</span>);
+
+<span class='kw'>match</span> <span class='ident'>b</span>.<span class='ident'>split_start_at</span>(<span class='number'>5</span>) {
+  <span class='prelude-val'>Err</span>(()) <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;This won&#39;t happen.&quot;</span>),
+  <span class='prelude-val'>Ok</span>(<span class='ident'>c</span>)   <span class='op'>=&gt;</span> <span class='kw'>unsafe</span> {
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;world&quot;</span>);
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>c</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hello&quot;</span>);
+  }
+}
+
+<span class='kw'>match</span> <span class='ident'>b</span>.<span class='ident'>split_start_at</span>(<span class='number'>0</span>) {
+  <span class='prelude-val'>Err</span>(()) <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;This won&#39;t happen, either.&quot;</span>),
+  <span class='prelude-val'>Ok</span>(<span class='ident'>c</span>)   <span class='op'>=&gt;</span> <span class='kw'>unsafe</span> {
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;world&quot;</span>);
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>c</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;&quot;</span>);
+  }
+}
+
+<span class='kw'>match</span> <span class='ident'>b</span>.<span class='ident'>split_start_at</span>(<span class='number'>10000</span>) {
+  <span class='prelude-val'>Ok</span>(_)   <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;This won&#39;t happen!&quot;</span>),
+  <span class='prelude-val'>Err</span>(()) <span class='op'>=&gt;</span> <span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;world&quot;</span>); },
+}</pre>
+</div><h3 id='tymethod.unsafe_split_start_at' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_split_start_at' class='fnname'>unsafe_split_start_at</a>(&amp;mut self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; Self</code></h3><div class='docblock'><p>Like <code>split_start_at</code>, but does not perform bounds checking.</p>
+</div><h3 id='tymethod.rewind' class='method stab '><code>fn <a href='#tymethod.rewind' class='fnname'>rewind</a>(&amp;mut self)</code></h3><div class='docblock'><p>Sets the lower bound of the window to the lower limit.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;ll&quot;</span>); }
+
+<span class='ident'>b</span>.<span class='ident'>rewind</span>();
+
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hell&quot;</span>); }</pre>
+</div><h3 id='tymethod.reset' class='method stab '><code>fn <a href='#tymethod.reset' class='fnname'>reset</a>(&amp;mut self)</code></h3><div class='docblock'><p>Sets the window to the limits.</p>
+
+<p>&quot;Take it to the limit...&quot;</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hel&quot;</span>); }
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;l&quot;</span>); }
+<span class='ident'>b</span>.<span class='ident'>reset</span>();
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hello&quot;</span>); }</pre>
+</div><h3 id='tymethod.flip_lo' class='method stab '><code>fn <a href='#tymethod.flip_lo' class='fnname'>flip_lo</a>(&amp;mut self)</code></h3><div class='docblock'><p>Sets the window to range from the lower limit to the lower bound of the
+old window. This is typically called after a series of <code>Fill</code>s, to
+reposition the window in preparation to <code>Consume</code> the newly written data.</p>
+
+<p>If the area of the limits is denoted with <code>[ ]</code> and the area of the window
+is denoted with <code>x</code>, then the <code>flip_lo</code> looks like:</p>
+
+<p><code>Before: [ xxxx ]</code></p>
+
+<p><code>After: [xxxxxxx ]</code></p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>new</span>(<span class='number'>4</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_be</span>(<span class='number'>1u8</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_be</span>(<span class='number'>2u8</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_be</span>(<span class='number'>3u8</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>len</span>(), <span class='number'>1</span>);
+
+<span class='ident'>b</span>.<span class='ident'>flip_lo</span>();
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>(), <span class='prelude-val'>Ok</span>(<span class='number'>0x0102u16</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>(), <span class='prelude-val'>Ok</span>(<span class='number'>0x03u8</span>));
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>is_empty</span>());</pre>
+</div><h3 id='tymethod.flip_hi' class='method stab '><code>fn <a href='#tymethod.flip_hi' class='fnname'>flip_hi</a>(&amp;mut self)</code></h3><div class='docblock'><p>Sets the window to range from the upper bound of the old window to the
+upper limit. This is a dual to <code>flip_lo</code>, and is typically called when the
+data in the current (narrowed) window has been processed and the window
+needs to be positioned over the remaining data in the buffer.</p>
+
+<p>If the area of the limits is denoted with <code>[ ]</code> and the area of the window
+is denoted with <code>x</code>, then the <code>flip_lo</code> looks like:</p>
+
+<p><code>Before: [ xxxx ]</code></p>
+
+<p><code>After: [ xx]</code></p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>(), <span class='prelude-val'>Ok</span>(<span class='string'>b&#39;h&#39;</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>(), <span class='prelude-val'>Ok</span>(<span class='string'>b&#39;e&#39;</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>(), <span class='prelude-val'>Ok</span>(<span class='string'>b&#39;l&#39;</span>));
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>is_empty</span>());
+
+<span class='ident'>b</span>.<span class='ident'>flip_hi</span>();
+
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='op'>!</span><span class='ident'>b</span>.<span class='ident'>is_empty</span>());
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>(), <span class='prelude-val'>Ok</span>(<span class='string'>b&#39;l&#39;</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>(), <span class='prelude-val'>Ok</span>(<span class='string'>b&#39;o&#39;</span>));
+<span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>is_empty</span>());</pre>
+</div><h3 id='tymethod.lo_space' class='method stab '><code>fn <a href='#tymethod.lo_space' class='fnname'>lo_space</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h3><div class='docblock'><p>Returns the number of bytes between the lower limit and the lower bound.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>new</span>(<span class='number'>100</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>20</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>lo_space</span>(), <span class='number'>20</span>);
+<span class='ident'>b</span>.<span class='ident'>flip_lo</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>lo_space</span>(), <span class='number'>0</span>);</pre>
+</div><h3 id='tymethod.hi_space' class='method stab '><code>fn <a href='#tymethod.hi_space' class='fnname'>hi_space</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h3><div class='docblock'><p>Returns the number of bytes between the upper bound and the upper limit.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>new</span>(<span class='number'>100</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>20</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>hi_space</span>(), <span class='number'>80</span>);
+<span class='ident'>b</span>.<span class='ident'>flip_hi</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>hi_space</span>(), <span class='number'>0</span>);</pre>
+</div><h3 id='tymethod.peek' class='method stab '><code>fn <a href='#tymethod.peek' class='fnname'>peek</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, dst: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;mut [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Reads the bytes at a given offset from the beginning of the window, into
+the supplied buffer. Either the entire buffer is filled, or an error is
+returned because bytes outside of the window were requested.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [ <span class='number'>0x01</span>, <span class='number'>0x02</span>, <span class='number'>0x03</span>, <span class='number'>0x04</span> ];
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>tgt4</span> <span class='op'>=</span> [ <span class='number'>0x00</span>, <span class='number'>0x00</span>, <span class='number'>0x00</span>, <span class='number'>0x00</span> ];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>tgt3</span> <span class='op'>=</span> [ <span class='number'>0x00</span>, <span class='number'>0x00</span>, <span class='number'>0x00</span> ];
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek</span>(<span class='number'>0</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>tgt4</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>tgt4</span>.<span class='ident'>iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='kw-2'>&amp;</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>).<span class='ident'>fold</span>(<span class='number'>0</span>,<span class='op'>|</span><span class='ident'>a</span>, <span class='ident'>b</span><span class='op'>|</span> <span class='ident'>a</span> <span class='op'>+</span> <span class='ident'>b</span>), <span class='number'>10</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek</span>(<span class='number'>1</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>tgt3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>tgt3</span>.<span class='ident'>iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='kw-2'>&amp;</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>).<span class='ident'>fold</span>(<span class='number'>0</span>, <span class='op'>|</span><span class='ident'>a</span>, <span class='ident'>b</span><span class='op'>|</span> <span class='ident'>a</span> <span class='op'>+</span> <span class='ident'>b</span>), <span class='number'>9</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek</span>(<span class='number'>1</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>tgt4</span>), <span class='prelude-val'>Err</span>(()));</pre>
+</div><h3 id='tymethod.peek_be' class='method stab '><code>fn <a href='#tymethod.peek_be' class='fnname'>peek_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;T, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Reads a big-endian primitive at a given offset from the beginning of the
+window.</p>
+
+<p>An error is returned if bytes outside of the window were requested.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [ <span class='number'>0x01</span>, <span class='number'>0x02</span>, <span class='number'>0x03</span>, <span class='number'>0x04</span> ];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_be</span>(<span class='number'>0</span>), <span class='prelude-val'>Ok</span>(<span class='number'>0x0203u16</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_be</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(<span class='number'>0x0304u16</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_be</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>(<span class='number'>2</span>), <span class='prelude-val'>Err</span>(()));</pre>
+</div><h3 id='tymethod.peek_le' class='method stab '><code>fn <a href='#tymethod.peek_le' class='fnname'>peek_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;T, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Reads a little-endian primitive at a given offset from the beginning of
+the window.</p>
+
+<p>An error is returned if bytes outside of the window were requested.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [ <span class='number'>0x01</span>, <span class='number'>0x02</span>, <span class='number'>0x03</span>, <span class='number'>0x04</span> ];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_le</span>(<span class='number'>0</span>), <span class='prelude-val'>Ok</span>(<span class='number'>0x0302u16</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_le</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(<span class='number'>0x0403u16</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>peek_le</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>(<span class='number'>2</span>), <span class='prelude-val'>Err</span>(()));</pre>
+</div><h3 id='tymethod.consume' class='method stab '><code>fn <a href='#tymethod.consume' class='fnname'>consume</a>(&amp;mut self, dst: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;mut [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Reads bytes, starting from the front of the window, into the supplied
+buffer. Either the entire buffer is filled, or an error is returned
+because bytes outside the window were requested.</p>
+
+<p>After the bytes have been read, the window will be moved to no longer
+include then.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [ <span class='number'>0x01</span>, <span class='number'>0x02</span>, <span class='number'>0x03</span>, <span class='number'>0x04</span> ];
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>tgt3</span> <span class='op'>=</span> [ <span class='number'>0x00</span>, <span class='number'>0x00</span>, <span class='number'>0x00</span> ];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>tgt1</span> <span class='op'>=</span> [ <span class='number'>0x00</span> ];
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>tgt3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>tgt3</span>.<span class='ident'>iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='kw-2'>&amp;</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>).<span class='ident'>fold</span>(<span class='number'>0</span>, <span class='op'>|</span><span class='ident'>a</span>, <span class='ident'>b</span><span class='op'>|</span> <span class='ident'>a</span> <span class='op'>+</span> <span class='ident'>b</span>), <span class='number'>6</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>tgt3</span>), <span class='prelude-val'>Err</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>tgt1</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>tgt1</span>[<span class='number'>0</span>], <span class='number'>4</span>);</pre>
+</div><h3 id='tymethod.consume_be' class='method stab '><code>fn <a href='#tymethod.consume_be' class='fnname'>consume_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;T, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Reads a big-endian primitive from the beginning of the window.</p>
+
+<p>After the primitive has been read, the window will be moved such that it
+is no longer included.</p>
+
+<p>An error is returned if bytes outside of the window were requested.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [ <span class='number'>0x01</span>, <span class='number'>0x02</span>, <span class='number'>0x03</span>, <span class='number'>0x04</span> ];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>(), <span class='prelude-val'>Ok</span>(<span class='number'>0x0203u16</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>(), <span class='prelude-val'>Err</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>(), <span class='prelude-val'>Ok</span>(<span class='number'>0x04u8</span>));</pre>
+</div><h3 id='tymethod.consume_le' class='method stab '><code>fn <a href='#tymethod.consume_le' class='fnname'>consume_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;T, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Reads a little-endian primitive from the beginning of the window.</p>
+
+<p>After the primitive has been read, the window will be moved such that it
+is no longer included.</p>
+
+<p>An error is returned if bytes outside of the window were requested.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [ <span class='number'>0x01</span>, <span class='number'>0x02</span>, <span class='number'>0x03</span>, <span class='number'>0x04</span> ];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_le</span>(), <span class='prelude-val'>Ok</span>(<span class='number'>0x0302u16</span>));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_le</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>(), <span class='prelude-val'>Err</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_le</span>(), <span class='prelude-val'>Ok</span>(<span class='number'>0x04u8</span>));</pre>
+</div><h3 id='tymethod.check_range' class='method stab '><code>fn <a href='#tymethod.check_range' class='fnname'>check_range</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>Returns an <code>Err(())</code> if the <code>len</code> bytes, starting at <code>pos</code>, are not all
+in the window. To be used with the <code>try!</code> macro.</p>
+
+<p>Make sure you use this in conjunction with the <code>unsafe</code> combinators. It
+is recommended you minimize your bounds checks by doing it once with
+<code>check_range</code>, followed by unsafe accesses. If you do unsafe accesses
+without a <code>check_range</code>, there will likely be reliability and security
+issues with your application.</p>
+
+<p>Below is a correct usage of <code>check_range</code> to minimize bounds checks:</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>result</span>::<span class='prelude-ty'>Result</span>::{<span class='self'>self</span>,<span class='prelude-val'>Ok</span>};
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='comment'>// [ number of byte buffers, size of first byte buffer, ...bytes, etc. ]</span>
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [ <span class='number'>0x02</span>, <span class='number'>0x02</span>, <span class='number'>0x55</span>, <span class='number'>0x66</span>, <span class='number'>0x03</span>, <span class='number'>0x11</span>, <span class='number'>0x22</span>, <span class='number'>0x33</span> ];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='kw'>fn</span> <span class='ident'>parse</span><span class='op'>&lt;</span><span class='ident'>B</span>: <span class='ident'>Iobuf</span><span class='op'>&gt;</span>(<span class='ident'>b</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>B</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>usize</span>, ()<span class='op'>&gt;</span> {
+  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>sum</span> <span class='op'>=</span> <span class='number'>0</span>;
+
+  <span class='kw'>let</span> <span class='ident'>num_buffers</span>: <span class='ident'>u8</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>());
+
+  <span class='kw'>for</span> _ <span class='kw'>in</span> <span class='number'>0</span>..<span class='ident'>num_buffers</span> {
+    <span class='kw'>let</span> <span class='ident'>len</span>: <span class='ident'>u8</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>consume_be</span>());
+
+    <span class='kw'>unsafe</span> {
+      <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range</span>(<span class='number'>0</span>, <span class='ident'>len</span> <span class='kw'>as</span> <span class='ident'>u32</span>));
+
+      <span class='kw'>for</span> _ <span class='kw'>in</span> <span class='number'>0</span>..<span class='ident'>len</span> {
+        <span class='ident'>sum</span> <span class='op'>+=</span> <span class='ident'>b</span>.<span class='ident'>unsafe_consume_be</span>::<span class='op'>&lt;</span><span class='ident'>u8</span><span class='op'>&gt;</span>() <span class='kw'>as</span> <span class='ident'>usize</span>;
+      }
+    }
+  }
+
+  <span class='prelude-val'>Ok</span>(<span class='ident'>sum</span>)
+}
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>parse</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>b</span>), <span class='prelude-val'>Ok</span>(<span class='number'>0x55</span> <span class='op'>+</span> <span class='number'>0x66</span> <span class='op'>+</span> <span class='number'>0x11</span> <span class='op'>+</span> <span class='number'>0x22</span> <span class='op'>+</span> <span class='number'>0x33</span>));</pre>
+</div><h3 id='tymethod.check_range_usize' class='method stab '><code>fn <a href='#tymethod.check_range_usize' class='fnname'>check_range_usize</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h3><div class='docblock'><p>The same as <code>check_range</code>, but with a <code>usize</code> length. If you&#39;re checking
+the range of something which might overflow an <code>i32</code>, use this version
+instead of <code>check_range</code>.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range_usize</span>(<span class='number'>1u32</span>, <span class='number'>5usize</span>), <span class='prelude-val'>Err</span>(()));</pre>
+</div><h3 id='tymethod.check_range_fail' class='method stab '><code>fn <a href='#tymethod.check_range_fail' class='fnname'>check_range_fail</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>)</code></h3><div class='docblock'><p>The same as <code>check_range</code>, but fails if the bounds check returns <code>Err(())</code>.</p>
+
+<pre><code class="language-should_fail">use iobuf::{ROIobuf,Iobuf};
+
+let mut b = ROIobuf::from_str(&quot;hello&quot;);
+
+b.check_range_fail(1, 5); // boom.
+</code></pre>
+</div><h3 id='tymethod.check_range_usize_fail' class='method stab '><code>fn <a href='#tymethod.check_range_usize_fail' class='fnname'>check_range_usize_fail</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>)</code></h3><div class='docblock'><p>The same as <code>check_range_usize</code>, but fails if the bounds check returns
+<code>Err(())</code>.</p>
+
+<pre><code class="language-should_fail">use iobuf::{ROIobuf,Iobuf};
+
+let mut b = ROIobuf::from_str(&quot;hello&quot;);
+
+b.check_range_usize_fail(1u32, 5u); // boom.
+</code></pre>
+</div><h3 id='tymethod.unsafe_peek' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_peek' class='fnname'>unsafe_peek</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, dst: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;mut [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>)</code></h3><div class='docblock'><p>Reads the bytes at a given offset from the beginning of the window, into
+the supplied buffer. It is undefined behavior to read outside the iobuf
+window.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [<span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>3</span>,<span class='number'>4</span>,<span class='number'>5</span>,<span class='number'>6</span>];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>dst</span> <span class='op'>=</span> [<span class='number'>0</span>; <span class='number'>4</span>];
+
+<span class='kw'>unsafe</span> {
+  <span class='comment'>// one range check, instead of two!</span>
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range</span>(<span class='number'>0</span>, <span class='number'>5</span>), <span class='prelude-val'>Ok</span>(()));
+
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>unsafe_peek_be</span>::<span class='op'>&lt;</span><span class='ident'>u8</span><span class='op'>&gt;</span>(<span class='number'>0</span>), <span class='number'>1u8</span>);
+  <span class='ident'>b</span>.<span class='ident'>unsafe_peek</span>(<span class='number'>1</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>dst</span>);
+}
+
+<span class='kw'>let</span> <span class='ident'>expected</span> <span class='op'>=</span> [ <span class='number'>2u8</span>, <span class='number'>3</span>, <span class='number'>4</span>, <span class='number'>5</span> ];
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>dst</span>, <span class='ident'>expected</span>);</pre>
+</div><h3 id='tymethod.unsafe_peek_be' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_peek_be' class='fnname'>unsafe_peek_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; T</code></h3><div class='docblock'><p>Reads a big-endian primitive at a given offset from the beginning of the
+window. It is undefined behavior to read outside the iobuf window.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [<span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>3</span>,<span class='number'>4</span>,<span class='number'>5</span>,<span class='number'>6</span>];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='kw'>unsafe</span> {
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range</span>(<span class='number'>0</span>, <span class='number'>6</span>), <span class='prelude-val'>Ok</span>(()));
+  <span class='kw'>let</span> <span class='ident'>x</span>: <span class='ident'>u16</span> <span class='op'>=</span> <span class='ident'>b</span>.<span class='ident'>unsafe_peek_be</span>(<span class='number'>0</span>);
+  <span class='kw'>let</span> <span class='ident'>y</span>: <span class='ident'>u32</span> <span class='op'>=</span> <span class='ident'>b</span>.<span class='ident'>unsafe_peek_be</span>(<span class='number'>2</span>);
+  <span class='ident'>b</span>.<span class='ident'>unsafe_advance</span>(<span class='number'>6</span>);
+
+  <span class='kw'>let</span> <span class='ident'>z</span>: <span class='ident'>u32</span> <span class='op'>=</span> <span class='ident'>x</span> <span class='kw'>as</span> <span class='ident'>u32</span> <span class='op'>+</span> <span class='ident'>y</span>;
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>z</span>, <span class='number'>0x0102</span> <span class='op'>+</span> <span class='number'>0x03040506</span>);
+}</pre>
+</div><h3 id='tymethod.unsafe_peek_le' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_peek_le' class='fnname'>unsafe_peek_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; T</code></h3><div class='docblock'><p>Reads a little-endian primitive at a given offset from the beginning of
+the window. It is undefined behavior to read outside the iobuf window.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [<span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>3</span>,<span class='number'>4</span>,<span class='number'>5</span>,<span class='number'>6</span>];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='kw'>unsafe</span> {
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range</span>(<span class='number'>0</span>, <span class='number'>6</span>), <span class='prelude-val'>Ok</span>(()));
+  <span class='kw'>let</span> <span class='ident'>x</span>: <span class='ident'>u16</span> <span class='op'>=</span> <span class='ident'>b</span>.<span class='ident'>unsafe_peek_le</span>(<span class='number'>0</span>);
+  <span class='kw'>let</span> <span class='ident'>y</span>: <span class='ident'>u32</span> <span class='op'>=</span> <span class='ident'>b</span>.<span class='ident'>unsafe_peek_le</span>(<span class='number'>2</span>);
+  <span class='ident'>b</span>.<span class='ident'>unsafe_advance</span>(<span class='number'>6</span>);
+
+  <span class='kw'>let</span> <span class='ident'>z</span>: <span class='ident'>u32</span> <span class='op'>=</span> <span class='ident'>x</span> <span class='kw'>as</span> <span class='ident'>u32</span> <span class='op'>+</span> <span class='ident'>y</span>;
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>z</span>, <span class='number'>0x0201</span> <span class='op'>+</span> <span class='number'>0x06050403</span>);
+}</pre>
+</div><h3 id='tymethod.unsafe_consume' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_consume' class='fnname'>unsafe_consume</a>(&amp;mut self, dst: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;mut [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>)</code></h3><div class='docblock'><p>Reads bytes, starting from the front of the window, into the supplied
+buffer. After the bytes have been read, the window will be moved to no
+longer include then.</p>
+
+<p>It is undefined behavior to request bytes outside the iobuf window.</p>
+</div><h3 id='tymethod.unsafe_consume_be' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_consume_be' class='fnname'>unsafe_consume_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self) -&gt; T</code></h3><div class='docblock'><p>Reads a big-endian primitive at the beginning of the window.</p>
+
+<p>After the primitive has been read, the window will be moved such that it
+is no longer included.</p>
+
+<p>It is undefined behavior if bytes outside the window are requested.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [ <span class='number'>0x01</span>, <span class='number'>0x02</span>, <span class='number'>0x03</span>, <span class='number'>0x04</span> ];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='kw'>unsafe</span> {
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range</span>(<span class='number'>0</span>, <span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>unsafe_consume_be</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>(), <span class='number'>0x0203u16</span>);
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>unsafe_consume_be</span>::<span class='op'>&lt;</span><span class='ident'>u8</span><span class='op'>&gt;</span>(), <span class='number'>0x04u8</span>);
+}</pre>
+</div><h3 id='tymethod.unsafe_consume_le' class='method stab '><code>unsafe fn <a href='#tymethod.unsafe_consume_le' class='fnname'>unsafe_consume_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self) -&gt; T</code></h3><div class='docblock'><p>Reads a little-endian primitive at the beginning of the window.</p>
+
+<p>After the primitive has been read, the window will be moved such that it
+is no longer included.</p>
+
+<p>It is undefined behavior if bytes outside of the window are requested.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> [ <span class='number'>0x01</span>, <span class='number'>0x02</span>, <span class='number'>0x03</span>, <span class='number'>0x04</span> ];
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='kw'>unsafe</span> {
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>check_range</span>(<span class='number'>0</span>, <span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>unsafe_consume_le</span>::<span class='op'>&lt;</span><span class='ident'>u16</span><span class='op'>&gt;</span>(), <span class='number'>0x0302u16</span>);
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>unsafe_consume_le</span>::<span class='op'>&lt;</span><span class='ident'>u8</span><span class='op'>&gt;</span>(), <span class='number'>0x04u8</span>);
+}</pre>
+</div><h3 id='tymethod.invariant' class='method stab '><code>fn <a href='#tymethod.invariant' class='fnname'>invariant</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a class='struct' href='https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/collections/string/struct.String.html' title='collections::string::String'>String</a>&gt;&gt;</code></h3><div class='docblock'><p>Checks internal state of the iobuf, to ensure that internal invariants are
+satisified. Returns <code>Err(msg)</code> if any invariant isn&#39;t satisfied.</p>
+</div><h3 id='tymethod.as_raw' class='method stab '><code>unsafe fn <a href='#tymethod.as_raw' class='fnname'>as_raw</a>&lt;'b&gt;(&amp;'b self) -&gt; &amp;'b RawIobuf&lt;'b&gt;</code></h3><div class='docblock'><p>For internal use only.</p>
+</div><h3 id='tymethod.ptr' class='method stab '><code>fn <a href='#tymethod.ptr' class='fnname'>ptr</a>(&amp;self) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/core/nonzero/struct.NonZero.html' title='core::nonzero::NonZero'>NonZero</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut <a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a></a>&gt;</code></h3><div class='docblock'><p>Gets a pointer to the start of the internal backing buffer. This is
+extremely low level, and it is not recommended you use this interface.</p>
+</div><h3 id='tymethod.is_owned' class='method stab '><code>fn <a href='#tymethod.is_owned' class='fnname'>is_owned</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h3><div class='docblock'><p>Returns <code>true</code> if the Iobuf points to owned memory (i.e. has to do a
+refcount modification on <code>clone</code> or <code>drop</code>) or borrowed memory.</p>
+</div><h3 id='tymethod.lo_min' class='method stab '><code>fn <a href='#tymethod.lo_min' class='fnname'>lo_min</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h3><div class='docblock'><p>Returns an index into the buffer returned by <code>ptr</code> that represents the
+inclusive lower bound of the limits.</p>
+</div><h3 id='tymethod.lo' class='method stab '><code>fn <a href='#tymethod.lo' class='fnname'>lo</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h3><div class='docblock'><p>Returns an index into the buffer returned by <code>ptr</code> that represents the
+inclusive lower bound of the window.</p>
+</div><h3 id='tymethod.hi' class='method stab '><code>fn <a href='#tymethod.hi' class='fnname'>hi</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h3><div class='docblock'><p>Returns an index into the buffer returned by <code>ptr</code> that represents the
+exclusive upper bound of the window.</p>
+</div><h3 id='tymethod.hi_max' class='method stab '><code>fn <a href='#tymethod.hi_max' class='fnname'>hi_max</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h3><div class='docblock'><p>Returns an index into the buffer returned by <code>ptr</code> that represents the
+exclusive upper bound of the limits.</p>
+</div></div>
+        <h2 id='implementors'>Implementors</h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><code>impl&lt;'a&gt; <a class='trait' href='../iobuf/trait.Iobuf.html' title='iobuf::Iobuf'>Iobuf</a> for <a class='struct' href='../iobuf/struct.ROIobuf.html' title='iobuf::ROIobuf'>ROIobuf</a>&lt;'a&gt;</code></li>
+<li><code>impl <a class='trait' href='../iobuf/trait.Iobuf.html' title='iobuf::Iobuf'>Iobuf</a> for <a class='struct' href='../iobuf/struct.AROIobuf.html' title='iobuf::AROIobuf'>AROIobuf</a></code></li>
+<li><code>impl&lt;'a&gt; <a class='trait' href='../iobuf/trait.Iobuf.html' title='iobuf::Iobuf'>Iobuf</a> for <a class='struct' href='../iobuf/struct.RWIobuf.html' title='iobuf::RWIobuf'>RWIobuf</a>&lt;'a&gt;</code></li>
+</ul><script type="text/javascript" async
+                              src="../implementors/iobuf/trait.Iobuf.js">
+                      </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "iobuf";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>

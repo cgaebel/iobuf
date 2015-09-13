@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["IORingbuf","A ring buffer implemented with `Iobuf`s."]]});

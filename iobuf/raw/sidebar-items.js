@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["Allocator","Used to provide custom memory to Iobufs, instead of just using the heap."]]});

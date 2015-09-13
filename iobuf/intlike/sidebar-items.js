@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["IntLike","8-64 bit integer types. Not floating point."]]});

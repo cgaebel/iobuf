@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `AppendBuf` struct in crate `iobuf`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, AppendBuf">
+
+    <title>iobuf::AppendBuf - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>iobuf</a></p><script>window.sidebarCurrent = {name: 'AppendBuf', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>iobuf</a>::<wbr><a class='struct' href=''>AppendBuf</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-12818' class='srclink' href='../src/iobuf/appendbuf.rs.html#25-27' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct AppendBuf&lt;'a&gt; {
+    // some fields omitted
+}</pre><div class='docblock'><p>Append-Only Input Buffer</p>
+
+<p>This buffer is intended to act as a intermediate buffer to be <code>fill</code>ed by
+incoming streaming data, such as sockets, files, or perhaps DB results</p>
+
+<p>It has the unique feature of being able to break off reference counted
+slices of data in its buffer that it has already written.</p>
+
+<p>This invariant is enforced by allowing slices to be taken only from the
+low side of the buffer, before the start of the window</p>
+
+<p>Its primary interface is <code>fill</code>, which is the mechanism for appending data,
+and atomic_slice, which will take a position
+and a length and return a Result<AROIobuf, ()></p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl&lt;'a&gt; <a class='struct' href='../iobuf/struct.AppendBuf.html' title='iobuf::AppendBuf'>AppendBuf</a>&lt;'a&gt;</code></h3><div class='impl-items'><h4 id='method.empty' class='method'><code>fn <a href='#method.empty' class='fnname'>empty</a>() -&gt; <a class='struct' href='../iobuf/struct.AppendBuf.html' title='iobuf::AppendBuf'>AppendBuf</a>&lt;'static&gt;</code></h4>
+<div class='docblock'><p>Constructs a trivially empty Iobuf, limits and window are 0, and there&#39;s
+an empty backing buffer. This will not allocate.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>AppendBuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>AppendBuf</span>::<span class='ident'>empty</span>();
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>len</span>(), <span class='number'>0</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>cap</span>(), <span class='number'>0</span>);</pre>
+</div><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>(len: <a href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>) -&gt; <a class='struct' href='../iobuf/struct.AppendBuf.html' title='iobuf::AppendBuf'>AppendBuf</a>&lt;'static&gt;</code></h4>
+<div class='docblock'><p>Constructs a new Iobuf with a buffer of size <code>len</code>, undefined contents,
+and the limits and window set to the full size of the buffer.</p>
+
+<p>The maximum length of an Iobuf is approximately 2 GB.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>AppendBuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>AppendBuf</span>::<span class='ident'>new</span>(<span class='number'>10</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>len</span>(), <span class='number'>10</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>cap</span>(), <span class='number'>10</span>);</pre>
+</div><h4 id='method.new_with_allocator' class='method'><code>fn <a href='#method.new_with_allocator' class='fnname'>new_with_allocator</a>(len: <a href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>, allocator: <a class='struct' href='https://doc.rust-lang.org/nightly/alloc/arc/struct.Arc.html' title='alloc::arc::Arc'>Arc</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../iobuf/trait.Allocator.html' title='iobuf::Allocator'>Allocator</a>&gt;&gt;) -&gt; <a class='struct' href='../iobuf/struct.AppendBuf.html' title='iobuf::AppendBuf'>AppendBuf</a>&lt;'static&gt;</code></h4>
+<div class='docblock'><p>Constructs a new Iobuf with a buffer of size <code>len</code>, undefined contents,
+and the limits and window set to the full range of the buffer. The memory
+will be allocated out of the given allocator, instead of the global heap.</p>
+
+<p>The maximum length of an Iobuf is approximately 2 GB.</p>
+</div><h4 id='method.atomic_slice' class='method'><code>fn <a href='#method.atomic_slice' class='fnname'>atomic_slice</a>(&amp;self, from: <a href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>, to: <a href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../iobuf/struct.AROIobuf.html' title='iobuf::AROIobuf'>AROIobuf</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Creates an AROIobuf as a slice of written buffer. This is space that preceeds
+the window in the buffer, or, more specifically, between the lo_min and lo offsets.
+This guarantees that the AROIobuf can be thought of as safely immutable while this
+buffer can continue to be <code>fill</code>ed and <code>poke</code>d. There are no operations for this buffer
+to reset the window to a lower position in the buffer.
+len is the number of bytes back from the start of the window where the slice begins
+ (and also the length of the slice)</p>
+
+<p>If the from or to parameters are negative, then the compliment of that number is
+ counted from the end of the available buffer. e.g.
+ from: 0 to: 2  would take the first two characters of the buffer.
+ from: 0 to: -2 would take all but the last two characters of the buffer
+```rust
+use iobuf::{AppendBuf, Iobuf};</p>
+
+<p>let mut buf = AppendBuf::new(24);
+  for i in b&#39;A&#39; .. b&#39;X&#39; + 1 {
+    buf.fill_be(i).unwrap();
+  }</p>
+
+<p>let all = buf.atomic_slice_to(-1).ok().expect(&quot;all&quot;);</p>
+
+<p>let a = unsafe { all.as_window_slice() };</p>
+
+<p>assert_eq!(a, b&quot;ABCDEFGHIJKLMNOPQRSTUVWX&quot;);</p>
+
+<p>let begin = buf.atomic_slice(0, 8).ok().expect(&quot;from_begin&quot;);
+  let middle = buf.atomic_slice(8, 16).ok().expect(&quot;pos_from_end&quot;);
+  let end = buf.atomic_slice(-9, -1).ok().expect(&quot;from_end&quot;);
+  let meh = buf.atomic_slice(4, 12).ok().expect(&quot;pos_from_begin&quot;);</p>
+
+<p>let b = unsafe { begin.as_window_slice() };
+  let m = unsafe { middle.as_window_slice() };
+  let e = unsafe { end.as_window_slice() };
+  let z = unsafe { meh.as_window_slice() };</p>
+
+<p>assert_eq!(b, b&quot;ABCDEFGH&quot;);
+  assert_eq!(m, b&quot;IJKLMNOP&quot;);
+  assert_eq!(e, b&quot;QRSTUVWX&quot;);
+  assert_eq!(z, b&quot;EFGHIJKL&quot;);
+```</p>
+</div><h4 id='method.atomic_slice_from' class='method'><code>fn <a href='#method.atomic_slice_from' class='fnname'>atomic_slice_from</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../iobuf/struct.AROIobuf.html' title='iobuf::AROIobuf'>AROIobuf</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Creates an AROIobuf as a slice of written buffer. This is space that preceeds
+the window in the buffer, or, more specifically, between the lo_min and lo offsets.
+This guarantees that the AROIobuf can be thought of as safely immutable while this
+buffer can continue to be <code>fill</code>ed and <code>poke</code>d. There are no operations for this buffer
+to reset the window to a lower position in the buffer.
+len is the number of bytes back from the start of the window where the slice begins
+ (and also the length of the slice)</p>
+
+<p>The slice produced begins at parameter pos and goes to the end of the buffer</p>
+
+<p>If the from or to parameters are negative, then the compliment of that number is
+ counted from the end of the available buffer. e.g.
+ from: 0 to: 2  would take the first two characters of the buffer.
+ from: 0 to: -2 would take all but the last two characters of the buffer</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>AppendBuf</span>, <span class='ident'>Iobuf</span>};
+
+  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>buf</span> <span class='op'>=</span> <span class='ident'>AppendBuf</span>::<span class='ident'>new</span>(<span class='number'>24</span>);
+  <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='string'>b&#39;A&#39;</span> .. <span class='string'>b&#39;X&#39;</span> <span class='op'>+</span> <span class='number'>1</span> {
+    <span class='ident'>buf</span>.<span class='ident'>fill_be</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>();
+  }
+
+  <span class='kw'>let</span> <span class='ident'>all</span> <span class='op'>=</span> <span class='ident'>buf</span>.<span class='ident'>atomic_slice_from</span>(<span class='number'>0</span>).<span class='ident'>ok</span>().<span class='ident'>expect</span>(<span class='string'>&quot;all&quot;</span>);
+
+  <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>all</span>.<span class='ident'>as_window_slice</span>() };
+
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>, <span class='string'>b&quot;ABCDEFGHIJKLMNOPQRSTUVWX&quot;</span>);
+
+  <span class='kw'>let</span> <span class='ident'>end</span> <span class='op'>=</span> <span class='ident'>buf</span>.<span class='ident'>atomic_slice_from</span>(<span class='number'>16</span>).<span class='ident'>ok</span>().<span class='ident'>expect</span>(<span class='string'>&quot;from_begin&quot;</span>);
+  <span class='kw'>let</span> <span class='ident'>more</span> <span class='op'>=</span> <span class='ident'>buf</span>.<span class='ident'>atomic_slice_from</span>(<span class='op'>-</span><span class='number'>9</span>).<span class='ident'>ok</span>().<span class='ident'>expect</span>(<span class='string'>&quot;pos_from_end&quot;</span>);
+
+  <span class='kw'>let</span> <span class='ident'>m</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>more</span>.<span class='ident'>as_window_slice</span>() };
+  <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>end</span>.<span class='ident'>as_window_slice</span>() };
+
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>m</span>, <span class='string'>b&quot;QRSTUVWX&quot;</span>);
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>e</span>, <span class='string'>b&quot;QRSTUVWX&quot;</span>);</pre>
+</div><h4 id='method.atomic_slice_to' class='method'><code>fn <a href='#method.atomic_slice_to' class='fnname'>atomic_slice_to</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../iobuf/struct.AROIobuf.html' title='iobuf::AROIobuf'>AROIobuf</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Creates an AROIobuf as a slice of written buffer. This is space that preceeds
+the window in the buffer, or, more specifically, between the lo_min and lo offsets.
+This guarantees that the AROIobuf can be thought of as safely immutable while this
+buffer can continue to be <code>fill</code>ed and <code>poke</code>d. There are no operations for this buffer
+to reset the window to a lower position in the buffer.
+len is the number of bytes back from the start of the window where the slice begins
+ (and also the length of the slice)</p>
+
+<p>The slice produced begins at the beginning of the buffer until parameter pos</p>
+
+<p>If the from or to parameters are negative, then the compliment of that number is
+ counted from the end of the available buffer. e.g.
+ from: 0 to: 2  would take the first two characters of the buffer.
+ from: 0 to: -2 would take all but the last two characters of the buffer</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>AppendBuf</span>, <span class='ident'>Iobuf</span>};
+
+  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>buf</span> <span class='op'>=</span> <span class='ident'>AppendBuf</span>::<span class='ident'>new</span>(<span class='number'>24</span>);
+  <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='string'>b&#39;A&#39;</span> .. <span class='string'>b&#39;X&#39;</span> <span class='op'>+</span> <span class='number'>1</span> {
+    <span class='ident'>buf</span>.<span class='ident'>fill_be</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>();
+  }
+
+  <span class='kw'>let</span> <span class='ident'>all</span> <span class='op'>=</span> <span class='ident'>buf</span>.<span class='ident'>atomic_slice_to</span>(<span class='op'>-</span><span class='number'>1</span>).<span class='ident'>ok</span>().<span class='ident'>expect</span>(<span class='string'>&quot;all&quot;</span>);
+
+  <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>all</span>.<span class='ident'>as_window_slice</span>() };
+
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>, <span class='string'>b&quot;ABCDEFGHIJKLMNOPQRSTUVWX&quot;</span>);
+
+  <span class='kw'>let</span> <span class='ident'>begin</span> <span class='op'>=</span> <span class='ident'>buf</span>.<span class='ident'>atomic_slice_to</span>(<span class='number'>8</span>).<span class='ident'>ok</span>().<span class='ident'>expect</span>(<span class='string'>&quot;begin&quot;</span>);
+  <span class='kw'>let</span> <span class='ident'>more</span> <span class='op'>=</span> <span class='ident'>buf</span>.<span class='ident'>atomic_slice_to</span>(<span class='op'>-</span><span class='number'>9</span>).<span class='ident'>ok</span>().<span class='ident'>expect</span>(<span class='string'>&quot;more&quot;</span>);
+
+  <span class='kw'>let</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>begin</span>.<span class='ident'>as_window_slice</span>() };
+  <span class='kw'>let</span> <span class='ident'>m</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>more</span>.<span class='ident'>as_window_slice</span>() };
+
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>, <span class='string'>b&quot;ABCDEFGH&quot;</span>);
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>m</span>, <span class='string'>b&quot;ABCDEFGHIJKLMNOP&quot;</span>);</pre>
+</div><h4 id='method.as_mut_window_slice' class='method'><code>fn <a href='#method.as_mut_window_slice' class='fnname'>as_mut_window_slice</a>&lt;'b&gt;(&amp;'b self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;'b mut [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a></code></h4>
+<div class='docblock'><p>Reads the data in the window as a mutable slice.</p>
+
+<p>It may only be used safely if you ensure that the data in the iobuf never
+interacts with the slice, as they point to the same data. <code>peek</code>ing or
+<code>poke</code>ing the slice returned from this function is a big no-no.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>, <span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>s</span> <span class='op'>=</span> [<span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>3</span>];
+
+{
+  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>from_slice</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>s</span>[..]);
+
+  <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>1</span>), <span class='prelude-val'>Ok</span>(()));
+  <span class='kw'>unsafe</span> { <span class='ident'>b</span>.<span class='ident'>as_mut_window_slice</span>()[<span class='number'>1</span>] <span class='op'>=</span> <span class='number'>30</span>; }
+}
+
+<span class='kw'>let</span> <span class='ident'>expected</span> <span class='op'>=</span> [ <span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>30</span> ];
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>s</span>, <span class='kw-2'>&amp;</span><span class='ident'>expected</span>[..]);</pre>
+</div><h4 id='method.as_window_slice' class='method'><code>fn <a href='#method.as_window_slice' class='fnname'>as_window_slice</a>&lt;'b&gt;(&amp;'b self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;'b [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a></code></h4>
+<div class='docblock'><p>Provides an immutable slice into the window of the buffer</p>
+</div><h4 id='method.as_limit_slice' class='method'><code>unsafe fn <a href='#method.as_limit_slice' class='fnname'>as_limit_slice</a>&lt;'b&gt;(&amp;'b self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;'b [</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a></code></h4>
+<div class='docblock'><p>Provides an immutable slice into the entire usable space
+of the buffer</p>
+</div><h4 id='method.poke' class='method'><code>fn <a href='#method.poke' class='fnname'>poke</a>(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, src: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Writes the bytes at a given offset from the beginning of the window, into
+the supplied buffer. Either the entire buffer is copied, or an error is
+returned because bytes outside of the window would be written.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span>[ <span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>3</span>,<span class='number'>4</span> ];
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>new</span>(<span class='number'>10</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke</span>(<span class='number'>0</span>, <span class='ident'>data</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke</span>(<span class='number'>3</span>, <span class='ident'>data</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>7</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke</span>(<span class='number'>4</span>, <span class='ident'>data</span>), <span class='prelude-val'>Err</span>(())); <span class='comment'>// no partial write, just failure</span>
+
+<span class='kw'>let</span> <span class='ident'>expected</span> <span class='op'>=</span> [ <span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>3</span>,<span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>3</span>,<span class='number'>4</span> ];
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='ident'>expected</span>); }</pre>
+</div><h4 id='method.poke_be' class='method'><code>fn <a href='#method.poke_be' class='fnname'>poke_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, t: T) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Writes a big-endian primitive at a given offset from the beginning of the
+window.</p>
+
+<p>An error is returned if bytes outside of the window would be accessed.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>new</span>(<span class='number'>10</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke_be</span>(<span class='number'>0</span>, <span class='number'>0x0304u16</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke_be</span>(<span class='number'>1</span>, <span class='number'>0x0505u16</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke_be</span>(<span class='number'>3</span>, <span class='number'>0x06070809u32</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>7</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='kw'>let</span> <span class='ident'>expected</span> <span class='op'>=</span> [ <span class='number'>3</span>,<span class='number'>5</span>,<span class='number'>5</span>,<span class='number'>6</span>,<span class='number'>7</span>,<span class='number'>8</span>,<span class='number'>9</span> ];
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='ident'>expected</span>); }</pre>
+</div><h4 id='method.poke_le' class='method'><code>fn <a href='#method.poke_le' class='fnname'>poke_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;self, pos: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>, t: T) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Writes a little-endian primitive at a given offset from the beginning of
+the window.</p>
+
+<p>An error is returned if bytes outside of the window would be accessed.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>new</span>(<span class='number'>10</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke_le</span>(<span class='number'>0</span>, <span class='number'>0x0304u16</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke_le</span>(<span class='number'>1</span>, <span class='number'>0x0505u16</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>poke_le</span>(<span class='number'>3</span>, <span class='number'>0x06070809u32</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>7</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), [ <span class='number'>4</span>, <span class='number'>5</span>, <span class='number'>5</span>, <span class='number'>9</span>, <span class='number'>8</span>, <span class='number'>7</span>, <span class='number'>6</span> ]); }</pre>
+</div><h4 id='method.fill' class='method'><code>fn <a href='#method.fill' class='fnname'>fill</a>(&amp;mut self, src: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Writes bytes from the supplied buffer, starting from the front of the
+window. Either the entire buffer is copied, or an error is returned
+because bytes outside the window were requested.</p>
+
+<p>After the bytes have been written, the window will be moved to no longer
+include then.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='ident'>data</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span>[ <span class='number'>1</span>, <span class='number'>2</span>, <span class='number'>3</span>, <span class='number'>4</span> ];
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>new</span>(<span class='number'>10</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill</span>(<span class='ident'>data</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill</span>(<span class='ident'>data</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill</span>(<span class='ident'>data</span>), <span class='prelude-val'>Err</span>(()));
+
+<span class='ident'>b</span>.<span class='ident'>flip_lo</span>();
+
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), [ <span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>3</span>,<span class='number'>4</span>,<span class='number'>1</span>,<span class='number'>2</span>,<span class='number'>3</span>,<span class='number'>4</span> ]); }</pre>
+</div><h4 id='method.fill_be' class='method'><code>fn <a href='#method.fill_be' class='fnname'>fill_be</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self, t: T) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Writes a big-endian primitive into the beginning of the window.</p>
+
+<p>After the primitive has been written, the window will be moved such that
+it is no longer included.</p>
+
+<p>An error is returned if bytes outside of the window were requested.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>new</span>(<span class='number'>10</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_be</span>(<span class='number'>0x12345678u32</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_be</span>(<span class='number'>0x11223344u32</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_be</span>(<span class='number'>0x54321123u32</span>), <span class='prelude-val'>Err</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_be</span>(<span class='number'>0x8877u16</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='ident'>b</span>.<span class='ident'>flip_lo</span>();
+
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), [ <span class='number'>0x12</span>, <span class='number'>0x34</span>, <span class='number'>0x56</span>, <span class='number'>0x78</span>
+                     , <span class='number'>0x11</span>, <span class='number'>0x22</span>, <span class='number'>0x33</span>, <span class='number'>0x44</span>
+                     , <span class='number'>0x88</span>, <span class='number'>0x77</span> ]); }</pre>
+</div><h4 id='method.fill_le' class='method'><code>fn <a href='#method.fill_le' class='fnname'>fill_le</a>&lt;T: <a class='trait' href='../iobuf/trait.IntLike.html' title='iobuf::IntLike'>IntLike</a>&gt;(&amp;mut self, t: T) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Writes a little-endian primitive into the beginning of the window.</p>
+
+<p>After the primitive has been written, the window will be moved such that
+it is no longer included.</p>
+
+<p>An error is returned if bytes outside of the window were requested.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>RWIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>RWIobuf</span>::<span class='ident'>new</span>(<span class='number'>10</span>);
+
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_le</span>(<span class='number'>0x12345678u32</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_le</span>(<span class='number'>0x11223344u32</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_le</span>(<span class='number'>0x54321123u32</span>), <span class='prelude-val'>Err</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>fill_le</span>(<span class='number'>0x8877u16</span>), <span class='prelude-val'>Ok</span>(()));
+
+<span class='ident'>b</span>.<span class='ident'>flip_lo</span>();
+
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), [ <span class='number'>0x78</span>, <span class='number'>0x56</span>, <span class='number'>0x34</span>, <span class='number'>0x12</span>
+                     , <span class='number'>0x44</span>, <span class='number'>0x33</span>, <span class='number'>0x22</span>, <span class='number'>0x11</span>
+                     , <span class='number'>0x77</span>, <span class='number'>0x88</span> ]); }</pre>
+</div><h4 id='method.advance' class='method'><code>fn <a href='#method.advance' class='fnname'>advance</a>(&amp;mut self, len: <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Advances the lower bound of the window by <code>len</code>. <code>Err(())</code> will be
+returned if you advance past the upper bound of the window.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>3</span>), <span class='prelude-val'>Err</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;lo&quot;</span>); }</pre>
+</div><h4 id='method.reset' class='method'><code>fn <a href='#method.reset' class='fnname'>reset</a>(&amp;mut self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Sets the window to the limits.</p>
+
+<p>&quot;Take it to the limit...&quot;</p>
+
+<p>NOTE: This can only work if the refcount on this buffer is 0</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>iobuf</span>::{<span class='ident'>ROIobuf</span>,<span class='ident'>Iobuf</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>ROIobuf</span>::<span class='ident'>from_str</span>(<span class='string'>&quot;hello&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>resize</span>(<span class='number'>3</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hel&quot;</span>); }
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>advance</span>(<span class='number'>2</span>), <span class='prelude-val'>Ok</span>(()));
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;l&quot;</span>); }
+<span class='ident'>b</span>.<span class='ident'>reset</span>();
+<span class='kw'>unsafe</span> { <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>.<span class='ident'>as_window_slice</span>(), <span class='string'>b&quot;hello&quot;</span>); }</pre>
+</div><h4 id='method.len' class='method'><code>fn <a href='#method.len' class='fnname'>len</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h4>
+<div class='docblock'><p>Returns the capacity of the current writing window</p>
+</div><h4 id='method.cap' class='method'><code>fn <a href='#method.cap' class='fnname'>cap</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h4>
+<div class='docblock'><p>Returns the capacity of the entire buffer, written or not</p>
+</div><h4 id='method.is_empty' class='method'><code>fn <a href='#method.is_empty' class='fnname'>is_empty</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>Returns whether or not <code>len() == 0</code>.</p>
+</div><h4 id='method.invariant' class='method'><code>fn <a href='#method.invariant' class='fnname'>invariant</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a class='struct' href='https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/collections/string/struct.String.html' title='collections::string::String'>String</a>&gt;&gt;</code></h4>
+<div class='docblock'><p>Checks internal state of the AppendBuf, to ensure that internal invariants
+are satisified. Returns <code>Err(msg)</code> if any invariant isn&#39;t satisfied.</p>
+</div><h4 id='method.as_raw' class='method'><code>unsafe fn <a href='#method.as_raw' class='fnname'>as_raw</a>&lt;'b&gt;(&amp;'b self) -&gt; &amp;'b RawIobuf&lt;'b&gt;</code></h4>
+<div class='docblock'><p>For internal use only.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> for <a class='struct' href='../iobuf/struct.AppendBuf.html' title='iobuf::AppendBuf'>AppendBuf</a>&lt;'a&gt;</code></h3><div class='impl-items'></div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='struct' href='../iobuf/struct.AppendBuf.html' title='iobuf::AppendBuf'>AppendBuf</a>&lt;'a&gt;</code></h3><div class='impl-items'><h4 id='method.fmt' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#method.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Drop.html' title='core::ops::Drop'>Drop</a> for <a class='struct' href='../iobuf/struct.AppendBuf.html' title='iobuf::AppendBuf'>AppendBuf</a>&lt;'a&gt;</code></h3><div class='impl-items'><h4 id='method.drop' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/trait.Drop.html#method.drop' class='fnname'>drop</a>(&amp;mut self)</code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/std/io/trait.Write.html' title='std::io::Write'>Write</a> for <a class='struct' href='../iobuf/struct.AppendBuf.html' title='iobuf::AppendBuf'>AppendBuf</a>&lt;'a&gt;</code></h3><div class='impl-items'><h4 id='method.write' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/std/io/trait.Write.html#method.write' class='fnname'>write</a>(&amp;mut self, buf: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/std/io/error/type.Result.html' title='std::io::error::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>&gt;</code></h4>
+<h4 id='method.flush' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/std/io/trait.Write.html#method.flush' class='fnname'>flush</a>(&amp;mut self) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/std/io/error/type.Result.html' title='std::io::error::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<h4 id='method.write_all' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/std/io/trait.Write.html#method.write_all' class='fnname'>write_all</a>(&amp;mut self, buf: <a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a class='struct' href='https://doc.rust-lang.org/nightly/std/io/error/struct.Error.html' title='std::io::error::Error'>Error</a>&gt;</code></h4>
+<h4 id='method.write_fmt' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/std/io/trait.Write.html#method.write_fmt' class='fnname'>write_fmt</a>(&amp;mut self, fmt: <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Arguments.html' title='core::fmt::Arguments'>Arguments</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>, <a class='struct' href='https://doc.rust-lang.org/nightly/std/io/error/struct.Error.html' title='std::io::error::Error'>Error</a>&gt;</code></h4>
+<h4 id='method.by_ref' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/std/io/trait.Write.html#method.by_ref' class='fnname'>by_ref</a>(&amp;mut self) -&gt; &amp;mut Self</code></h4>
+<h4 id='method.broadcast' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/std/io/trait.Write.html#method.broadcast' class='fnname'>broadcast</a>&lt;W&gt;(self, other: W) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/std/io/struct.Broadcast.html' title='std::io::Broadcast'>Broadcast</a>&lt;Self, W&gt; <span class='where'>where W: <a class='trait' href='https://doc.rust-lang.org/nightly/std/io/trait.Write.html' title='std::io::Write'>Write</a></span></code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "iobuf";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>
