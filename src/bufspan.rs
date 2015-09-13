@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt::{self, Formatter, Debug};
 use std::intrinsics::{assume, move_val_init};
-use std::iter::{self, order, IntoIterator, FromIterator};
+use std::iter::{self, IntoIterator, FromIterator};
 use std::mem;
 use std::option;
 use std::slice;
@@ -260,9 +260,8 @@ fn test_ends_with_vbuf() {
 #[inline]
 fn cmp_buf_buf<Buf: Iobuf>(bx: &Buf, by: &Buf) -> Ordering {
   unsafe {
-    order::cmp(
-      bx.as_window_slice().into_iter(),
-      by.as_window_slice().into_iter())
+    bx.as_window_slice().into_iter().cmp(
+    by.as_window_slice().into_iter())
   }
 }
 
@@ -276,12 +275,12 @@ fn cmp_buf_vec<Buf: Iobuf>(b: &Buf, v: &[Buf]) -> Ordering {
     if b.len() >= x.len() {
       let (start, new_b) = b.split_at(x.len());
 
-      match order::cmp(start.into_iter(), x.into_iter()) {
+      match start.into_iter().cmp(x.into_iter()) {
         Ordering::Equal => { b = new_b; }
         order => return order,
       }
     } else {
-      return order::cmp((&b).into_iter(), x.into_iter());
+      return (&b).into_iter().cmp(x.into_iter());
     }
   }
 
@@ -309,7 +308,7 @@ fn test_cmp_buf_vec() {
 
 #[cold]
 fn cmp_vec_vec<Buf: Iobuf>(vx: &BufSpan<Buf>, vy: &BufSpan<Buf>) -> Ordering {
-  order::cmp(vx.iter_bytes(), vy.iter_bytes())
+  vx.iter_bytes().cmp(vy.iter_bytes())
 }
 
 /// A span over potentially many Iobufs. This is useful as a "string" type where

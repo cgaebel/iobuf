@@ -117,9 +117,9 @@ impl<'a> io::Write for RWIobuf<'a> {
 /// 0xFF, and consuming/validating these numbers in parallel in 4 other threads:
 ///
 /// ```rust
-/// #![feature(std_misc, future)]
+/// #![feature(std_misc)]
 /// use iobuf::{RWIobuf, AROIobuf, Iobuf};
-/// use std::sync::Future;
+/// use std::thread;
 ///
 /// // Write the bytes 0x00 - 0xFF into an Iobuf.
 /// fn fill(buf: &mut RWIobuf<'static>) -> Result<(), ()> {
@@ -168,7 +168,7 @@ impl<'a> io::Write for RWIobuf<'a> {
 /// for i in 0..4 {
 ///   // This clone modifies the AROIobuf's atomic refcount.
 ///   let mut b = shared_b.clone();
-///   tasks.push(Future::spawn(move || {
+///   tasks.push(thread::spawn(move || {
 ///     let start = i*0x40;
 ///     assert_eq!(b.advance(start), Ok(()));
 ///     assert_eq!(b.resize(0x40), Ok(()));
@@ -183,7 +183,7 @@ impl<'a> io::Write for RWIobuf<'a> {
 /// }
 ///
 /// for mut t in tasks.into_iter() {
-///   t.get();
+///   t.join();
 /// }
 /// ```
 #[unsafe_no_drop_flag]
