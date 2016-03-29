@@ -37,6 +37,7 @@
 //! Fun tidbit: Data allocated by `Iobuf` is guaranteed to be aligned to 16 bytes.
 //! This may be abused to write efficient SIMD data processing code.
 #![deny(missing_docs)]
+#![deny(warnings)]
 
 #![feature(filling_drop)]
 #![feature(plugin)]
