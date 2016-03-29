@@ -25,6 +25,8 @@ const TARGET_WORD_SIZE: usize = 32;
 /// efficient SIMD code on Iobufs.
 const DATA_ALIGNMENT: usize = 16;
 
+const U32_BITS: usize = 32;
+
 /// The biggest Iobuf supported, to allow us to have a small RawIobuf struct.
 /// By limiting the buffer sizes, we can bring the struct down from 40 bytes to
 /// 24 bytes -- a 40% reduction. This frees up precious cache and registers for
@@ -32,7 +34,7 @@ const DATA_ALIGNMENT: usize = 16;
 const MAX_BUFFER_LEN: usize = i32::MAX as usize - ALLOCATION_HEADER_SIZE;
 
 /// The bitmask to get the "is the buffer owned" bit.
-const OWNED_MASK: u32 = 1 << (u32::BITS - 1);
+const OWNED_MASK: u32 = 1 << (U32_BITS - 1);
 
 /// Used to provide custom memory to Iobufs, instead of just using the heap.
 pub trait Allocator: Sync + Send {
@@ -43,7 +45,7 @@ pub trait Allocator: Sync + Send {
   fn deallocate(&self, ptr: NonZero<*mut u8>, len: usize, align: usize);
 }
 
-struct AllocationHeader {
+pub struct AllocationHeader {
   allocator: Option<NonZero<*mut ()>>,
   allocation_length: usize,
   refcount: usize,

@@ -37,21 +37,17 @@
 //! Fun tidbit: Data allocated by `Iobuf` is guaranteed to be aligned to 16 bytes.
 //! This may be abused to write efficient SIMD data processing code.
 #![deny(missing_docs)]
-#![deny(warnings)]
 
 #![feature(filling_drop)]
 #![feature(plugin)]
 #![feature(unsafe_no_drop_flag)]
 #![feature(core_intrinsics)]
-#![feature(iter_order)]
 #![feature(nonzero)]
 #![feature(raw)]
 #![feature(heap_api)]
 #![feature(iter_arith)]
-#![feature(num_bits_bytes)]
 
 #![feature(alloc)]
-#![feature(core)]
 
 #![cfg_attr(test, feature(test))]
 
