@@ -5,7 +5,6 @@ use std::sync::Arc;
 use raw::{Allocator, RawIobuf, write_failed};
 use impls::AROIobuf;
 use intlike::IntLike;
-use iobuf::Iobuf;
 
 /// Append-Only Input Buffer
 ///
