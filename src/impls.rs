@@ -17,7 +17,6 @@ use iobuf::Iobuf;
 /// If your function only needs to do read-only operations on an Iobuf, consider
 /// taking a generic `Iobuf` trait instead. That way, it can be used with either
 /// a ROIobuf or a RWIobuf, generically.
-#[unsafe_no_drop_flag]
 pub struct ROIobuf<'a> {
   raw: RawIobuf<'a>,
 }
@@ -63,7 +62,6 @@ impl<'a> Drop for ROIobuf<'a> {
 ///
 /// The `unsafe_` prefix means the function omits bounds checks. Misuse can
 /// easily cause security issues. Be careful!
-#[unsafe_no_drop_flag]
 pub struct RWIobuf<'a> {
   raw: RawIobuf<'a>,
 }
@@ -186,7 +184,6 @@ impl<'a> io::Write for RWIobuf<'a> {
 ///   t.join();
 /// }
 /// ```
-#[unsafe_no_drop_flag]
 pub struct AROIobuf {
   raw: RawIobuf<'static>,
 }
@@ -212,7 +209,6 @@ impl Drop for AROIobuf {
 /// If the refcount on an Iobuf is `1`, it can be made unique with `.unique()`.
 /// This will allow sending across channels, and later conversion back to a
 /// normal refcounted (atomically or non) Iobuf with zero overhead.
-#[unsafe_no_drop_flag]
 pub struct UniqueIobuf {
   raw: RawIobuf<'static>,
 }

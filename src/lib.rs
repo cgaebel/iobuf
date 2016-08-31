@@ -39,9 +39,7 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-#![feature(filling_drop)]
 #![feature(plugin)]
-#![feature(unsafe_no_drop_flag)]
 #![feature(core_intrinsics)]
 #![feature(nonzero)]
 #![feature(heap_api)]

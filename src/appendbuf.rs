@@ -20,7 +20,6 @@ use intlike::IntLike;
 /// Its primary interface is `fill`, which is the mechanism for appending data,
 /// and atomic_slice, which will take a position
 /// and a length and return a Result<AROIobuf, ()>
-#[unsafe_no_drop_flag]
 pub struct AppendBuf<'a> {
   raw: RawIobuf<'a>,
 }

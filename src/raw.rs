@@ -472,9 +472,6 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn drop_atomic(&mut self) {
-    // TODO: Remove this when zeroing drop is removed.
-    if self.lo_min_and_owned_bit == mem::POST_DROP_U32 { return; }
-
     self.atomic_dec_ref_count();
 
     // Reset the owned bit, to prevent double-frees when drop reform lands.
@@ -483,9 +480,6 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn drop_nonatomic(&mut self) {
-    // TODO: Remove this when zeroing drop is removed.
-    if self.lo_min_and_owned_bit == mem::POST_DROP_U32 { return; }
-
     self.nonatomic_dec_ref_count();
 
     // Reset the owned bit, to prevent double-frees when drop reform lands.
