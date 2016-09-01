@@ -39,15 +39,10 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-#![feature(filling_drop)]
 #![feature(plugin)]
-#![feature(unsafe_no_drop_flag)]
 #![feature(core_intrinsics)]
 #![feature(nonzero)]
-#![feature(raw)]
 #![feature(heap_api)]
-#![feature(iter_arith)]
-
 #![feature(alloc)]
 
 #![cfg_attr(test, feature(test))]

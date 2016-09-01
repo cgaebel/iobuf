@@ -5,7 +5,6 @@ use std::sync::Arc;
 use raw::{Allocator, RawIobuf, write_failed};
 use impls::AROIobuf;
 use intlike::IntLike;
-use iobuf::Iobuf;
 
 /// Append-Only Input Buffer
 ///
@@ -21,7 +20,6 @@ use iobuf::Iobuf;
 /// Its primary interface is `fill`, which is the mechanism for appending data,
 /// and atomic_slice, which will take a position
 /// and a length and return a Result<AROIobuf, ()>
-#[unsafe_no_drop_flag]
 pub struct AppendBuf<'a> {
   raw: RawIobuf<'a>,
 }

@@ -7,11 +7,11 @@ use std::io;
 use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
-use std::raw::{self, Repr};
 use std::i32;
 use std::u32;
 use std::sync::Arc;
 use std::sync::atomic::{self, AtomicUsize, Ordering};
+use std::slice;
 
 use intlike::{IntLike, from_be, from_le, to_be, to_le};
 
@@ -472,9 +472,6 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn drop_atomic(&mut self) {
-    // TODO: Remove this when zeroing drop is removed.
-    if self.lo_min_and_owned_bit == mem::POST_DROP_U32 { return; }
-
     self.atomic_dec_ref_count();
 
     // Reset the owned bit, to prevent double-frees when drop reform lands.
@@ -483,9 +480,6 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn drop_nonatomic(&mut self) {
-    // TODO: Remove this when zeroing drop is removed.
-    if self.lo_min_and_owned_bit == mem::POST_DROP_U32 { return; }
-
     self.nonatomic_dec_ref_count();
 
     // Reset the owned bit, to prevent double-frees when drop reform lands.
@@ -545,14 +539,14 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn from_slice(s: &'a [u8]) -> Self {
     unsafe {
-      let len = s.repr().len;
+      let len = s.len();
 
       if len > MAX_BUFFER_LEN {
         buffer_too_big(len);
       }
 
       RawIobuf {
-        buf:    NonZero::new(s.repr().data as *mut u8),
+        buf:    NonZero::new(s.as_ptr() as *mut u8),
         lo_min_and_owned_bit: 0,
         lo:     0,
         hi:     len as u32,
@@ -566,8 +560,7 @@ impl<'a> RawIobuf<'a> {
   pub fn from_slice_copy(s: &[u8]) -> RawIobuf<'static> {
     unsafe {
       let b = RawIobuf::new(s.len());
-      let s = s.repr();
-      memcpy(*b.buf, s.data, s.len);
+      memcpy(*b.buf, s.as_ptr(), s.len());
       b
     }
   }
@@ -575,9 +568,8 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
     unsafe {
-      let s = s.repr();
-      let b = RawIobuf::new_with_allocator(s.len, allocator);
-      memcpy(*b.buf, s.data, s.len);
+      let b = RawIobuf::new_with_allocator(s.len(), allocator);
+      memcpy(*b.buf, s.as_ptr(), s.len());
       b
     }
   }
@@ -627,11 +619,8 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
-  pub unsafe fn as_raw_limit_slice(&self) -> raw::Slice<u8> {
-    raw::Slice {
-      data: self.buf.offset(self.lo_min() as isize),
-      len:  self.cap() as usize,
-    }
+  pub unsafe fn as_raw_limit_slice<'b>(&'b self) -> &'b [u8] {
+      return slice::from_raw_parts(self.buf.offset(self.lo_min() as isize), self.cap() as usize);
   }
 
   #[inline]
@@ -640,16 +629,14 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
+  #[allow(mutable_transmutes)]
   pub unsafe fn as_mut_limit_slice<'b>(&'b self) -> &'b mut [u8] {
     mem::transmute(self.as_raw_limit_slice())
   }
 
   #[inline]
-  pub unsafe fn as_raw_window_slice(&self) -> raw::Slice<u8> {
-    raw::Slice {
-      data: self.buf.offset(self.lo as isize),
-      len:  self.len() as usize,
-    }
+  pub unsafe fn as_raw_window_slice<'b>(&'b self) -> &'b [u8] {
+      return slice::from_raw_parts(self.buf.offset(self.lo as isize), self.len() as usize);
   }
 
   #[inline]
@@ -658,6 +645,7 @@ impl<'a> RawIobuf<'a> {
   }
 
   #[inline]
+  #[allow(mutable_transmutes)]
   pub unsafe fn as_mut_window_slice<'b>(&'b self) -> &'b mut [u8] {
     mem::transmute(self.as_raw_window_slice())
   }
@@ -1160,10 +1148,8 @@ impl<'a> RawIobuf<'a> {
     let len = dst.len();
     self.debug_check_range_usize(pos, len);
 
-    let dst: raw::Slice<u8> = mem::transmute(dst);
-
     memcpy(
-      dst.data as *mut u8,
+      dst.as_mut_ptr() as *mut u8,
       self.buf.offset((self.lo + pos) as isize),
       len);
   }
@@ -1198,11 +1184,9 @@ impl<'a> RawIobuf<'a> {
     let len = src.len();
     self.debug_check_range_usize(pos, len);
 
-    let src: raw::Slice<u8> = mem::transmute(src);
-
     memcpy(
       self.buf.offset((self.lo + pos) as isize),
-      src.data,
+      src.as_ptr(),
       len);
   }
 
