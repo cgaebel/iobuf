@@ -83,6 +83,7 @@ impl<'a> AppendBuf<'a> {
   ///  counted from the end of the available buffer. e.g.
   ///  from: 0 to: 2  would take the first two characters of the buffer.
   ///  from: 0 to: -2 would take all but the last two characters of the buffer
+  ///
   /// ```rust
   /// use iobuf::{AppendBuf, Iobuf};
   ///
