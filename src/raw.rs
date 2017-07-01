@@ -1,4 +1,5 @@
 use alloc::heap;
+use core::ptr::Unique;
 
 use core::nonzero::NonZero;
 
@@ -89,7 +90,7 @@ impl AllocationHeader {
       match self.allocator {
         None => heap::allocate(len, DATA_ALIGNMENT),
         Some(allocator) => {
-          let allocator: &Arc<Box<Allocator>> = mem::transmute(&*allocator);
+          let allocator: &Arc<Box<Allocator>> = mem::transmute(&allocator.get());
           allocator.allocate(len, DATA_ALIGNMENT)
         }
       }
@@ -124,7 +125,7 @@ impl AllocationHeader {
         allocator:
           match self.allocator {
             None => None,
-            Some(allocator) => mem::transmute(*allocator),
+            Some(allocator) => mem::transmute(allocator.get()),
           },
       }
     }
@@ -166,7 +167,7 @@ struct Deallocator {
 impl Deallocator {
   fn deallocate(self, ptr: NonZero<*mut u8>) {
     unsafe {
-      let ptr: *mut u8 = ptr.offset(-(ALLOCATION_HEADER_SIZE as isize));
+      let ptr: *mut u8 = ptr.get().offset(-(ALLOCATION_HEADER_SIZE as isize));
       match self.allocator {
         None =>
           heap::deallocate(ptr, self.allocation_length, DATA_ALIGNMENT),
@@ -298,7 +299,7 @@ impl<'a> RawIobuf<'a> {
   fn inv_fail(&self, msg: &str) -> Box<String> {
     Box::new(format!("{}: Iobuf {{ buf: {:?}, owned: {}, lo_min: {}, lo: {}, hi: {}, hi_max: {} }}",
       msg,
-      *self.buf, self.is_owned(), self.lo_min(), self.lo(), self.hi(), self.hi_max()))
+      self.buf.get(), self.is_owned(), self.lo_min(), self.lo(), self.hi(), self.hi_max()))
   }
 
   /// Checks a single invariant condition, returning a boxed (for size savings)
@@ -345,7 +346,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn empty() -> RawIobuf<'static> {
     RawIobuf {
-      buf:    unsafe { NonZero::new(heap::EMPTY as *mut u8) },
+      buf:    unsafe { NonZero::new(Unique::empty().as_ptr()) },
       lo_min_and_owned_bit: 0,
       lo:     0,
       hi:     0,
@@ -514,7 +515,7 @@ impl<'a> RawIobuf<'a> {
     unsafe {
       if self.is_owned() {
         Some(mem::transmute(
-          self.buf.offset(-(ALLOCATION_HEADER_SIZE as isize))))
+          self.buf.get().offset(-(ALLOCATION_HEADER_SIZE as isize))))
       } else {
         None
       }
@@ -560,7 +561,7 @@ impl<'a> RawIobuf<'a> {
   pub fn from_slice_copy(s: &[u8]) -> RawIobuf<'static> {
     unsafe {
       let b = RawIobuf::new(s.len());
-      memcpy(*b.buf, s.as_ptr(), s.len());
+      memcpy(b.buf.get(), s.as_ptr(), s.len());
       b
     }
   }
@@ -569,7 +570,7 @@ impl<'a> RawIobuf<'a> {
   pub fn from_slice_copy_with_allocator(s: &[u8], allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
     unsafe {
       let b = RawIobuf::new_with_allocator(s.len(), allocator);
-      memcpy(*b.buf, s.as_ptr(), s.len());
+      memcpy(b.buf.get(), s.as_ptr(), s.len());
       b
     }
   }
@@ -620,7 +621,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn as_raw_limit_slice<'b>(&'b self) -> &'b [u8] {
-      return slice::from_raw_parts(self.buf.offset(self.lo_min() as isize), self.cap() as usize);
+      return slice::from_raw_parts(self.buf.get().offset(self.lo_min() as isize), self.cap() as usize);
   }
 
   #[inline]
@@ -636,7 +637,7 @@ impl<'a> RawIobuf<'a> {
 
   #[inline]
   pub unsafe fn as_raw_window_slice<'b>(&'b self) -> &'b [u8] {
-      return slice::from_raw_parts(self.buf.offset(self.lo as isize), self.len() as usize);
+      return slice::from_raw_parts(self.buf.get().offset(self.lo as isize), self.len() as usize);
   }
 
   #[inline]
@@ -895,7 +896,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn is_extended_by<'b>(&self, other: &RawIobuf<'b>) -> bool {
     unsafe {
-      self.buf.offset(self.hi as isize) == other.buf.offset(other.lo as isize)
+      self.buf.get().offset(self.hi as isize) == other.buf.get().offset(other.lo as isize)
          // check_range, but with `cap()` instead of `len()`.
       && self.hi as u64 + other.len() as u64 <= self.hi_max as u64
     }
@@ -1036,8 +1037,8 @@ impl<'a> RawIobuf<'a> {
       let lo_min = self.lo_min();
 
       memmove(
-        self.buf.offset(lo_min as isize),
-        self.buf.offset(self.lo as isize),
+        self.buf.get().offset(lo_min as isize),
+        self.buf.get().offset(self.lo as isize),
         len as usize);
 
       self.lo = lo_min + len;
@@ -1150,7 +1151,7 @@ impl<'a> RawIobuf<'a> {
 
     memcpy(
       dst.as_mut_ptr() as *mut u8,
-      self.buf.offset((self.lo + pos) as isize),
+      self.buf.get().offset((self.lo + pos) as isize),
       len);
   }
 
@@ -1163,7 +1164,7 @@ impl<'a> RawIobuf<'a> {
 
     memcpy(
       &mut dst as *mut T as *mut u8,
-      self.buf.offset((self.lo + pos) as isize),
+      self.buf.get().offset((self.lo + pos) as isize),
       len);
 
     dst
@@ -1185,7 +1186,7 @@ impl<'a> RawIobuf<'a> {
     self.debug_check_range_usize(pos, len);
 
     memcpy(
-      self.buf.offset((self.lo + pos) as isize),
+      self.buf.get().offset((self.lo + pos) as isize),
       src.as_ptr(),
       len);
   }
@@ -1196,7 +1197,7 @@ impl<'a> RawIobuf<'a> {
     self.debug_check_range_usize(pos, len);
 
     memcpy(
-      self.buf.offset((self.lo + pos) as isize),
+      self.buf.get().offset((self.lo + pos) as isize),
       &t as *const T as *const u8,
       len);
   }
@@ -1452,7 +1453,7 @@ fn test_allocator() {
     }
 
     fn deallocate(&self, ptr: NonZero<*mut u8>, len: usize, align: usize) {
-      unsafe { ::alloc::heap::deallocate(*ptr, len, align) }
+      unsafe { ::alloc::heap::deallocate(ptr.get(), len, align) }
     }
   }
 
