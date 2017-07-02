@@ -44,6 +44,7 @@
 #![feature(nonzero)]
 #![feature(heap_api)]
 #![feature(alloc)]
+#![feature(unique)]
 
 #![cfg_attr(test, feature(test))]
 
