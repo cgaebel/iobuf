@@ -93,7 +93,8 @@ impl AllocationHeader {
               .expect("could not allocate memory")
         },
         Some(allocator) => {
-          let allocator: &Arc<Box<Allocator>> = mem::transmute(&allocator.get());
+          let raw_allocator = allocator.get();
+          let allocator: &Arc<Box<Allocator>> = mem::transmute(&raw_allocator);
           allocator.allocate(len, DATA_ALIGNMENT)
         }
       }
