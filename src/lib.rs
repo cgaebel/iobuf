@@ -42,7 +42,7 @@
 #![feature(plugin)]
 #![feature(core_intrinsics)]
 #![feature(nonzero)]
-#![feature(heap_api)]
+#![feature(allocator_api)]
 #![feature(alloc)]
 #![feature(unique)]
 

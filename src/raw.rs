@@ -1,4 +1,4 @@
-use alloc::heap;
+use alloc::heap::{Heap, Alloc, Layout};
 use core::ptr::Unique;
 
 use core::nonzero::NonZero;
@@ -88,9 +88,13 @@ impl AllocationHeader {
   fn allocate(&self, len: usize) -> *mut u8 {
     unsafe {
       match self.allocator {
-        None => heap::allocate(len, DATA_ALIGNMENT),
+        None => {
+          Heap.alloc(Layout::from_size_align(len, DATA_ALIGNMENT).unwrap())
+              .expect("could not allocate memory")
+        },
         Some(allocator) => {
-          let allocator: &Arc<Box<Allocator>> = mem::transmute(&allocator.get());
+          let raw_allocator = allocator.get();
+          let allocator: &Arc<Box<Allocator>> = mem::transmute(&raw_allocator);
           allocator.allocate(len, DATA_ALIGNMENT)
         }
       }
@@ -169,8 +173,9 @@ impl Deallocator {
     unsafe {
       let ptr: *mut u8 = ptr.get().offset(-(ALLOCATION_HEADER_SIZE as isize));
       match self.allocator {
-        None =>
-          heap::deallocate(ptr, self.allocation_length, DATA_ALIGNMENT),
+        None => {
+          Heap.dealloc(ptr, Layout::from_size_align(self.allocation_length, DATA_ALIGNMENT).unwrap())
+        },
         Some(alloc) =>
           alloc.deallocate(NonZero::new(ptr), self.allocation_length, DATA_ALIGNMENT),
       }
@@ -1449,11 +1454,16 @@ fn test_allocator() {
 
   impl Allocator for MyAllocator {
     fn allocate(&self, size: usize, align: usize) -> *mut u8 {
-      unsafe { ::alloc::heap::allocate(size, align) }
+      unsafe {
+        Heap.alloc(Layout::from_size_align(size, align).unwrap())
+          .expect("could not allocate memory")
+      }
     }
 
     fn deallocate(&self, ptr: NonZero<*mut u8>, len: usize, align: usize) {
-      unsafe { ::alloc::heap::deallocate(ptr.get(), len, align) }
+      unsafe {
+        Heap.dealloc(ptr.get(), Layout::from_size_align(len, align).unwrap())
+      }
     }
   }
 
