@@ -45,6 +45,7 @@
 #![feature(allocator_api)]
 #![feature(alloc)]
 #![feature(unique)]
+#![feature(fn_must_use)]
 
 #![cfg_attr(test, feature(test))]
 
