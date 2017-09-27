@@ -177,7 +177,7 @@ impl Deallocator {
           Heap.dealloc(ptr, Layout::from_size_align(self.allocation_length, DATA_ALIGNMENT).unwrap())
         },
         Some(alloc) =>
-          alloc.deallocate(NonZero::new(ptr), self.allocation_length, DATA_ALIGNMENT),
+          alloc.deallocate(NonZero::new_unchecked(ptr), self.allocation_length, DATA_ALIGNMENT),
       }
     }
   }
@@ -277,7 +277,7 @@ impl<'a> RawIobuf<'a> {
       }
 
       RawIobuf {
-        buf:    NonZero::new(buf),
+        buf:    NonZero::new_unchecked(buf),
         lo_min_and_owned_bit: OWNED_MASK,
         lo:     0,
         hi:     len as u32,
@@ -296,7 +296,7 @@ impl<'a> RawIobuf<'a> {
   pub fn new_with_allocator(len: usize, allocator: Arc<Box<Allocator>>) -> RawIobuf<'static> {
     unsafe {
       let allocator: *mut () = mem::transmute(allocator);
-      RawIobuf::new_impl(len, Some(NonZero::new(allocator)))
+      RawIobuf::new_impl(len, Some(NonZero::new_unchecked(allocator)))
     }
   }
 
@@ -351,7 +351,7 @@ impl<'a> RawIobuf<'a> {
   #[inline]
   pub fn empty() -> RawIobuf<'static> {
     RawIobuf {
-      buf:    unsafe { NonZero::new(Unique::empty().as_ptr()) },
+      buf:    unsafe { NonZero::new_unchecked(Unique::empty().as_ptr()) },
       lo_min_and_owned_bit: 0,
       lo:     0,
       hi:     0,
@@ -552,7 +552,7 @@ impl<'a> RawIobuf<'a> {
       }
 
       RawIobuf {
-        buf:    NonZero::new(s.as_ptr() as *mut u8),
+        buf:    NonZero::new_unchecked(s.as_ptr() as *mut u8),
         lo_min_and_owned_bit: 0,
         lo:     0,
         hi:     len as u32,
