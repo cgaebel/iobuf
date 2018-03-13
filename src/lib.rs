@@ -46,6 +46,7 @@
 #![feature(alloc)]
 #![feature(unique)]
 #![feature(fn_must_use)]
+#![feature(ptr_internals)]
 
 #![cfg_attr(test, feature(test))]
 
